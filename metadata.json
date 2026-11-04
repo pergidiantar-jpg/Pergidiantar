@@ -1,0 +1,6 @@
+{
+  "name": "PERGIDIANTAR - Travel & Tour Agency Platform",
+  "description": "Platform resmi penyedia jasa perjalanan wisata PERGIDIANTAR. Menyediakan paket All In & Hemat (Jogja, Malang, Bali), booking online terintegrasi, inventaris armada, analitik penjualan, dan dashboard multi-role.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
