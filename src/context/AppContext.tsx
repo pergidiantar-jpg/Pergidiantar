@@ -89,6 +89,7 @@ interface AppContextType {
   addDriver: (driver: Omit<DriverCrew, 'id'>) => void;
   updateFleet: (unit: FleetUnit) => void;
   updateDriver: (driver: DriverCrew) => void;
+  addPackage: (pkg: Omit<TourPackage, 'id'>) => TourPackage;
   updatePackage: (pkg: TourPackage) => void;
   deletePackage: (pkgId: string) => void;
   addHotel: (hotel: Omit<HotelPartner, 'id'>) => void;
@@ -1106,6 +1107,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerPush('Data Driver Diperbarui', `Informasi driver ${driver.name} berhasil diperbarui.`, 'system');
   };
 
+  const addPackage = (pkgData: Omit<TourPackage, 'id'>) => {
+    const newPkg: TourPackage = {
+      ...pkgData,
+      id: `pkg-${Date.now()}`
+    };
+    setPackages((prev) => [newPkg, ...prev]);
+    cloudSyncDoc('packages', newPkg.id, newPkg).catch(() => {});
+    triggerPush('Paket Wisata Ditambahkan', `Paket wisata baru "${newPkg.title}" (${newPkg.destinationLabel}) berhasil ditambahkan oleh Super Admin.`, 'system');
+    return newPkg;
+  };
+
   const updatePackage = (pkg: TourPackage) => {
     setPackages((prev) => prev.map((p) => (p.id === pkg.id ? pkg : p)));
     cloudSyncDoc('packages', pkg.id, pkg).catch(() => {});
@@ -1553,6 +1565,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addDriver,
         updateFleet,
         updateDriver,
+        addPackage,
         updatePackage,
         deletePackage,
         addHotel,

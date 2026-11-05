@@ -20,7 +20,7 @@ import {
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
 export const PackageManagement: React.FC = () => {
-  const { packages, updatePackage, deletePackage, currentRole } = useApp();
+  const { packages, addPackage, updatePackage, deletePackage, currentRole } = useApp();
 
   const isSuperAdmin = currentRole === 'super_admin';
 
@@ -42,6 +42,164 @@ export const PackageManagement: React.FC = () => {
   const [maxPax, setMaxPax] = useState<number>(12);
   const [recommendedVehicle, setRecommendedVehicle] = useState('');
   const [highlightPointsStr, setHighlightPointsStr] = useState('');
+
+  // Form states for adding new tour package
+  const [addTitle, setAddTitle] = useState('');
+  const [addCategory, setAddCategory] = useState<PackageCategory>('family_trip');
+  const [addDestination, setAddDestination] = useState<DestinationRegion>('jogja');
+  const [addPriceHemat, setAddPriceHemat] = useState<number>(1250000);
+  const [addPriceAllIn, setAddPriceAllIn] = useState<number>(1850000);
+  const [addDurationDays, setAddDurationDays] = useState<number>(3);
+  const [addDurationNights, setAddDurationNights] = useState<number>(2);
+  const [addMinPax, setAddMinPax] = useState<number>(2);
+  const [addMaxPax, setAddMaxPax] = useState<number>(14);
+  const [addVehicle, setAddVehicle] = useState('Toyota HiAce Premio Luxury (14 Seats)');
+  const [addBadge, setAddBadge] = useState('Paket Pilihan');
+  const [addHeroImage, setAddHeroImage] = useState('/src/assets/images/dest_jogja_heritage_1793579234240.jpg');
+  const [addHighlightsStr, setAddHighlightsStr] = useState(
+    'Rute santai & fleksibel untuk liburan keluarga\nUnit armada ber-AC dingin dengan driver profesional\nDestinasi populer terbaik dan spot foto instagramable'
+  );
+  const [addTicketsStr, setAddTicketsStr] = useState(
+    'Tiket Masuk Destinasi Wisata Utama\nRetribusi Tol & Parkir Seluruh Rute'
+  );
+  const [addDays, setAddDays] = useState<
+    { day: number; title: string; description: string; activitiesStr: string }[]
+  >([
+    {
+      day: 1,
+      title: 'Penjemputan & Eksplorasi Budaya',
+      description: 'Penyambutan ramah di bandara/stasiun dengan armada AC dingin.',
+      activitiesStr: 'Penjemputan di titik kedatangan (Bandara/Stasiun)\nMakan siang kuliner khas lokal\nKunjungan destinasi ikonik utama\nCheck-in hotel mitra dan istirahat'
+    },
+    {
+      day: 2,
+      title: 'Petualangan Alam & Panorama Indah',
+      description: 'Eksplorasi spot alam favorit dengan panorama memukau.',
+      activitiesStr: 'Sarapan pagi di hotel\nTur alam dan spot pemandangan terbaik\nMakan siang santap kuliner tradisional\nHunting foto sunset sore hari\nMakan malam bersama'
+    },
+    {
+      day: 3,
+      title: 'Belanja Cenderamata & Kepulangan',
+      description: 'Membeli buah tangan khas daerah sebelum kepulangan.',
+      activitiesStr: 'Sarapan dan check-out hotel\nKunjungan pusat oleh-oleh khas & kerajinan lokal\nMakan siang kuliner penutup\nPengantaran ke Stasiun / Bandara'
+    }
+  ]);
+
+  const resetAddForm = () => {
+    setAddTitle('');
+    setAddCategory('family_trip');
+    setAddDestination('jogja');
+    setAddPriceHemat(1250000);
+    setAddPriceAllIn(1850000);
+    setAddDurationDays(3);
+    setAddDurationNights(2);
+    setAddMinPax(2);
+    setAddMaxPax(14);
+    setAddVehicle('Toyota HiAce Premio Luxury (14 Seats)');
+    setAddBadge('Paket Pilihan');
+    setAddHeroImage('/src/assets/images/dest_jogja_heritage_1793579234240.jpg');
+    setAddHighlightsStr(
+      'Rute santai & fleksibel untuk liburan keluarga\nUnit armada ber-AC dingin dengan driver profesional\nDestinasi populer terbaik dan spot foto instagramable'
+    );
+    setAddTicketsStr('Tiket Masuk Destinasi Wisata Utama\nRetribusi Tol & Parkir Seluruh Rute');
+    setAddDays([
+      {
+        day: 1,
+        title: 'Penjemputan & Eksplorasi Budaya',
+        description: 'Penyambutan ramah di bandara/stasiun dengan armada AC dingin.',
+        activitiesStr: 'Penjemputan di titik kedatangan (Bandara/Stasiun)\nMakan siang kuliner khas lokal\nKunjungan destinasi ikonik utama\nCheck-in hotel mitra dan istirahat'
+      },
+      {
+        day: 2,
+        title: 'Petualangan Alam & Panorama Indah',
+        description: 'Eksplorasi spot alam favorit dengan panorama memukau.',
+        activitiesStr: 'Sarapan pagi di hotel\nTur alam dan spot pemandangan terbaik\nMakan siang santap kuliner tradisional\nHunting foto sunset sore hari\nMakan malam bersama'
+      },
+      {
+        day: 3,
+        title: 'Belanja Cenderamata & Kepulangan',
+        description: 'Membeli buah tangan khas daerah sebelum kepulangan.',
+        activitiesStr: 'Sarapan dan check-out hotel\nKunjungan pusat oleh-oleh khas & kerajinan lokal\nMakan siang kuliner penutup\nPengantaran ke Stasiun / Bandara'
+      }
+    ]);
+  };
+
+  const handleAddDay = () => {
+    const nextDay = addDays.length + 1;
+    setAddDays([
+      ...addDays,
+      {
+        day: nextDay,
+        title: `Hari Ke-${nextDay}: Aktivitas Lanjutan`,
+        description: 'Rute perjalanan dan eksplorasi lanjutan.',
+        activitiesStr: 'Kunjungan destinasi wisata pilihan\nMakan siang kuliner lokal\nPengantaran kembali ke hotel'
+      }
+    ]);
+    setAddDurationDays(nextDay);
+    setAddDurationNights(Math.max(1, nextDay - 1));
+  };
+
+  const handleRemoveDay = () => {
+    if (addDays.length <= 1) return;
+    const newDays = addDays.slice(0, -1);
+    setAddDays(newDays);
+    setAddDurationDays(newDays.length);
+    setAddDurationNights(Math.max(0, newDays.length - 1));
+  };
+
+  const handleCreatePackage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addTitle.trim()) return;
+
+    const newPkgData: Omit<TourPackage, 'id'> = {
+      title: addTitle.trim(),
+      category: addCategory,
+      categoryLabel: 
+        addCategory === 'single_trip' ? 'Single Trip' :
+        addCategory === 'family_trip' ? 'Family Trip' :
+        addCategory === 'family_gathering' ? 'Family Gathering' :
+        addCategory === 'company_gathering' ? 'Company Gathering' : 'Study Tour',
+      destinations: [addDestination],
+      destinationLabel: 
+        addDestination === 'jogja' ? 'Yogyakarta' :
+        addDestination === 'malang' ? 'Malang & Bromo' : 'Bali',
+      durationDays: Number(addDurationDays),
+      durationNights: Number(addDurationNights),
+      heroImage: addHeroImage || '/src/assets/images/dest_jogja_heritage_1793579234240.jpg',
+      priceHematPerPax: Number(addPriceHemat),
+      priceAllInPerPax: Number(addPriceAllIn),
+      minPax: Number(addMinPax),
+      maxPax: Number(addMaxPax),
+      recommendedVehicle: addVehicle.trim() || 'Toyota Avanza / Innova / Hi-Ace',
+      badge: addBadge.trim() || 'Paket Pilihan',
+      highlightPoints: addHighlightsStr
+        .split('\n')
+        .map(s => s.trim())
+        .filter(Boolean),
+      itinerary: addDays.map((d) => ({
+        day: d.day,
+        title: d.title.trim(),
+        description: d.description.trim(),
+        activities: d.activitiesStr
+          .split('\n')
+          .map(s => s.trim())
+          .filter(Boolean)
+      })),
+      included: {
+        transport: 'Kendaraan, driver, bbm, parkir (Termasuk Paket Hemat & All In)',
+        accommodation: 'Hotel Bintang Mitra Pilihan (Termasuk Paket All In)',
+        meals: 'Makan 1x di hotel dan 2x/ hari di luar hotel (Termasuk Paket All In)',
+        tickets: addTicketsStr
+          .split('\n')
+          .map(s => s.trim())
+          .filter(Boolean),
+        additional: ['Air mineral botol setiap hari', 'Snack box kedatangan', 'P3K standar pariwisata']
+      }
+    };
+
+    addPackage(newPkgData);
+    setIsAddModalOpen(false);
+  };
 
   const openEditModal = (pkg: TourPackage) => {
     setEditingPackage(pkg);
@@ -119,6 +277,20 @@ export const PackageManagement: React.FC = () => {
               Super Admin berwenang mengubah harga paket (Hemat & All-In), mengubah kota tujuan wisata (Jogja, Malang, Bali), kuota peserta, dan armada rekomendasi.
             </p>
           </div>
+
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                resetAddForm();
+                setIsAddModalOpen(true);
+              }}
+              className="py-2.5 px-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-colors shadow-xs shrink-0 self-start sm:self-center"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Paket Tour Baru</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -434,6 +606,377 @@ export const PackageManagement: React.FC = () => {
                 >
                   <Save className="w-4 h-4" />
                   <span>Simpan Perubahan Paket</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add New Package Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 sm:p-6">
+          <div 
+            className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs transition-opacity" 
+            onClick={() => setIsAddModalOpen(false)}
+          />
+
+          <div className="relative bg-white rounded-3xl border border-neutral-200 shadow-2xl w-full max-w-3xl overflow-hidden z-10 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-5 border-b border-neutral-200 bg-neutral-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">
+                    Tambah Pilihan Paket Tour Baru
+                  </h3>
+                  <span className="text-xs text-neutral-400 block mt-0.5">
+                    Paket baru akan otomatis tampil pada katalog pelanggan dan tersinkronisasi ke Cloud Firestore.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleCreatePackage} className="overflow-y-auto p-6 space-y-5 text-xs flex-1">
+              <div>
+                <label className="block text-neutral-800 font-bold mb-1">
+                  Nama / Judul Paket Wisata *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Eksplorasi Eksotis Malang & Sunrise Bromo Jeep Adventure"
+                  value={addTitle}
+                  onChange={(e) => setAddTitle(e.target.value)}
+                  required
+                  className="w-full py-2.5 px-3 border border-neutral-300 rounded-xl font-semibold text-neutral-900 focus:ring-2 focus:ring-orange-500 bg-neutral-50/70"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-blue-600" /> Kota Tujuan *
+                  </label>
+                  <select
+                    value={addDestination}
+                    onChange={(e) => {
+                      const val = e.target.value as DestinationRegion;
+                      setAddDestination(val);
+                      if (val === 'jogja') setAddHeroImage('/src/assets/images/dest_jogja_heritage_1793579234240.jpg');
+                      else if (val === 'malang') setAddHeroImage('/src/assets/images/dest_malang_bromo_1793579235303.jpg');
+                      else setAddHeroImage('/src/assets/images/dest_bali_paradise_1793579235747.jpg');
+                    }}
+                    className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-bold text-neutral-800 bg-neutral-50 focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="jogja">Yogyakarta (Jogja)</option>
+                    <option value="malang">Malang & Bromo</option>
+                    <option value="bali">Bali Pulau Dewata</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1">
+                    Kategori Penawaran *
+                  </label>
+                  <select
+                    value={addCategory}
+                    onChange={(e) => setAddCategory(e.target.value as PackageCategory)}
+                    className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-bold text-neutral-800 bg-neutral-50 focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="single_trip">Single Trip (Private)</option>
+                    <option value="family_trip">Family Trip (Keluarga)</option>
+                    <option value="family_gathering">Family Gathering</option>
+                    <option value="company_gathering">Company Gathering</option>
+                    <option value="study_tour">Study Tour (Sekolah/Kampus)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1">
+                    Badge / Label Promo
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Paket Terfavorit, Promo Spesial"
+                    value={addBadge}
+                    onChange={(e) => setAddBadge(e.target.value)}
+                    className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-semibold text-neutral-900 bg-neutral-50 focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
+              {/* Price inputs with exact requested inclusion labels */}
+              <div className="p-4 bg-orange-50/60 rounded-2xl border border-orange-200 space-y-3">
+                <span className="text-[11px] font-black text-orange-900 uppercase tracking-wider block">
+                  Penetapan Tarif Biaya Reservasi per Pax
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-neutral-800 font-bold mb-0.5">
+                      Harga Paket Hemat (Rp/pax) *
+                    </label>
+                    <span className="text-[10px] text-blue-700 block mb-1 font-semibold">
+                      Inklusi: (kendaraan, driver, bbm, parkir)
+                    </span>
+                    <input
+                      type="number"
+                      step={25000}
+                      min={100000}
+                      value={addPriceHemat}
+                      onChange={(e) => setAddPriceHemat(Number(e.target.value))}
+                      required
+                      className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-mono font-bold text-neutral-900 bg-white focus:ring-2 focus:ring-orange-500"
+                    />
+                    <span className="text-[10px] text-neutral-500 mt-0.5 block font-mono">
+                      Rp {Number(addPriceHemat).toLocaleString('id-ID')} / pax
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-800 font-bold mb-0.5">
+                      Harga Paket All In (Rp/pax) *
+                    </label>
+                    <span className="text-[10px] text-orange-700 block mb-1 font-semibold">
+                      Inklusi: (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)
+                    </span>
+                    <input
+                      type="number"
+                      step={25000}
+                      min={100000}
+                      value={addPriceAllIn}
+                      onChange={(e) => setAddPriceAllIn(Number(e.target.value))}
+                      required
+                      className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-mono font-bold text-orange-600 bg-white focus:ring-2 focus:ring-orange-500"
+                    />
+                    <span className="text-[10px] text-neutral-500 mt-0.5 block font-mono">
+                      Rp {Number(addPriceAllIn).toLocaleString('id-ID')} / pax
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Duration and Capacity */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1">Durasi Hari *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={14}
+                    value={addDurationDays}
+                    onChange={(e) => setAddDurationDays(Number(e.target.value))}
+                    required
+                    className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-bold bg-neutral-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1">Durasi Malam *</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={14}
+                    value={addDurationNights}
+                    onChange={(e) => setAddDurationNights(Number(e.target.value))}
+                    required
+                    className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-bold bg-neutral-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1">Min Pax *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={addMinPax}
+                    onChange={(e) => setAddMinPax(Number(e.target.value))}
+                    required
+                    className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-bold bg-neutral-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1">Max Pax *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={addMaxPax}
+                    onChange={(e) => setAddMaxPax(Number(e.target.value))}
+                    required
+                    className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-bold bg-neutral-50"
+                  />
+                </div>
+              </div>
+
+              {/* Vehicle & Hero Image */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1">
+                    Rekomendasi Armada *
+                  </label>
+                  <input
+                    type="text"
+                    value={addVehicle}
+                    onChange={(e) => setAddVehicle(e.target.value)}
+                    required
+                    placeholder="Contoh: Toyota HiAce Premio Luxury (14 Seats)"
+                    className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-semibold bg-neutral-50 text-neutral-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1">
+                    Pilihan Foto Banner Utama
+                  </label>
+                  <select
+                    value={addHeroImage}
+                    onChange={(e) => setAddHeroImage(e.target.value)}
+                    className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-semibold bg-neutral-50 text-neutral-800"
+                  >
+                    <option value="/src/assets/images/dest_jogja_heritage_1793579234240.jpg">Foto Destinasi Jogja (Heritage & Candi)</option>
+                    <option value="/src/assets/images/dest_malang_bromo_1793579235303.jpg">Foto Destinasi Malang & Bromo</option>
+                    <option value="/src/assets/images/dest_bali_paradise_1793579235747.jpg">Foto Destinasi Bali Paradise</option>
+                    <option value="/src/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg">Foto Armada HiAce & Bus Pariwisata</option>
+                    <option value="/src/assets/images/hero_pergidiantar_travel_1793579233622.jpg">Foto Suasana Tour Wisatawan</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Highlights */}
+              <div>
+                <label className="block text-neutral-800 font-bold mb-1">
+                  Highlight Poin Tour (Satu poin per baris) *
+                </label>
+                <textarea
+                  rows={2}
+                  value={addHighlightsStr}
+                  onChange={(e) => setAddHighlightsStr(e.target.value)}
+                  placeholder="Masukkan keunggulan utama tour..."
+                  required
+                  className="w-full py-2 px-3 border border-neutral-300 rounded-xl bg-neutral-50 text-neutral-900 font-medium"
+                />
+              </div>
+
+              {/* Day-by-Day Itinerary Builder */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-black text-neutral-900 uppercase tracking-wider block">
+                      Susunan Jadwal & Itinerary Harian
+                    </span>
+                    <span className="text-[11px] text-neutral-500">
+                      Tentukan rute aktivitas untuk setiap hari perjalanan ({addDays.length} Hari).
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {addDays.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveDay}
+                        className="py-1 px-2.5 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 text-[11px] font-bold"
+                      >
+                        - Hapus Hari
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleAddDay}
+                      className="py-1 px-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-bold flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" /> Tambah Hari
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  {addDays.map((dayItem, dIdx) => (
+                    <div key={dIdx} className="p-3 bg-white rounded-xl border border-neutral-200 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-md bg-orange-100 text-orange-700 font-black text-xs flex items-center justify-center shrink-0">
+                          {dayItem.day}
+                        </span>
+                        <input
+                          type="text"
+                          value={dayItem.title}
+                          onChange={(e) => {
+                            const updated = [...addDays];
+                            updated[dIdx].title = e.target.value;
+                            setAddDays(updated);
+                          }}
+                          placeholder={`Judul Hari Ke-${dayItem.day}`}
+                          required
+                          className="flex-1 py-1 px-2 border border-neutral-300 rounded-lg font-bold text-xs"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={dayItem.description}
+                        onChange={(e) => {
+                          const updated = [...addDays];
+                          updated[dIdx].description = e.target.value;
+                          setAddDays(updated);
+                        }}
+                        placeholder="Deskripsi singkat rute hari ini"
+                        className="w-full py-1 px-2 border border-neutral-200 rounded-lg text-[11px] text-neutral-600 bg-neutral-50"
+                      />
+                      <div>
+                        <label className="text-[10px] font-bold text-neutral-500 block mb-0.5">
+                          Daftar Aktivitas & Spot Kunjungan (Satu per baris):
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={dayItem.activitiesStr}
+                          onChange={(e) => {
+                            const updated = [...addDays];
+                            updated[dIdx].activitiesStr = e.target.value;
+                            setAddDays(updated);
+                          }}
+                          required
+                          placeholder="Aktivitas 1&#10;Aktivitas 2&#10;Aktivitas 3"
+                          className="w-full py-1 px-2 border border-neutral-300 rounded-lg text-[11px] text-neutral-800"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tickets Inclusions */}
+              <div>
+                <label className="block text-neutral-800 font-bold mb-1">
+                  Tiket Wisata yang Tercover (Satu tiket per baris untuk Paket All In)
+                </label>
+                <textarea
+                  rows={2}
+                  value={addTicketsStr}
+                  onChange={(e) => setAddTicketsStr(e.target.value)}
+                  placeholder="Tiket Candi Borobudur&#10;Paket Jeep Merapi&#10;Tiket Obelix Hills"
+                  className="w-full py-2 px-3 border border-neutral-300 rounded-xl bg-neutral-50 text-neutral-900 font-medium"
+                />
+              </div>
+
+              {/* Actions Footer */}
+              <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-3 sticky bottom-0 bg-white">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="py-2.5 px-4 rounded-xl text-neutral-700 hover:bg-neutral-100 font-semibold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="py-2.5 px-6 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold flex items-center gap-2 shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Simpan & Publikasikan Paket Tour</span>
                 </button>
               </div>
             </form>

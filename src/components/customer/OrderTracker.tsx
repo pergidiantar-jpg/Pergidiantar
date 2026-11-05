@@ -20,8 +20,10 @@ import {
   FileText
 } from 'lucide-react';
 
+import { OrderTripItineraryTracker } from './OrderTripItineraryTracker';
+
 export const OrderTracker: React.FC = () => {
-  const { orders, setActiveOrderForPayment, setSelectedInvoiceForModal } = useApp();
+  const { orders, packages, setActiveOrderForPayment, setSelectedInvoiceForModal } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<BookingOrder | null>(orders[0] || null);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
@@ -145,7 +147,8 @@ export const OrderTracker: React.FC = () => {
         {/* Right column: Active Order Timeline & Full Details */}
         <div className="lg:col-span-2">
           {selectedOrder ? (
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-2xs overflow-hidden">
+            <>
+              <div className="bg-white rounded-2xl border border-neutral-200 shadow-2xs overflow-hidden">
               {/* Header card */}
               <div className="p-6 bg-neutral-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -390,6 +393,17 @@ export const OrderTracker: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Step-by-Step Interactive Trip Itinerary Timeline */}
+            <OrderTripItineraryTracker 
+              order={selectedOrder} 
+              pkg={
+                packages.find((p) => p.id === selectedOrder.packageId) ||
+                packages.find((p) => p.title.toLowerCase() === selectedOrder.packageTitle.toLowerCase()) ||
+                packages[0]
+              } 
+            />
+          </>
           ) : (
             <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center text-neutral-400">
               Pilih pesanan dari daftar di sebelah kiri untuk melihat rincian lengkap.
