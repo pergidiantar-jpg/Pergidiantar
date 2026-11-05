@@ -10,6 +10,7 @@ import { EmailOutboxView } from './EmailOutboxView';
 import { PackageManagement } from './PackageManagement';
 import { UserRegisterManagement } from './UserRegisterManagement';
 import { AdminPurgeCenter } from './AdminPurgeCenter';
+import { VendorPaymentManagement } from './VendorPaymentManagement';
 import { 
   ShoppingBag, 
   Car, 
@@ -17,14 +18,15 @@ import {
   TrendingUp, 
   MessageSquare, 
   ShieldCheck, 
-  ChevronRight,
-  Sparkles,
-  ExternalLink,
-  Mail,
-  Compass,
-  Bell,
-  Users,
-  Trash2
+  ChevronRight, 
+  Sparkles, 
+  ExternalLink, 
+  Mail, 
+  Compass, 
+  Bell, 
+  Users, 
+  Trash2,
+  CreditCard
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -35,6 +37,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'admin-users-registry', label: 'Data User & Register', icon: Users, desc: 'Database user & pendaftaran (Super Admin)' },
     { id: 'admin-packages', label: 'Kelola Paket & Harga', icon: Compass, desc: 'Edit harga & tujuan (Super Admin)' },
     { id: 'admin-inventory', label: 'Manajemen Inventaris', icon: Car, desc: 'Sinkronisasi armada & driver' },
+    { id: 'admin-vendor-payments', label: 'Pembayaran Vendor & Mitra', icon: CreditCard, desc: 'Driver, hotel, armada & tiket wisata' },
     { id: 'admin-reports', label: 'Laporan Bulanan Transaksi', icon: FileSpreadsheet, desc: 'Rekap omzet, ekspor PDF & CSV' },
     { id: 'admin-analytics', label: 'Analitik Penjualan Visual', icon: TrendingUp, desc: 'Tren pendapatan & performa' },
     { id: 'admin-chat', label: 'Chat Dukungan Tamu', icon: MessageSquare, desc: 'Live CS & template balasan' },
@@ -159,6 +162,7 @@ export const AdminDashboard: React.FC = () => {
           {activeTab === 'admin-users-registry' && <UserRegisterManagement />}
           {activeTab === 'admin-packages' && <PackageManagement />}
           {activeTab === 'admin-inventory' && <InventoryManagement />}
+          {activeTab === 'admin-vendor-payments' && <VendorPaymentManagement />}
           {activeTab === 'admin-reports' && <MonthlyReport />}
           {activeTab === 'admin-analytics' && <SalesAnalytics />}
           {activeTab === 'admin-chat' && <CustomerSupportChat />}

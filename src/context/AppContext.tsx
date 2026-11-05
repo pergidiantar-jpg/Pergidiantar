@@ -11,7 +11,8 @@ import {
   NotificationItem,
   PaymentStatus,
   OrderStatus,
-  MonthlyReportSummary
+  MonthlyReportSummary,
+  VendorPayment
 } from '../types/travel';
 import {
   INITIAL_PACKAGES,
@@ -21,7 +22,8 @@ import {
   INITIAL_ORDERS,
   INITIAL_USERS,
   INITIAL_CHATS,
-  INITIAL_NOTIFICATIONS
+  INITIAL_NOTIFICATIONS,
+  INITIAL_VENDOR_PAYMENTS
 } from '../data/initialData';
 import { 
   ADMIN_PRIMARY_EMAIL, 
@@ -121,6 +123,16 @@ interface AppContextType {
   setIsNotifOpen: (open: boolean) => void;
   openNotifications: () => void;
   closeNotifications: () => void;
+  // Customer Digital Invoice Modal
+  selectedInvoiceForModal: BookingOrder | null;
+  setSelectedInvoiceForModal: (order: BookingOrder | null) => void;
+  // Vendor Disbursements (Driver, Hotel, Kendaraan, Tempat Wisata)
+  vendorPayments: VendorPayment[];
+  addVendorPayment: (payment: Omit<VendorPayment, 'id' | 'paymentNumber' | 'createdAt'>) => void;
+  updateVendorPayment: (payment: VendorPayment) => void;
+  deleteVendorPayment: (paymentId: string) => void;
+  updateVendorPaymentStatus: (paymentId: string, status: 'selesai' | 'menunggu' | 'proses') => void;
+  purgeVendorPayments: () => void;
   // User Registry & Admin Management
   registeredCustomers: RegisteredCustomer[];
   adminAddUser: (data: { name: string; email: string; role: UserRole; phone: string; password?: string }) => Promise<void>;
@@ -153,6 +165,7 @@ const LOCAL_STORAGE_KEY_USERS = 'pergidiantar_users_v2';
 const LOCAL_STORAGE_KEY_STAFF_AUTH = 'pergidiantar_staff_session_v1';
 const LOCAL_STORAGE_KEY_PACKAGES = 'pergidiantar_packages_v1';
 const LOCAL_STORAGE_KEY_HOTELS = 'pergidiantar_hotels_v1';
+const LOCAL_STORAGE_KEY_VENDOR_PAYMENTS = 'pergidiantar_vendor_payments_v1';
 
 // Purge permanence flags
 const LOCAL_STORAGE_KEY_PURGED_ORDERS = 'pergidiantar_purged_orders';
@@ -162,6 +175,7 @@ const LOCAL_STORAGE_KEY_PURGED_CHATS = 'pergidiantar_purged_chats';
 const LOCAL_STORAGE_KEY_PURGED_NOTIFS = 'pergidiantar_purged_notifs';
 const LOCAL_STORAGE_KEY_PURGED_PACKAGES = 'pergidiantar_purged_packages';
 const LOCAL_STORAGE_KEY_PURGED_HOTELS = 'pergidiantar_purged_hotels';
+const LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS = 'pergidiantar_purged_vendor_payments';
 const LOCAL_STORAGE_KEY_LAST_ACTIVITY = 'pergidiantar_last_activity_timestamp';
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -185,6 +199,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [];
     }
   });
+
+  const [vendorPayments, setVendorPayments] = useState<VendorPayment[]>(() => {
+    try {
+      if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS) === 'true') return [];
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY_VENDOR_PAYMENTS);
+      return saved !== null ? JSON.parse(saved) : INITIAL_VENDOR_PAYMENTS;
+    } catch {
+      return [];
+    }
+  });
+
+  const [selectedInvoiceForModal, setSelectedInvoiceForModal] = useState<BookingOrder | null>(null);
 
   const [users, setUsers] = useState<UserProfile[]>(() => {
     try {
@@ -526,6 +552,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_HOTELS);
     }
   }, [hotels]);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY_VENDOR_PAYMENTS, JSON.stringify(vendorPayments));
+    if (vendorPayments.length === 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS, 'true');
+    } else {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS);
+    }
+  }, [vendorPayments]);
 
   useEffect(() => {
     saveAllRegisteredCustomers(registeredCustomers);
@@ -1017,6 +1052,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerPush('Hotel Mitra Dihapus', `Data hotel ${target?.name || ''} telah dihapus dari sistem.`, 'system');
   };
 
+  const addVendorPayment = (paymentData: Omit<VendorPayment, 'id' | 'paymentNumber' | 'createdAt'>) => {
+    const timestamp = Date.now();
+    const prefix = paymentData.category === 'driver' ? 'PAY-DRV' :
+      paymentData.category === 'hotel' ? 'PAY-HTL' :
+      paymentData.category === 'vehicle_vendor' ? 'PAY-VEH' : 'PAY-TKT';
+    const cleanNum = `${prefix}-${new Date().toISOString().substring(0, 7).replace('-', '')}-${String(vendorPayments.length + 1).padStart(3, '0')}`;
+
+    const newPayment: VendorPayment = {
+      ...paymentData,
+      id: `disb-${timestamp}`,
+      paymentNumber: cleanNum,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+    };
+    setVendorPayments((prev) => [newPayment, ...prev]);
+    triggerPush(
+      'Pembayaran Vendor Berhasil Dicatat',
+      `${newPayment.categoryLabel} sebesar Rp ${newPayment.amount.toLocaleString('id-ID')} ke ${newPayment.vendorName} berhasil dicatat.`,
+      'payment'
+    );
+  };
+
+  const updateVendorPayment = (payment: VendorPayment) => {
+    setVendorPayments((prev) => prev.map((p) => (p.id === payment.id ? payment : p)));
+    triggerPush(
+      'Pembayaran Vendor Diperbarui',
+      `Data pembayaran ${payment.paymentNumber} (${payment.vendorName}) berhasil diperbarui.`,
+      'payment'
+    );
+  };
+
+  const deleteVendorPayment = (paymentId: string) => {
+    const target = vendorPayments.find((p) => p.id === paymentId);
+    setVendorPayments((prev) => prev.filter((p) => p.id !== paymentId));
+    triggerPush(
+      'Pembayaran Vendor Dihapus',
+      `Data pembayaran ${target?.paymentNumber || ''} telah dihapus dari sistem.`,
+      'system'
+    );
+  };
+
+  const updateVendorPaymentStatus = (paymentId: string, status: 'selesai' | 'menunggu' | 'proses') => {
+    setVendorPayments((prev) =>
+      prev.map((p) => {
+        if (p.id === paymentId) {
+          return {
+            ...p,
+            status,
+            approvedBy: status === 'selesai' ? (staffUser?.name || 'Super Admin (Benisius)') : p.approvedBy
+          };
+        }
+        return p;
+      })
+    );
+    triggerPush(
+      'Status Pembayaran Diperbarui',
+      `Status pembayaran vendor #${paymentId} diperbarui menjadi: ${status.toUpperCase()}.`,
+      'payment'
+    );
+  };
+
   const sendChatMessage = (text: string, sender: 'customer' | 'cs_admin' = 'customer', packageContext?: string) => {
     if (!text.trim()) return;
 
@@ -1261,6 +1356,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerPush('Purge Hotel Mitra', 'Seluruh data hotel mitra dan kuota kamar telah dihapus secara permanen.', 'system');
   };
 
+  const purgeVendorPayments = () => {
+    setVendorPayments([]);
+    localStorage.setItem(LOCAL_STORAGE_KEY_VENDOR_PAYMENTS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS, 'true');
+    triggerPush('Purge Vendor Payments', 'Seluruh data pembayaran vendor telah dihapus permanen.', 'system');
+  };
+
   const purgeCustomers = () => {
     adminPurgeAllCustomers();
     setRegisteredCustomers([]);
@@ -1275,6 +1377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications([]);
     setPackages([]);
     setHotels([]);
+    setVendorPayments([]);
     setRegisteredCustomers([]);
 
     // Keep only Super Admin Benisius
@@ -1297,6 +1400,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES, 'true');
     localStorage.setItem(LOCAL_STORAGE_KEY_HOTELS, '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_HOTELS, 'true');
+    localStorage.setItem(LOCAL_STORAGE_KEY_VENDOR_PAYMENTS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS, 'true');
 
     adminPurgeAllCustomers();
     triggerPush('Factory Reset', 'RESET PABRIK TOTAL BERHASIL. Seluruh data portal telah dikosongkan permanen.', 'system');
@@ -1312,6 +1417,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fleet,
         drivers,
         hotels,
+        vendorPayments,
+        selectedInvoiceForModal,
+        setSelectedInvoiceForModal,
         users,
         currentUser,
         currentRole,
@@ -1346,6 +1454,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addHotel,
         updateHotel,
         deleteHotel,
+        addVendorPayment,
+        updateVendorPayment,
+        deleteVendorPayment,
+        updateVendorPaymentStatus,
+        purgeVendorPayments,
         sendChatMessage,
         markChatAsRead,
         markNotificationAsRead,

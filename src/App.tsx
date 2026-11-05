@@ -14,6 +14,8 @@ import { DestinationSlideshow } from './components/customer/DestinationSlideshow
 import { PackageCatalog } from './components/customer/PackageCatalog';
 import { InclusionsSection } from './components/customer/InclusionsSection';
 import { OrderTracker } from './components/customer/OrderTracker';
+import { CustomerInvoicesView } from './components/customer/CustomerInvoicesView';
+import { CustomerInvoiceModal } from './components/customer/CustomerInvoiceModal';
 import { PackageDetailModal } from './components/customer/PackageDetailModal';
 import { BookingModal } from './components/customer/BookingModal';
 import { PaymentModal } from './components/customer/PaymentModal';
@@ -34,6 +36,8 @@ const MainAppContent: React.FC = () => {
     customerUser,
     activeOrderForPayment, 
     setActiveOrderForPayment,
+    selectedInvoiceForModal,
+    setSelectedInvoiceForModal,
     openAuthModal,
     pendingBooking,
     setPendingBooking,
@@ -102,6 +106,8 @@ const MainAppContent: React.FC = () => {
           /* Logged In Customer Portal */
           activeTab === 'my-orders' ? (
             <OrderTracker />
+          ) : activeTab === 'customer-invoices' ? (
+            <CustomerInvoicesView />
           ) : (
             <>
               {/* Hero Banner with Inclusions */}
@@ -187,6 +193,17 @@ const MainAppContent: React.FC = () => {
         order={activeOrderForPayment}
         isOpen={!!activeOrderForPayment}
         onClose={() => setActiveOrderForPayment(null)}
+      />
+
+      {/* Customer Digital Invoice Modal */}
+      <CustomerInvoiceModal
+        order={selectedInvoiceForModal}
+        isOpen={!!selectedInvoiceForModal}
+        onClose={() => setSelectedInvoiceForModal(null)}
+        onPayOrder={(order: BookingOrder) => {
+          setSelectedInvoiceForModal(null);
+          setActiveOrderForPayment(order);
+        }}
       />
 
       {/* Auto-Logout Inactivity Security Modal */}

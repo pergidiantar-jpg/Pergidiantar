@@ -15,7 +15,8 @@ import {
   Lock,
   X,
   FileSpreadsheet,
-  Hotel
+  Hotel,
+  CreditCard
 } from 'lucide-react';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
@@ -29,6 +30,7 @@ export const AdminPurgeCenter: React.FC = () => {
     notifications, 
     packages, 
     registeredCustomers,
+    vendorPayments,
     currentRole,
     purgeOrders,
     purgeFleet,
@@ -38,6 +40,7 @@ export const AdminPurgeCenter: React.FC = () => {
     purgeNotifications,
     purgePackages,
     purgeCustomers,
+    purgeVendorPayments,
     purgeAllDataFactoryReset
   } = useApp();
 
@@ -441,6 +444,44 @@ export const AdminPurgeCenter: React.FC = () => {
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Hapus Semua Pelanggan ({registeredCustomers.length})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Category 8: Vendor & Partner Payments */}
+        <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-mono font-bold bg-neutral-100 text-neutral-800 px-2 py-0.5 rounded-md">
+                {vendorPayments.length} Transaksi
+              </span>
+            </div>
+            <h3 className="text-sm font-bold text-neutral-900">Pembayaran Vendor & Mitra</h3>
+            <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+              Seluruh data pembayaran driver, hotel mitra, vendor kendaraan, dan tiket tempat wisata.
+            </p>
+          </div>
+
+          <div className="pt-3 border-t border-neutral-100">
+            <button
+              onClick={() => setActivePurgeAction({
+                key: 'vendor-payments-all',
+                title: 'Hapus Seluruh Data Pembayaran Vendor & Mitra',
+                itemName: `${vendorPayments.length} Transaksi Pembayaran Vendor`,
+                message: 'Semua pencatatan pembayaran ke driver, hotel, vendor kendaraan, dan tempat wisata akan dihapus permanen.',
+                onExecute: () => {
+                  purgeVendorPayments();
+                  showSuccess('Seluruh data pembayaran vendor & mitra berhasil dihapus permanen.');
+                }
+              })}
+              disabled={vendorPayments.length === 0}
+              className="w-full py-2 px-3 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 rounded-xl transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Hapus Semua Pembayaran Vendor ({vendorPayments.length})</span>
             </button>
           </div>
         </div>

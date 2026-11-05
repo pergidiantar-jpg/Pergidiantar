@@ -142,6 +142,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
                   Lacak Pesanan Saya
                 </button>
                 <button
+                  onClick={() => setActiveTab('customer-invoices')}
+                  className={`hover:text-neutral-900 transition-colors whitespace-nowrap shrink-0 pb-0.5 ${
+                    activeTab === 'customer-invoices' ? 'text-orange-600 font-semibold border-b-2 border-orange-500' : ''
+                  }`}
+                >
+                  Invoice & Tagihan
+                </button>
+                <button
                   onClick={() => {
                     const el = document.getElementById('inclusions-info');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -404,6 +412,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
                 className="w-full text-left py-2 px-3 text-sm font-medium rounded-xl hover:bg-neutral-100"
               >
                 Lacak Pesanan Saya
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('customer-invoices');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left py-2 px-3 text-sm font-medium rounded-xl hover:bg-neutral-100"
+              >
+                Invoice & Tagihan
               </button>
               <button
                 onClick={() => {

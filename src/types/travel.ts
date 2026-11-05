@@ -193,3 +193,30 @@ export interface MonthlyReportSummary {
   allInOrdersCount: number;
   hematOrdersCount: number;
 }
+
+export type VendorCategory = 'driver' | 'hotel' | 'vehicle_vendor' | 'tourist_spot';
+
+export interface VendorPayment {
+  id: string;
+  paymentNumber: string;
+  category: VendorCategory;
+  categoryLabel: string;
+  vendorName: string;
+  recipientContact?: string;
+  relatedOrderId?: string;
+  relatedOrderNumber?: string;
+  packageName?: string;
+  destination?: string;
+  amount: number;
+  date: string;
+  status: 'selesai' | 'menunggu' | 'proses';
+  paymentMethod: 'transfer_bca' | 'transfer_mandiri' | 'transfer_bri' | 'kas_operasional' | 'qris';
+  paymentMethodLabel: string;
+  bankAccount?: string;
+  referenceNumber?: string;
+  description: string;
+  createdAt: string;
+  approvedBy?: string;
+  invoiceUrl?: string;
+}
+

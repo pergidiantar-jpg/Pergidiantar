@@ -16,11 +16,12 @@ import {
   ChevronRight,
   ShieldCheck,
   Download,
-  FileCheck
+  FileCheck,
+  FileText
 } from 'lucide-react';
 
 export const OrderTracker: React.FC = () => {
-  const { orders, setActiveOrderForPayment } = useApp();
+  const { orders, setActiveOrderForPayment, setSelectedInvoiceForModal } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<BookingOrder | null>(orders[0] || null);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
@@ -348,6 +349,15 @@ export const OrderTracker: React.FC = () => {
                         <span>Bayar Sekarang</span>
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedInvoiceForModal(selectedOrder)}
+                      className="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-xs"
+                      title="Buka Invoice Digital Interaktif"
+                    >
+                      <FileText className="w-4 h-4 text-white" />
+                      <span>Lihat Invoice</span>
+                    </button>
                     <button
                       type="button"
                       onClick={handleDownloadInvoice}
