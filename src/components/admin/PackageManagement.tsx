@@ -160,7 +160,7 @@ export const PackageManagement: React.FC = () => {
                   <span className="text-sm font-black text-blue-700 font-mono">
                     Rp {pkg.priceHematPerPax.toLocaleString('id-ID')}
                   </span>
-                  <span className="text-[10px] text-neutral-400 block">/ pax</span>
+                  <span className="text-[10px] text-neutral-500 block">/ pax (kendaraan, driver, bbm, parkir)</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-orange-600 font-bold block uppercase">
@@ -169,7 +169,7 @@ export const PackageManagement: React.FC = () => {
                   <span className="text-sm font-black text-orange-600 font-mono">
                     Rp {pkg.priceAllInPerPax.toLocaleString('id-ID')}
                   </span>
-                  <span className="text-[10px] text-neutral-400 block">/ pax (All In)</span>
+                  <span className="text-[10px] text-orange-700/80 block">/ pax (lengkap tiket, hotel, makan)</span>
                 </div>
               </div>
 
@@ -306,6 +306,9 @@ export const PackageManagement: React.FC = () => {
                     <label className="block text-neutral-700 font-bold mb-1">
                       Harga Paket Hemat (Rp/pax) *
                     </label>
+                    <span className="text-[10px] text-blue-700 block mb-1 font-medium">
+                      Inklusi: (kendaraan, driver, bbm, parkir)
+                    </span>
                     <input
                       type="number"
                       step={50000}
@@ -322,8 +325,11 @@ export const PackageManagement: React.FC = () => {
 
                   <div>
                     <label className="block text-neutral-700 font-bold mb-1">
-                      Harga Paket All In VIP (Rp/pax) *
+                      Harga Paket All In (Rp/pax) *
                     </label>
+                    <span className="text-[10px] text-orange-700 block mb-1 font-medium">
+                      Inklusi: (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)
+                    </span>
                     <input
                       type="number"
                       step={50000}

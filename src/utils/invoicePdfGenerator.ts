@@ -147,7 +147,14 @@ export const generateBookingInvoicePdf = (order: BookingOrder) => {
 
   let rightY = currentY + 14;
   rightY += renderRow('Paket Wisata:', `${order.packageTitle} (${order.destinationLabel})`, rightX + 4, rightY);
-  rightY += renderRow('Tipe Penawaran:', order.tier === 'all_in' ? 'All In VIP (Hotel, Makan, Tiket)' : 'Paket Hemat (Ekonomis)', rightX + 4, rightY);
+  rightY += renderRow(
+    'Tipe Penawaran:',
+    order.tier === 'all_in'
+      ? 'Paket All In (kendaraan, driver, bbm, parkir, tiket, hotel, makan)'
+      : 'Paket Hemat (kendaraan, driver, bbm, parkir)',
+    rightX + 4,
+    rightY
+  );
   rightY += renderRow('Jadwal Tour:', `${order.tourStartDate} s/d ${order.tourEndDate}`, rightX + 4, rightY);
   rightY += renderRow('Jumlah Peserta:', `${order.paxCount} Orang (Pax)`, rightX + 4, rightY);
   
@@ -185,7 +192,7 @@ export const generateBookingInvoicePdf = (order: BookingOrder) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(15, 23, 42);
-  doc.text(`Paket ${order.packageTitle} (${order.tier === 'all_in' ? 'All In VIP' : 'Paket Hemat'})`, margin + 4, currentY + 5.5);
+  doc.text(`Paket ${order.packageTitle} (${order.tier === 'all_in' ? 'Paket All In' : 'Paket Hemat'})`, margin + 4, currentY + 5.5);
   doc.setFont('helvetica', 'normal');
   doc.text(`${order.paxCount} Pax`, margin + 105, currentY + 5.5, { align: 'center' });
   doc.text(`Rp ${baseRatePerPax.toLocaleString('id-ID')}`, margin + 140, currentY + 5.5, { align: 'right' });
@@ -262,14 +269,24 @@ export const generateBookingInvoicePdf = (order: BookingOrder) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(30, 41, 59);
-  doc.text('FASILITAS PASTI TERMASUK:', margin + 4, currentY + 6);
+  doc.text(
+    order.tier === 'all_in' ? 'FASILITAS PAKET ALL IN TERMASUK:' : 'FASILITAS PAKET HEMAT TERMASUK:',
+    margin + 4,
+    currentY + 6
+  );
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
-  doc.text('• Transportasi: Kendaraan AC dingin berlisensi, Supir ramah berpengalaman, BBM & Parkir seluruh destinasi.', margin + 4, currentY + 11);
-  doc.text('• Akomodasi: Hotel Bintang sesuai pilihan paket, Istirahat nyaman, WiFi & fasilitas terawat.', margin + 4, currentY + 15.5);
-  doc.text('• Layanan Tamu: Makan teratur & higienis, Air mineral botol setiap hari & Tiket masuk seluruh objek wisata resmi.', margin + 4, currentY + 20);
+  if (order.tier === 'all_in') {
+    doc.text('• Fasilitas Lengkap: Kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel.', margin + 4, currentY + 11);
+    doc.text('• Akomodasi: Hotel mitra bintang terverifikasi, kamar bersih, shower hangat & WiFi lancar.', margin + 4, currentY + 15.5);
+    doc.text('• Konsumsi & Wisata: Makan higienis terjadwal, air mineral harian & seluruh tiket masuk objek wisata.', margin + 4, currentY + 20);
+  } else {
+    doc.text('• Transportasi: Kendaraan, driver, bbm, parkir tercover penuh untuk seluruh rute perjalanan.', margin + 4, currentY + 11);
+    doc.text('• Fleksibilitas Budget: Hotel, makan, dan tiket masuk wisata dikelola mandiri sesuai kebutuhan tamu.', margin + 4, currentY + 15.5);
+    doc.text('• Supir Profesional: Pengemudi ramah dan paham rute wisata terbaik siap mendampingi Anda.', margin + 4, currentY + 20);
+  }
 
   // 6. Signatures and Official Company Seal
   currentY += 28;

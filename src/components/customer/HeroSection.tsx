@@ -52,7 +52,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             Liburan Nyaman, Berkesan & Bebas Ribet Bersama <span className="text-white">PERGI</span><span className="text-orange-400">DIANTAR</span>
           </h1>
           <p className="mt-4 text-base sm:text-lg text-neutral-300 leading-relaxed">
-            Menghubungkan Anda langsung dengan armada dan akomodasi terbaik. Pilihan paket <strong>All In</strong> dan <strong>Paket Hemat</strong> untuk destinasi unggulan <strong>Jogja, Malang, dan Bali</strong>.
+            Pilihan <strong>Paket Hemat</strong> (kendaraan, driver, bbm, parkir) dan <strong>Paket All In</strong> (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel) untuk destinasi unggulan <strong>Jogja, Malang, dan Bali</strong>.
           </p>
         </div>
 

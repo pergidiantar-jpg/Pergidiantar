@@ -30,7 +30,7 @@ export const CustomerSupportChat: React.FC = () => {
   const cannedTemplates = [
     {
       title: 'Template Family Gathering',
-      text: 'Halo Bapak/Ibu! Untuk Family Gathering Jogja/Malang/Bali, fasilitas All In kami sudah mencakup Medium/Big Bus AC, driver ramah, hotel bintang terverifikasi, makan 3x sehari prasmanan + Gala Dinner, serta tiket seluruh destinasi. Boleh kami tahu tanggal rencana dan perkiraan jumlah anggota keluarga?'
+      text: 'Halo Bapak/Ibu! Untuk tour Jogja/Malang/Bali, Paket All In kami mencakup: kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel. Tersedia pula Paket Hemat (kendaraan, driver, bbm, parkir). Boleh kami tahu tanggal rencana dan perkiraan jumlah anggota rombongan?'
     },
     {
       title: 'Template Alokasi Bus & HiAce',

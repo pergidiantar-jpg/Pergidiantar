@@ -162,7 +162,7 @@ export const OrderTracker: React.FC = () => {
                     {selectedOrder.packageTitle}
                   </h2>
                   <span className="text-xs text-neutral-300 mt-1 block">
-                    {selectedOrder.destinationLabel} · {selectedOrder.paxCount} Peserta ({selectedOrder.tier === 'all_in' ? 'All In VIP' : 'Paket Hemat'})
+                    {selectedOrder.destinationLabel} · {selectedOrder.paxCount} Peserta ({selectedOrder.tier === 'all_in' ? 'Paket All In' : 'Paket Hemat'})
                   </span>
                 </div>
 
@@ -290,10 +290,12 @@ export const OrderTracker: React.FC = () => {
                   {/* Hotel info */}
                   <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 text-xs">
                     <span className="text-[10px] text-neutral-400 uppercase font-bold block">
-                      Akomodasi Hotel Mitra
+                      Akomodasi Hotel & Konsumsi
                     </span>
                     <span className="font-semibold text-neutral-800">
-                      {selectedOrder.hotelAllotment || 'Hotel Bintang Sesuai Paket Terpilih (Konfirmasi Check-in Disiapkan)'}
+                      {selectedOrder.tier === 'all_in'
+                        ? (selectedOrder.hotelAllotment || 'Hotel Bintang Mitra (Makan 1x di hotel dan 2x/ hari di luar hotel)')
+                        : 'Penginapan & Makan Mandiri (Paket Hemat fokus pada kendaraan, driver, bbm, parkir)'}
                     </span>
                   </div>
                 </div>

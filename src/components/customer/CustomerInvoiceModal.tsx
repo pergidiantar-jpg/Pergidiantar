@@ -255,10 +255,12 @@ export const CustomerInvoiceModal: React.FC<CustomerInvoiceModalProps> = ({
                 <tr>
                   <td className="py-3.5 px-4">
                     <span className="font-bold text-neutral-900 block">
-                      Paket Wisata {order.packageTitle} ({order.tier === 'all_in' ? 'All In VIP' : 'Paket Hemat'})
+                      Paket Wisata {order.packageTitle} ({order.tier === 'all_in' ? 'Paket All In' : 'Paket Hemat'})
                     </span>
                     <span className="text-[11px] text-neutral-500 block mt-0.5">
-                      Termasuk transportasi, bbm, supir, tiket seluruh destinasi wisata, dan akomodasi hotel
+                      {order.tier === 'all_in'
+                        ? 'Paket All In (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)'
+                        : 'Paket Hemat (kendaraan, driver, bbm, parkir)'}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-center font-bold text-neutral-800">

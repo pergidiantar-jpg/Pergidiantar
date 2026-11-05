@@ -91,42 +91,71 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
         {/* Modal Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8">
           {/* Tier Switcher & Pricing */}
-          <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block">
-                Pilih Jenis Penawaran
-              </span>
-              <div className="flex items-center gap-2 mt-2">
-                <button
-                  onClick={() => setSelectedTier('all_in')}
-                  className={`py-2 px-4 rounded-xl text-xs font-bold transition-all border ${
-                    isAllIn
-                      ? 'bg-orange-500 text-white border-orange-500 shadow-xs'
-                      : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
-                  }`}
-                >
-                  All In (Lengkap & VIP)
-                </button>
-                <button
-                  onClick={() => setSelectedTier('paket_hemat')}
-                  className={`py-2 px-4 rounded-xl text-xs font-bold transition-all border ${
-                    !isAllIn
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                      : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
-                  }`}
-                >
-                  Paket Hemat (Ekonomis)
-                </button>
+          <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block">
+                  Pilih Jenis Penawaran
+                </span>
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    onClick={() => setSelectedTier('all_in')}
+                    className={`py-2 px-4 rounded-xl text-xs font-bold transition-all border ${
+                      isAllIn
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-xs'
+                        : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
+                    }`}
+                  >
+                    Paket All In
+                  </button>
+                  <button
+                    onClick={() => setSelectedTier('paket_hemat')}
+                    className={`py-2 px-4 rounded-xl text-xs font-bold transition-all border ${
+                      !isAllIn
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
+                    }`}
+                  >
+                    Paket Hemat
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-left sm:text-right w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-neutral-200">
+                <span className="text-xs text-neutral-500 block">Biaya Investasi</span>
+                <div className="text-2xl font-black text-emerald-700 font-mono" data-tabular>
+                  Rp {price.toLocaleString('id-ID')}
+                  <span className="text-xs font-normal text-neutral-600"> / orang</span>
+                </div>
+                <span className="text-[11px] text-neutral-500 block mt-0.5">
+                  {isAllIn
+                    ? 'All In: kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel'
+                    : 'Paket Hemat: kendaraan, driver, bbm, parkir'}
+                </span>
               </div>
             </div>
 
-            <div className="text-right sm:text-right w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-neutral-200">
-              <span className="text-xs text-neutral-500 block">Biaya Investasi</span>
-              <div className="text-2xl font-black text-emerald-700 font-mono" data-tabular>
-                Rp {price.toLocaleString('id-ID')}
-                <span className="text-xs font-normal text-neutral-600"> / orang</span>
+            {/* Prominent Tier Inclusion Description Box */}
+            <div className={`mt-4 p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+              isAllIn 
+                ? 'bg-orange-50/90 border-orange-200 text-orange-950' 
+                : 'bg-blue-50/90 border-blue-200 text-blue-950'
+            }`}>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider block opacity-75">
+                  {isAllIn ? 'KETERANGAN PAKET ALL IN' : 'KETERANGAN PAKET HEMAT'}
+                </span>
+                <p className="text-xs font-bold mt-0.5 leading-relaxed">
+                  {isAllIn 
+                    ? '(kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)' 
+                    : '(kendaraan, driver, bbm, parkir)'}
+                </p>
               </div>
-              <span className="text-[11px] text-neutral-400">Termasuk seluruh tiket, hotel & armada</span>
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase whitespace-nowrap self-start sm:self-auto ${
+                isAllIn ? 'bg-orange-200/80 text-orange-800' : 'bg-blue-200/80 text-blue-800'
+              }`}>
+                {isAllIn ? 'All In VIP Terpadu' : 'Hemat Transportasi'}
+              </span>
             </div>
           </div>
 
@@ -134,16 +163,16 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
           <div>
             <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider mb-4 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              Fasilitas Wajib Dalam Seluruh Paket
+              {isAllIn ? 'Fasilitas Termasuk Dalam Paket All In' : 'Fasilitas Termasuk Dalam Paket Hemat'}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 rounded-xl border border-neutral-200 bg-white">
                 <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 mb-1.5">
                   <Car className="w-4 h-4 text-orange-600" />
-                  <span>Transportasi (Armada, Driver, BBM, Parkir)</span>
+                  <span>Transportasi (Kendaraan, Driver, BBM, Parkir)</span>
                 </div>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  {packageData.included.transport}
+                  {packageData.included.transport || 'Unit pariwisata ber-AC dingin, supir berpengalaman, bahan bakar (BBM) penuh dan retribusi parkir seluruh titik singgah.'}
                 </p>
                 <div className="mt-2 pt-2 border-t border-neutral-100 flex flex-wrap items-center gap-1.5">
                   <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Pilihan Armada:</span>
@@ -153,45 +182,51 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl border border-neutral-200 bg-white">
+              <div className={`p-4 rounded-xl border ${isAllIn ? 'border-neutral-200 bg-white' : 'border-neutral-200/70 bg-neutral-50/70 opacity-75'}`}>
                 <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 mb-1.5">
                   <Hotel className="w-4 h-4 text-blue-600" />
-                  <span>Akomodasi Hotel & Istirahat</span>
+                  <span>Akomodasi Hotel</span>
                 </div>
                 <p className="text-xs text-neutral-600 leading-relaxed">
                   {isAllIn 
-                    ? 'Hotel Bintang 3-4 (Twin/Triple Share), Kamar bersih, AC dingin, kolam renang, shower hangat, WiFi cepat.' 
-                    : 'Hotel Nyaman Pilihan Bintang 2-3 / Homestay Terawat (Twin/Triple Share) lokasi strategis dekat pusat kota.'
+                    ? 'Hotel Bintang 3-4 Mitra Pilihan (Twin/Triple Share), Kamar bersih, AC dingin, kolam renang, shower hangat, WiFi cepat.' 
+                    : 'Tidak Termasuk dalam Paket Hemat. Tamu dapat memilih dan memesan penginapan secara mandiri sesuai preferensi anggaran.'
                   }
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl border border-neutral-200 bg-white">
+              <div className={`p-4 rounded-xl border ${isAllIn ? 'border-neutral-200 bg-white' : 'border-neutral-200/70 bg-neutral-50/70 opacity-75'}`}>
                 <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 mb-1.5">
                   <Utensils className="w-4 h-4 text-amber-600" />
-                  <span>Konsumsi & Wisata Kuliner</span>
+                  <span>Konsumsi & Makan</span>
                 </div>
                 <p className="text-xs text-neutral-600 leading-relaxed">
                   {isAllIn
-                    ? 'Makan teratur 3x sehari (Sarapan buffet hotel, Makan Siang & Malam di restoran khas favorit lokal) + Snack Box kedatangan & air mineral botol 600ml harian.'
-                    : 'Makan 2x sehari (Sarapan hotel & Makan Siang di restoran lokal) + air mineral harian terjamin higienis.'
+                    ? 'Makan 1x di hotel dan 2x/ hari di luar hotel (restoran lokal khas) + snack box kedatangan & air mineral botol harian.'
+                    : 'Tidak Termasuk dalam Paket Hemat. Tamu bebas berwisata kuliner secara mandiri selama perjalanan berlangsung.'
                   }
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl border border-neutral-200 bg-white">
+              <div className={`p-4 rounded-xl border ${isAllIn ? 'border-neutral-200 bg-white' : 'border-neutral-200/70 bg-neutral-50/70 opacity-75'}`}>
                 <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 mb-1.5">
                   <Ticket className="w-4 h-4 text-purple-600" />
-                  <span>Tiket Wisata Lengkap</span>
+                  <span>Tiket Wisata</span>
                 </div>
-                <ul className="text-xs text-neutral-600 space-y-1">
-                  {packageData.included.tickets.map((t, idx) => (
-                    <li key={idx} className="flex items-center gap-1.5">
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span>{t}</span>
-                    </li>
-                  ))}
-                </ul>
+                {isAllIn ? (
+                  <ul className="text-xs text-neutral-600 space-y-1">
+                    {packageData.included.tickets.map((t, idx) => (
+                      <li key={idx} className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>{t}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-neutral-600 leading-relaxed">
+                    Tidak Termasuk dalam Paket Hemat. Tiket masuk objek wisata dibeli mandiri di loket destinasi tujuan.
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -78,7 +78,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
             Pilihan Paket Wisata Lengkap & Terpercaya
           </h2>
           <p className="text-sm text-neutral-600 mt-1 max-w-2xl">
-            Tersedia pilihan <strong>All In</strong> (Fasilitas VIP & Konsumsi Penuh) dan <strong>Paket Hemat</strong> (Budget-Friendly). Seluruh penawaran sudah mencakup unit transportasi, supir, BBM, hotel, makan dan tiket wisata.
+            Tersedia pilihan <strong>Paket Hemat</strong> (kendaraan, driver, bbm, parkir) dan <strong>Paket All In</strong> (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel).
           </p>
         </div>
 
@@ -242,32 +242,76 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
                     </div>
                   </div>
 
-                  {/* All Included Summary Box - transport, hotel, makan, tiket */}
-                  <div className="mt-4 space-y-2 text-xs text-neutral-600 border-t border-neutral-100 pt-3 flex-1">
-                    <div className="flex items-start gap-2">
-                      <Car className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
-                      <span className="line-clamp-1">
-                        <strong>Transport:</strong> {pkg.included.transport.split(',')[0]} (Driver, BBM, Parkir & Tol)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Hotel className="w-3.5 h-3.5 text-orange-500 mt-0.5 shrink-0" />
-                      <span className="line-clamp-1">
-                        <strong>Akomodasi:</strong> {isAllIn ? 'Hotel Bintang 3-4 Pilihan' : 'Hotel Nyaman Pilihan Bintang 2-3'}
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Utensils className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
-                      <span className="line-clamp-1">
-                        <strong>Makan:</strong> {isAllIn ? '3x Sehari Lengkap' : '2x Sehari Higienis'} Resto Khas
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Ticket className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
-                      <span className="line-clamp-1">
-                        <strong>Tiket Wisata:</strong> {pkg.included.tickets.length} Lokasi Tercover
-                      </span>
-                    </div>
+                  {/* Inclusions Detail Box based on Selected Tier */}
+                  <div className="mt-4 space-y-2 text-xs border-t border-neutral-100 pt-3 flex-1">
+                    {isAllIn ? (
+                      <>
+                        <div className="p-2 bg-orange-50/70 rounded-xl border border-orange-200/80 mb-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-orange-700 block">
+                            Fasilitas Paket All In
+                          </span>
+                          <span className="text-[11px] font-semibold text-neutral-800 block mt-0.5 leading-snug">
+                            Kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2 text-neutral-600">
+                          <Car className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
+                          <span className="line-clamp-1">
+                            <strong>Kendaraan:</strong> Driver, BBM & Parkir Include
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2 text-neutral-600">
+                          <Hotel className="w-3.5 h-3.5 text-orange-500 mt-0.5 shrink-0" />
+                          <span className="line-clamp-1">
+                            <strong>Hotel:</strong> Mitra Bintang 3-4 Pilihan
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2 text-neutral-600">
+                          <Utensils className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+                          <span className="line-clamp-1">
+                            <strong>Makan:</strong> 1x di Hotel & 2x/hari di Luar Hotel
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2 text-neutral-600">
+                          <Ticket className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                          <span className="line-clamp-1">
+                            <strong>Tiket Wisata:</strong> {pkg.included.tickets.length} Lokasi Tercover Penuh
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-2 bg-blue-50/70 rounded-xl border border-blue-200/80 mb-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 block">
+                            Fasilitas Paket Hemat
+                          </span>
+                          <span className="text-[11px] font-semibold text-neutral-800 block mt-0.5 leading-snug">
+                            Kendaraan, driver, bbm, parkir
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2 text-neutral-600">
+                          <Car className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
+                          <span className="line-clamp-1">
+                            <strong>Kendaraan:</strong> Unit Pariwisata AC Terawat
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2 text-neutral-600">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                          <span className="line-clamp-1">
+                            <strong>Driver & BBM:</strong> Supir Ramah & Bensin Full
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2 text-neutral-600">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                          <span className="line-clamp-1">
+                            <strong>Parkir:</strong> Bebas Retribusi Seluruh Tempat
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-neutral-400 italic pt-1">
+                          *Hotel, tiket wisata & makan mandiri (opsional fleksibel)
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Action Buttons */}

@@ -49,9 +49,9 @@ export const INITIAL_PACKAGES: TourPackage[] = [
       }
     ],
     included: {
-      transport: 'Unit HiAce Premio / Private AC, Driver ramah, BBM full, Parkir semua lokasi, Biaya Tol',
-      accommodation: 'Hotel Bintang 3-4 (All In) atau Hotel Nyaman Pilihan Bintang 2-3 (Hemat)',
-      meals: 'Makan sesuai jadwal (3x sehari All In, 2x sehari Hemat) di restoran lokal khas',
+      transport: 'Kendaraan, driver, bbm, parkir (Termasuk Paket Hemat & All In)',
+      accommodation: 'Hotel Bintang 3-4 Mitra Pilihan (Termasuk Paket All In)',
+      meals: 'Makan 1x di hotel dan 2x/ hari di luar hotel (Termasuk Paket All In)',
       tickets: [
         'Tiket Masuk Candi Prambanan',
         'Tiket Masuk Keraton & Tamansari',
@@ -126,9 +126,9 @@ export const INITIAL_PACKAGES: TourPackage[] = [
       }
     ],
     included: {
-      transport: 'Toyota HiAce Premio Luxury, Driver profesional sabar, BBM, Tol & Parkir tercover',
-      accommodation: '2 Malam di Hotel Bintang 4 (All In) / Hotel Bintang 3 Nyaman (Hemat)',
-      meals: 'Makan teratur (Pagi, Siang, Malam All In / Siang Malam Hemat) di restoran ramah keluarga',
+      transport: 'Kendaraan, driver, bbm, parkir (Termasuk Paket Hemat & All In)',
+      accommodation: '2 Malam di Hotel Bintang 4 Mitra (Termasuk Paket All In)',
+      meals: 'Makan 1x di hotel dan 2x/ hari di luar hotel (Termasuk Paket All In)',
       tickets: [
         'Tiket Candi Borobudur / Prambanan',
         'Paket Jeep Merapi Family',

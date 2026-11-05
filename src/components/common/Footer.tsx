@@ -24,7 +24,7 @@ export const Footer: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-neutral-400 leading-relaxed">
-              Penyedia jasa perjalanan wisata terpercaya yang memfasilitasi kebutuhan tour Jogja, Malang, dan Bali. Paket All In & Hemat dengan jaminan unit armada prima.
+              Penyedia jasa perjalanan wisata terpercaya Jogja, Malang, dan Bali. Pilihan Paket Hemat (kendaraan, driver, bbm, parkir) dan Paket All In (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel).
             </p>
             <div className="flex items-center gap-2 text-xs text-blue-400 font-medium pt-1">
               <ShieldCheck className="w-4 h-4 text-orange-500" />

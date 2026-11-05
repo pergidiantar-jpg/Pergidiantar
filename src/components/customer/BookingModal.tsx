@@ -191,7 +191,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       paymentMethod: 'qris' as const,
       paymentStatus: 'pending' as const,
       orderStatus: 'baru' as const,
-      notes: `Pemesanan online melalui website PERGIDIANTAR. Pilihan paket: ${tier === 'all_in' ? 'All In VIP' : 'Paket Hemat'}. Armada pilihan: ${selectedFleet.name} (${selectedFleet.model}) [Biaya: ${vehicleUpgradePerPax === 0 ? 'Termasuk Standar' : `+Rp ${vehicleUpgradePerPax.toLocaleString('id-ID')}/pax`}].`
+      notes: `Pemesanan online melalui website PERGIDIANTAR. Pilihan paket: ${tier === 'all_in' ? 'Paket All In (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)' : 'Paket Hemat (kendaraan, driver, bbm, parkir)'}. Armada pilihan: ${selectedFleet.name} (${selectedFleet.model}) [Biaya: ${vehicleUpgradePerPax === 0 ? 'Termasuk Standar' : `+Rp ${vehicleUpgradePerPax.toLocaleString('id-ID')}/pax`}].`
     };
 
     const createdOrder = createBooking(newOrderData);
@@ -250,8 +250,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <label className="text-xs font-bold text-neutral-800 block">
                   Pilihan Fasilitas Paket
                 </label>
-                <span className="text-[11px] text-neutral-500">
-                  Seluruh paket mencakup Transport (armada+driver+bbm+parkir), Hotel & Makan, serta Tiket.
+                <span className="text-[11px] text-neutral-600 block mt-0.5">
+                  {tier === 'all_in'
+                    ? 'Paket All In (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)'
+                    : 'Paket Hemat (kendaraan, driver, bbm, parkir)'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -264,7 +266,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       : 'bg-white text-neutral-700 border-neutral-300'
                   }`}
                 >
-                  All In (VIP)
+                  Paket All In
                 </button>
                 <button
                   type="button"
@@ -591,7 +593,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-blue-700 font-medium">
-              Termasuk armada {selectedFleet.name}, bbm & parkir, supir berlisensi, akomodasi hotel, makan teratur & tiket wisata.
+              {tier === 'all_in'
+                ? `Termasuk Paket All In: armada ${selectedFleet.name}, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel.`
+                : `Termasuk Paket Hemat: armada ${selectedFleet.name}, driver, bbm, parkir.`}
             </p>
           </div>
 

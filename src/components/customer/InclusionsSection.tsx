@@ -40,7 +40,7 @@ export const InclusionsSection: React.FC = () => {
   const faqs = [
     {
       q: 'Apa perbedaan mendasar antara Paket All In dan Paket Hemat?',
-      a: 'Paket All In dirancang untuk kenyamanan tanpa beban tambahan: hotel bintang 3-4 pilihan, makan 3x sehari lengkap di restoran khas terfavorit, tiket wisata prioritas tanpa antre, snack & dokumentasi. Sedangkan Paket Hemat dirancang hemat budget: hotel bintang 2-3 / homestay bersih, makan 2x sehari, dan tiket wisata reguler. Keduanya sama-sama sudah mencakup armada transportasi, supir, BBM, parkir dan tol.'
+      a: 'Paket All In mencakup fasilitas lengkap: kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel untuk liburan tanpa repot. Sedangkan Paket Hemat mencakup: kendaraan, driver, bbm, parkir (fokus transportasi prima, sementara penginapan, makan, dan tiket wisata dapat Anda kelola secara mandiri sesuai preferensi anggaran).'
     },
     {
       q: 'Bagaimana sistem pembayaran terintegrasi di PERGIDIANTAR?',
@@ -66,10 +66,10 @@ export const InclusionsSection: React.FC = () => {
               STANDAR LAYANAN PERGIDIANTAR
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 mt-1">
-              Seluruh Paket Penawaran Sudah Termasuk
+              Fasilitas Paket All In & Paket Hemat
             </h2>
             <p className="text-xs sm:text-sm text-neutral-600 mt-2">
-              Tidak ada biaya tersembunyi. Dari penjemputan awal hingga kepulangan, seluruh kebutuhan perjalanan Anda telah disiapkan secara profesional.
+              Paket Hemat mencakup <strong>(kendaraan, driver, bbm, parkir)</strong>, sedangkan Paket All In mencakup <strong>(kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)</strong>.
             </p>
           </div>
 
@@ -79,10 +79,10 @@ export const InclusionsSection: React.FC = () => {
                 <Car className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-neutral-900">
-                1. Transportasi Penuh
+                1. Transportasi (Hemat & All In)
               </h3>
               <p className="text-xs text-neutral-600 leading-relaxed">
-                Unit armada pariwisata ber-AC dingin milik sendiri, supir ramah dan berlisensi, konsumsi bahan bakar (BBM), serta seluruh biaya retribusi tol dan parkir.
+                Kedua paket selalu mencakup armada kendaraan pariwisata ber-AC dingin, supir berlisensi, konsumsi bahan bakar (BBM), serta retribusi tol dan parkir seluruh titik singgah.
               </p>
             </div>
 
@@ -91,22 +91,22 @@ export const InclusionsSection: React.FC = () => {
                 <Hotel className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-neutral-900">
-                2. Akomodasi & Konsumsi
+                2. Akomodasi Hotel & Makan (All In)
               </h3>
               <p className="text-xs text-neutral-600 leading-relaxed">
-                Pilihan hotel mitra terverifikasi bintang 3-4 (All In) atau hotel nyaman pilihan (Hemat) dengan fasilitas lengkap dan makan sesuai jadwal di restoran khas lokal.
+                Khusus Paket All In: Pilihan hotel mitra terverifikasi bintang 3-4 yang nyaman, serta konsumsi teratur (makan 1x di hotel dan 2x/ hari di luar hotel di restoran khas lokal).
               </p>
             </div>
 
             <div className="bg-white rounded-2xl p-6 border border-neutral-200 shadow-2xs space-y-3">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
                 <Ticket className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-neutral-900">
-                3. Tiket Wisata Lengkap
+                3. Tiket Wisata Tercover (All In)
               </h3>
               <p className="text-xs text-neutral-600 leading-relaxed">
-                Tiket masuk seluruh objek wisata unggulan (Candi Prambanan/Borobudur, Jeep Merapi/Bromo, Tari Kecak Uluwatu, Desa Penglipuran) tanpa perlu repot antre tiket.
+                Khusus Paket All In: Tiket masuk seluruh objek wisata unggulan (Candi Prambanan/Borobudur, Jeep Merapi/Bromo, dsb) langsung disiapkan tanpa perlu repot antre tiket di lokasi.
               </p>
             </div>
           </div>
