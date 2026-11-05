@@ -83,6 +83,9 @@ interface AppContextType {
   updateDriver: (driver: DriverCrew) => void;
   updatePackage: (pkg: TourPackage) => void;
   deletePackage: (pkgId: string) => void;
+  addHotel: (hotel: Omit<HotelPartner, 'id'>) => void;
+  updateHotel: (hotel: HotelPartner) => void;
+  deleteHotel: (hotelId: string) => void;
   sendChatMessage: (text: string, sender?: 'customer' | 'cs_admin', packageContext?: string) => void;
   markChatAsRead: (id: string) => void;
   markNotificationAsRead: (id: string) => void;
@@ -131,6 +134,7 @@ interface AppContextType {
   purgeChats: () => void;
   purgeNotifications: () => void;
   purgePackages: () => void;
+  purgeHotels: () => void;
   purgeCustomers: () => void;
   purgeAllDataFactoryReset: () => void;
   // Inactivity Auto Logout
@@ -148,6 +152,7 @@ const LOCAL_STORAGE_KEY_NOTIFS = 'pergidiantar_notifs_v1';
 const LOCAL_STORAGE_KEY_USERS = 'pergidiantar_users_v2';
 const LOCAL_STORAGE_KEY_STAFF_AUTH = 'pergidiantar_staff_session_v1';
 const LOCAL_STORAGE_KEY_PACKAGES = 'pergidiantar_packages_v1';
+const LOCAL_STORAGE_KEY_HOTELS = 'pergidiantar_hotels_v1';
 
 // Purge permanence flags
 const LOCAL_STORAGE_KEY_PURGED_ORDERS = 'pergidiantar_purged_orders';
@@ -156,6 +161,7 @@ const LOCAL_STORAGE_KEY_PURGED_DRIVERS = 'pergidiantar_purged_drivers';
 const LOCAL_STORAGE_KEY_PURGED_CHATS = 'pergidiantar_purged_chats';
 const LOCAL_STORAGE_KEY_PURGED_NOTIFS = 'pergidiantar_purged_notifs';
 const LOCAL_STORAGE_KEY_PURGED_PACKAGES = 'pergidiantar_purged_packages';
+const LOCAL_STORAGE_KEY_PURGED_HOTELS = 'pergidiantar_purged_hotels';
 const LOCAL_STORAGE_KEY_LAST_ACTIVITY = 'pergidiantar_last_activity_timestamp';
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -170,7 +176,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  const [hotels] = useState<HotelPartner[]>(INITIAL_HOTELS);
+  const [hotels, setHotels] = useState<HotelPartner[]>(() => {
+    try {
+      if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_HOTELS) === 'true') return [];
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY_HOTELS);
+      return saved !== null ? JSON.parse(saved) : INITIAL_HOTELS;
+    } catch {
+      return [];
+    }
+  });
 
   const [users, setUsers] = useState<UserProfile[]>(() => {
     try {
@@ -503,6 +517,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_NOTIFS);
     }
   }, [notifications]);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY_HOTELS, JSON.stringify(hotels));
+    if (hotels.length === 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_HOTELS, 'true');
+    } else {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_HOTELS);
+    }
+  }, [hotels]);
 
   useEffect(() => {
     saveAllRegisteredCustomers(registeredCustomers);
@@ -974,6 +997,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerPush('Paket Wisata Dihapus', 'Paket wisata telah dihapus permanen oleh Super Admin.', 'system');
   };
 
+  const addHotel = (hotelData: Omit<HotelPartner, 'id'>) => {
+    const newHotel: HotelPartner = {
+      ...hotelData,
+      id: `htl-${Date.now()}`
+    };
+    setHotels((prev) => [newHotel, ...prev]);
+    triggerPush('Hotel Mitra Ditambahkan', `Hotel ${newHotel.name} (${newHotel.cityLabel}) dengan kuota ${newHotel.quotaAvailable} kamar berhasil ditambahkan.`, 'system');
+  };
+
+  const updateHotel = (hotel: HotelPartner) => {
+    setHotels((prev) => prev.map((h) => (h.id === hotel.id ? hotel : h)));
+    triggerPush('Data Hotel Diperbarui', `Informasi hotel ${hotel.name} (${hotel.cityLabel}) berhasil diperbarui.`, 'system');
+  };
+
+  const deleteHotel = (hotelId: string) => {
+    const target = hotels.find((h) => h.id === hotelId);
+    setHotels((prev) => prev.filter((h) => h.id !== hotelId));
+    triggerPush('Hotel Mitra Dihapus', `Data hotel ${target?.name || ''} telah dihapus dari sistem.`, 'system');
+  };
+
   const sendChatMessage = (text: string, sender: 'customer' | 'cs_admin' = 'customer', packageContext?: string) => {
     if (!text.trim()) return;
 
@@ -1211,6 +1254,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerPush('Purge Packages', 'Seluruh paket wisata telah dihapus secara permanen.', 'system');
   };
 
+  const purgeHotels = () => {
+    setHotels([]);
+    localStorage.setItem(LOCAL_STORAGE_KEY_HOTELS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_HOTELS, 'true');
+    triggerPush('Purge Hotel Mitra', 'Seluruh data hotel mitra dan kuota kamar telah dihapus secara permanen.', 'system');
+  };
+
   const purgeCustomers = () => {
     adminPurgeAllCustomers();
     setRegisteredCustomers([]);
@@ -1224,6 +1274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setChats([]);
     setNotifications([]);
     setPackages([]);
+    setHotels([]);
     setRegisteredCustomers([]);
 
     // Keep only Super Admin Benisius
@@ -1244,6 +1295,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_NOTIFS, 'true');
     localStorage.setItem(LOCAL_STORAGE_KEY_PACKAGES, '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES, 'true');
+    localStorage.setItem(LOCAL_STORAGE_KEY_HOTELS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_HOTELS, 'true');
 
     adminPurgeAllCustomers();
     triggerPush('Factory Reset', 'RESET PABRIK TOTAL BERHASIL. Seluruh data portal telah dikosongkan permanen.', 'system');
@@ -1290,6 +1343,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateDriver,
         updatePackage,
         deletePackage,
+        addHotel,
+        updateHotel,
+        deleteHotel,
         sendChatMessage,
         markChatAsRead,
         markNotificationAsRead,
@@ -1335,6 +1391,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         purgeChats,
         purgeNotifications,
         purgePackages,
+        purgeHotels,
         purgeCustomers,
         purgeAllDataFactoryReset,
         autoLogoutNotice,

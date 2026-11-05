@@ -14,7 +14,8 @@ import {
   CheckCircle2, 
   Lock,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Hotel
 } from 'lucide-react';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
@@ -23,6 +24,7 @@ export const AdminPurgeCenter: React.FC = () => {
     orders, 
     fleet, 
     drivers, 
+    hotels,
     chats, 
     notifications, 
     packages, 
@@ -31,6 +33,7 @@ export const AdminPurgeCenter: React.FC = () => {
     purgeOrders,
     purgeFleet,
     purgeDrivers,
+    purgeHotels,
     purgeChats,
     purgeNotifications,
     purgePackages,
@@ -290,7 +293,45 @@ export const AdminPurgeCenter: React.FC = () => {
           </div>
         </div>
 
-        {/* Category 5: Live Chat History */}
+        {/* Category 5: Hotel Partners & Room Quotas */}
+        <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
+                <Hotel className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-mono font-bold bg-neutral-100 text-neutral-800 px-2 py-0.5 rounded-md">
+                {hotels.length} Hotel
+              </span>
+            </div>
+            <h3 className="text-sm font-bold text-neutral-900">Hotel Mitra & Kuota Kamar</h3>
+            <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+              Seluruh data hotel mitra (Jogja, Malang, Bali), kuota kamar, dan harga kontrak.
+            </p>
+          </div>
+
+          <div className="pt-3 border-t border-neutral-100">
+            <button
+              onClick={() => setActivePurgeAction({
+                key: 'hotels-all',
+                title: 'Hapus Seluruh Hotel Mitra & Kuota Kamar',
+                itemName: `${hotels.length} Hotel Mitra`,
+                message: 'Semua data hotel mitra dan kuota kamar akan dihapus permanen dari sistem.',
+                onExecute: () => {
+                  purgeHotels();
+                  showSuccess('Seluruh data hotel mitra dan kuota kamar berhasil dihapus permanen.');
+                }
+              })}
+              disabled={hotels.length === 0}
+              className="w-full py-2 px-3 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 rounded-xl transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Hapus Semua Hotel ({hotels.length})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Category 6: Live Chat History */}
         <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
