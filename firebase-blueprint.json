@@ -1,0 +1,188 @@
+{
+  "entities": {
+    "BookingOrder": {
+      "title": "BookingOrder",
+      "description": "Customer booking orders for Jogja, Malang, and Bali tour packages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "orderNumber": { "type": "string", "maxLength": 64 },
+        "packageId": { "type": "string", "maxLength": 128 },
+        "packageTitle": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "categoryLabel": { "type": "string", "maxLength": 128 },
+        "destination": { "type": "string", "maxLength": 64 },
+        "destinationLabel": { "type": "string", "maxLength": 128 },
+        "tier": { "type": "string", "maxLength": 32 },
+        "tourStartDate": { "type": "string", "maxLength": 32 },
+        "tourEndDate": { "type": "string", "maxLength": 32 },
+        "paxCount": { "type": "number" },
+        "pricePerPax": { "type": "number" },
+        "subtotal": { "type": "number" },
+        "addOnsTotal": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "paymentMethod": { "type": "string", "maxLength": 64 },
+        "paymentStatus": { "type": "string", "maxLength": 32 },
+        "paymentReference": { "type": "string", "maxLength": 128 },
+        "orderStatus": { "type": "string", "maxLength": 64 },
+        "selectedVehicle": { "type": "string", "maxLength": 128 },
+        "assignedFleetId": { "type": "string", "maxLength": 128 },
+        "assignedFleetName": { "type": "string", "maxLength": 128 },
+        "assignedDriverId": { "type": "string", "maxLength": 128 },
+        "assignedDriverName": { "type": "string", "maxLength": 128 },
+        "assignedDriverPhone": { "type": "string", "maxLength": 32 },
+        "hotelAllotment": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "orderNumber", "packageTitle", "destination", "grandTotal", "orderStatus"]
+    },
+    "FleetUnit": {
+      "title": "FleetUnit",
+      "description": "Operational vehicles for tours",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "plateNumber": { "type": "string", "maxLength": 32 },
+        "name": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 64 },
+        "typeLabel": { "type": "string", "maxLength": 128 },
+        "capacitySeats": { "type": "number" },
+        "status": { "type": "string", "maxLength": 64 },
+        "driverName": { "type": "string", "maxLength": 128 },
+        "baseCity": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "name", "plateNumber", "type", "capacitySeats", "status"]
+    },
+    "DriverCrew": {
+      "title": "DriverCrew",
+      "description": "Licensed drivers and crew for travel operations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "licenseType": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "maxLength": 32 },
+        "totalTripsCompleted": { "type": "number" },
+        "rating": { "type": "number" }
+      },
+      "required": ["id", "name", "phone", "status"]
+    },
+    "HotelPartner": {
+      "title": "HotelPartner",
+      "description": "Partner hotels and room quota allocations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "city": { "type": "string", "maxLength": 64 },
+        "cityLabel": { "type": "string", "maxLength": 128 },
+        "starRating": { "type": "number" },
+        "allocatedRooms": { "type": "number" },
+        "bookedRooms": { "type": "number" },
+        "contractRate": { "type": "number" },
+        "status": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["id", "name", "city", "allocatedRooms"]
+    },
+    "VendorPayment": {
+      "title": "VendorPayment",
+      "description": "Disbursements and payouts to drivers, hotels, fleet vendors, and tourist attractions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "paymentNumber": { "type": "string", "maxLength": 64 },
+        "category": { "type": "string", "maxLength": 32 },
+        "vendorName": { "type": "string", "maxLength": 128 },
+        "recipientContact": { "type": "string", "maxLength": 64 },
+        "relatedOrderId": { "type": "string", "maxLength": 128 },
+        "relatedOrderNumber": { "type": "string", "maxLength": 64 },
+        "packageName": { "type": "string", "maxLength": 256 },
+        "destination": { "type": "string", "maxLength": 64 },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 32 },
+        "paymentMethod": { "type": "string", "maxLength": 64 },
+        "bankAccount": { "type": "string", "maxLength": 128 },
+        "referenceNumber": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 500 },
+        "approvedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "paymentNumber", "category", "vendorName", "amount", "status"]
+    },
+    "TourPackage": {
+      "title": "TourPackage",
+      "description": "Travel tour packages for Jogja, Malang, and Bali",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "destination": { "type": "string", "maxLength": 64 },
+        "durationDays": { "type": "number" },
+        "durationNights": { "type": "number" },
+        "priceAllIn": { "type": "number" },
+        "priceHemat": { "type": "number" }
+      },
+      "required": ["id", "title", "destination", "priceAllIn"]
+    },
+    "RegisteredCustomer": {
+      "title": "RegisteredCustomer",
+      "description": "Customer registered user accounts",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "phoneNumber": { "type": "string", "maxLength": 32 },
+        "isRegistered": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["uid", "displayName", "email"]
+    },
+    "TestConnection": {
+      "title": "TestConnection",
+      "description": "Test connection ping document",
+      "type": "object",
+      "properties": {
+        "connected": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/BookingOrder" },
+      "description": "Customer booking orders and statuses"
+    },
+    "/fleet/{fleetId}": {
+      "schema": { "$ref": "#/entities/FleetUnit" },
+      "description": "Fleet vehicle inventory and assignment"
+    },
+    "/drivers/{driverId}": {
+      "schema": { "$ref": "#/entities/DriverCrew" },
+      "description": "Tour driver crew records"
+    },
+    "/hotels/{hotelId}": {
+      "schema": { "$ref": "#/entities/HotelPartner" },
+      "description": "Partner hotel quotas and rates"
+    },
+    "/vendorPayments/{paymentId}": {
+      "schema": { "$ref": "#/entities/VendorPayment" },
+      "description": "Vendor disbursement and payout records"
+    },
+    "/packages/{packageId}": {
+      "schema": { "$ref": "#/entities/TourPackage" },
+      "description": "Published tour packages"
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/RegisteredCustomer" },
+      "description": "Registered customer profiles"
+    },
+    "/test/{testId}": {
+      "schema": { "$ref": "#/entities/TestConnection" },
+      "description": "Test connection document"
+    }
+  }
+}

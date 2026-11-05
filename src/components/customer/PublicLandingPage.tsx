@@ -41,9 +41,9 @@ export const PublicLandingPage: React.FC = () => {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
-  // Staff Login Form State
-  const [selectedStaffRole, setSelectedStaffRole] = useState<UserRole>('super_admin');
-  const [staffPassword, setStaffPassword] = useState('admin');
+  // Staff / Super Admin Login Form State (Strictly empty by default on all devices)
+  const [staffUsername, setStaffUsername] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
 
   // Status & loading
   const [loading, setLoading] = useState(false);
@@ -114,39 +114,41 @@ export const PublicLandingPage: React.FC = () => {
     }
   };
 
-  // Handle Staff Login
+  // Handle Staff / Super Admin Login (Strictly requires filling the form each time)
   const onStaffLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const staffMember = users.find(u => u.role === selectedStaffRole);
-    if (!staffMember) {
-      setErrorMsg('Akun staf tidak ditemukan.');
+    const cleanUser = staffUsername.trim();
+    const cleanPass = staffPassword.trim();
+
+    if (!cleanUser) {
+      setErrorMsg('Username / Email superadmin atau staf wajib diisi.');
       return;
     }
 
-    if (!staffPassword.trim()) {
-      setErrorMsg('Kata sandi staf wajib diisi.');
+    if (!cleanPass) {
+      setErrorMsg('Kata sandi (password) wajib diisi.');
       return;
     }
 
     setLoading(true);
     try {
-      const ok = await handleStaffLogin(staffMember.email, staffPassword);
+      const ok = await handleStaffLogin(cleanUser, cleanPass);
       if (!ok) {
-        setErrorMsg('Autentikasi staf gagal. Kata sandi tidak valid.');
+        setErrorMsg('Autentikasi gagal. Periksa kembali username dan kata sandi Anda.');
       } else {
-        setSuccessMsg(`Login berhasil sebagai ${staffMember.name} (${staffMember.roleLabel})!`);
+        setSuccessMsg('Login berhasil! Mengalihkan ke portal manajemen...');
+        setStaffUsername('');
+        setStaffPassword('');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Terjadi kesalahan autentikasi staf.');
+      setErrorMsg(err.message || 'Terjadi kesalahan autentikasi.');
     } finally {
       setLoading(false);
     }
   };
-
-  const selectedStaffObj = users.find(u => u.role === selectedStaffRole) || users[0];
 
   return (
     <div className="space-y-12 pb-16">
@@ -468,84 +470,49 @@ export const PublicLandingPage: React.FC = () => {
               </form>
             )}
 
-            {/* TAB 3: STAFF / ROLE LOGIN */}
+            {/* TAB 3: STAFF / SUPER ADMIN LOGIN */}
             {activeAuthTab === 'staff' && (
-              <form onSubmit={onStaffLoginSubmit} className="space-y-4 max-w-lg mx-auto">
+              <form onSubmit={onStaffLoginSubmit} className="space-y-4 max-w-lg mx-auto" autoComplete="off">
                 <div className="text-center pb-2">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-200 mb-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-200 mb-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Autentikasi Hak Akses Role Staf</span>
+                    <span>Login Hak Akses Super Admin & Staf</span>
                   </div>
                   <h3 className="text-base font-bold text-neutral-900">Masuk sebagai Pengguna Manajemen</h3>
                   <p className="text-xs text-neutral-500 mt-1">
-                    Halaman selain halaman customer hanya bisa diakses setelah role user melakukan login resmi.
+                    Username dan password wajib diisi manual pada setiap sesi login di semua perangkat demi keamanan.
                   </p>
                 </div>
 
-                {/* Role Selector Card */}
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1.5 flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5 text-blue-600" /> Pilih Akun Role Staf *
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {users.filter(u => u.role !== 'customer').map((usr) => {
-                      const isSel = usr.role === selectedStaffRole;
-                      return (
-                        <button
-                          key={usr.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedStaffRole(usr.role);
-                            setStaffPassword(usr.password || 'admin');
-                          }}
-                          className={`p-3 rounded-2xl text-left border text-xs transition-all ${
-                            isSel
-                              ? 'border-blue-600 bg-blue-50/70 ring-1 ring-blue-500 text-blue-950 font-bold'
-                              : 'border-neutral-200 hover:border-neutral-300 bg-white text-neutral-700'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] uppercase font-bold text-blue-700">
-                              {usr.roleLabel}
-                            </span>
-                            {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}
-                          </div>
-                          <div className="font-bold text-neutral-900 mt-0.5 truncate">{usr.name}</div>
-                          <div className="text-[11px] text-neutral-500 truncate">{usr.email}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
+                {/* Input 1: Username / Email */}
                 <div>
                   <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-neutral-500" /> Email Akun Terpilih
+                    <User className="w-3.5 h-3.5 text-blue-600" /> Username atau Email Super Admin / Staf *
                   </label>
                   <input
-                    type="email"
-                    disabled
-                    value={selectedStaffObj.email}
-                    className="w-full py-2.5 px-3.5 border border-neutral-200 rounded-xl bg-neutral-100 text-neutral-600 text-xs font-medium cursor-not-allowed"
+                    type="text"
+                    required
+                    autoComplete="off"
+                    placeholder="Masukkan username atau email (contoh: pergi.diantar@gmail.com atau benisius)"
+                    value={staffUsername}
+                    onChange={(e) => setStaffUsername(e.target.value)}
+                    className="w-full py-2.5 px-3.5 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-neutral-50 text-xs font-medium text-neutral-900 placeholder:text-neutral-400"
                   />
                 </div>
 
+                {/* Input 2: Password */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-blue-600" /> Kata Sandi Staf *
-                    </label>
-                    <span className="text-[10px] text-neutral-400 font-mono">
-                      (Default sandi demo: {selectedStaffObj.password || 'admin'})
-                    </span>
-                  </div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-blue-600" /> Kata Sandi (Password) *
+                  </label>
                   <input
                     type="password"
                     required
-                    placeholder="Masukkan kata sandi staf"
+                    autoComplete="new-password"
+                    placeholder="Masukkan kata sandi akun"
                     value={staffPassword}
                     onChange={(e) => setStaffPassword(e.target.value)}
-                    className="w-full py-2.5 px-3.5 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-neutral-50 text-xs font-mono"
+                    className="w-full py-2.5 px-3.5 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-neutral-50 text-xs font-mono text-neutral-900 placeholder:text-neutral-400"
                   />
                 </div>
 
@@ -558,11 +525,16 @@ export const PublicLandingPage: React.FC = () => {
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>Masuk sebagai {selectedStaffObj.roleLabel}</span>
+                      <span>Masuk ke Dashboard Super Admin</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>
+
+                <div className="pt-2 text-[11px] text-neutral-500 text-center flex items-center justify-center gap-1.5 border-t border-neutral-100">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Setiap perubahan data langsung terintegrasi secara real-time dengan Cloud Firebase</span>
+                </div>
               </form>
             )}
           </div>

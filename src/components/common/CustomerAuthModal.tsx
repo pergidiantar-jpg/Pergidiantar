@@ -38,16 +38,23 @@ export const CustomerAuthModal: React.FC = () => {
     } else {
       setActiveTab('login');
     }
-  }, [authModalMode]);
+    setEmail('');
+    setPassword('');
+    setFullName('');
+    setPhone('');
+    setStaffUsername('');
+    setStaffPassword('');
+    setErrorMsg(null);
+  }, [authModalMode, authModalOpen]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   
-  // Staff login state
-  const [selectedStaffRole, setSelectedStaffRole] = useState<UserRole>('super_admin');
-  const [staffPassword, setStaffPassword] = useState('admin');
+  // Staff login state (Strictly empty by default on all devices)
+  const [staffUsername, setStaffUsername] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -86,16 +93,19 @@ export const CustomerAuthModal: React.FC = () => {
           setErrorMsg('Email atau kata sandi tidak cocok. Silakan coba kembali.');
         }
       } else if (activeTab === 'staff') {
-        const staffObj = users.find(u => u.role === selectedStaffRole);
-        if (!staffObj) {
-          setErrorMsg('Role staf tidak ditemukan.');
+        const cleanUser = staffUsername.trim();
+        const cleanPass = staffPassword.trim();
+        if (!cleanUser || !cleanPass) {
+          setErrorMsg('Username/email dan kata sandi superadmin/staf wajib diisi.');
           setLoading(false);
           return;
         }
-        const success = await handleStaffLogin(staffObj.email, staffPassword);
+        const success = await handleStaffLogin(cleanUser, cleanPass);
         if (!success) {
-          setErrorMsg('Autentikasi staf gagal. Kata sandi tidak valid.');
+          setErrorMsg('Autentikasi gagal. Kata sandi tidak valid.');
         } else {
+          setStaffUsername('');
+          setStaffPassword('');
           closeAuthModal();
         }
       }
@@ -105,8 +115,6 @@ export const CustomerAuthModal: React.FC = () => {
       setLoading(false);
     }
   };
-
-  const selectedStaffObj = users.find(u => u.role === selectedStaffRole) || users[0];
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
@@ -243,24 +251,17 @@ export const CustomerAuthModal: React.FC = () => {
           ) : (
             <div>
               <label className="block text-neutral-700 font-bold mb-1 flex items-center gap-1.5">
-                <KeyRound className="w-3.5 h-3.5 text-blue-600" /> Pilih Role Staf *
+                <User className="w-3.5 h-3.5 text-blue-600" /> Username / Email Super Admin & Staf *
               </label>
-              <select
-                value={selectedStaffRole}
-                onChange={(e) => {
-                  const role = e.target.value as UserRole;
-                  setSelectedStaffRole(role);
-                  const matched = users.find(u => u.role === role);
-                  if (matched) setStaffPassword(matched.password || 'admin');
-                }}
-                className="w-full py-2 px-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-neutral-50 font-bold text-neutral-800"
-              >
-                {users.filter(u => u.role !== 'customer').map(u => (
-                  <option key={u.id} value={u.role}>
-                    {u.roleLabel} - {u.name} ({u.email})
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                placeholder="Masukkan username atau email (contoh: pergi.diantar@gmail.com atau benisius)"
+                value={staffUsername}
+                onChange={(e) => setStaffUsername(e.target.value)}
+                required
+                autoComplete="off"
+                className="w-full py-2 px-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-neutral-50 text-xs font-medium text-neutral-900 placeholder:text-neutral-400"
+              />
             </div>
           )}
 
@@ -285,11 +286,6 @@ export const CustomerAuthModal: React.FC = () => {
               <label className="text-neutral-700 font-bold flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-blue-600" /> Kata Sandi (Password) *
               </label>
-              {activeTab === 'staff' && (
-                <span className="text-[10px] text-neutral-400 font-mono">
-                  (Demo: {selectedStaffObj.password || 'admin'})
-                </span>
-              )}
             </div>
             <input
               type="password"
@@ -303,7 +299,8 @@ export const CustomerAuthModal: React.FC = () => {
                 }
               }}
               required
-              className="w-full py-2 px-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 font-mono"
+              autoComplete={activeTab === 'staff' ? 'new-password' : 'current-password'}
+              className="w-full py-2 px-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 font-mono text-xs text-neutral-900 placeholder:text-neutral-400"
             />
           </div>
 
@@ -324,7 +321,7 @@ export const CustomerAuthModal: React.FC = () => {
                   {activeTab === 'register' 
                     ? 'Daftar Sekarang & Buka Akses Portal' 
                     : activeTab === 'staff' 
-                    ? `Masuk sebagai ${selectedStaffObj.roleLabel}`
+                    ? 'Masuk ke Dashboard Super Admin'
                     : 'Masuk ke Akun Pelanggan'}
                 </span>
                 <ArrowRight className="w-4 h-4" />

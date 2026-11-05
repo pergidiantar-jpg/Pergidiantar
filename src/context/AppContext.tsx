@@ -47,6 +47,12 @@ import {
   adminUpdateCustomer,
   adminPurgeAllCustomers
 } from '../services/firebaseAuthService';
+import {
+  cloudSyncDoc,
+  cloudDeleteDoc,
+  cloudPurgeCollection,
+  cloudSubscribeCollection
+} from '../services/firebase';
 
 interface AppContextType {
   packages: TourPackage[];
@@ -383,17 +389,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerPush('Logout Berhasil', 'Anda telah keluar dari akun pelanggan.', 'system');
   };
 
-  const handleStaffLogin = async (email: string, password?: string): Promise<boolean> => {
-    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (!found) {
-      throw new Error('Email staf belum terdaftar di database PERGIDIANTAR.');
+  const handleStaffLogin = async (identifier: string, password?: string): Promise<boolean> => {
+    const cleanId = (identifier || '').trim().toLowerCase();
+    const cleanPass = (password || '').trim();
+
+    if (!cleanId) {
+      throw new Error('Username atau Email wajib diisi.');
     }
-    if (found.password && password && found.password !== password) {
-      throw new Error('Kata sandi staf salah. Harap periksa kembali password Anda.');
+    if (!cleanPass) {
+      throw new Error('Kata sandi wajib diisi.');
+    }
+
+    const found = users.find(u => 
+      u.email.toLowerCase() === cleanId ||
+      u.name.toLowerCase() === cleanId ||
+      (cleanId.includes('benisius') && u.role === 'super_admin') ||
+      (cleanId === 'superadmin' && u.role === 'super_admin') ||
+      (cleanId === 'admin' && u.role === 'super_admin')
+    );
+
+    if (!found) {
+      throw new Error('Username atau Email tidak terdaftar di database PERGIDIANTAR.');
+    }
+    if (found.password && found.password !== cleanPass) {
+      throw new Error('Kata sandi salah. Harap periksa kembali password Anda.');
     }
     if (found.status === 'inactive') {
       throw new Error('Akun staf Anda berstatus non-aktif. Harap hubungi Super Admin.');
     }
+
     // Logout customer session
     setCustomerUser(null);
     clearStoredCustomer();
@@ -404,6 +428,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveTab('admin-orders');
     closeAuthModal();
     triggerPush('Login Staf Berhasil', `Selamat datang, ${found.name} (${found.roleLabel})!`, 'system');
+
+    // Cloud Firebase Integration: Record verified login audit
+    cloudSyncDoc('users', found.id, {
+      ...found,
+      lastLoginAt: new Date().toISOString()
+    }).catch(() => {});
+
     return true;
   };
 
@@ -565,6 +596,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     saveAllRegisteredCustomers(registeredCustomers);
   }, [registeredCustomers]);
+
+  // Real-time Cloud Firebase Synchronization across all online devices
+  useEffect(() => {
+    const unsubOrders = cloudSubscribeCollection<BookingOrder>('orders', (cloudOrders) => {
+      if (cloudOrders && cloudOrders.length > 0) {
+        setOrders(cloudOrders);
+      }
+    });
+    const unsubPayments = cloudSubscribeCollection<VendorPayment>('vendorPayments', (cloudPayments) => {
+      if (cloudPayments && cloudPayments.length > 0) {
+        setVendorPayments(cloudPayments);
+      }
+    });
+    const unsubFleet = cloudSubscribeCollection<FleetUnit>('fleet', (cloudFleet) => {
+      if (cloudFleet && cloudFleet.length > 0) {
+        setFleet(cloudFleet);
+      }
+    });
+    const unsubDrivers = cloudSubscribeCollection<DriverCrew>('drivers', (cloudDrivers) => {
+      if (cloudDrivers && cloudDrivers.length > 0) {
+        setDrivers(cloudDrivers);
+      }
+    });
+    const unsubHotels = cloudSubscribeCollection<HotelPartner>('hotels', (cloudHotels) => {
+      if (cloudHotels && cloudHotels.length > 0) {
+        setHotels(cloudHotels);
+      }
+    });
+
+    return () => {
+      unsubOrders();
+      unsubPayments();
+      unsubFleet();
+      unsubDrivers();
+      unsubHotels();
+    };
+  }, []);
 
   // Inactivity auto-logout (30 minutes of inactivity)
   const [autoLogoutNotice, setAutoLogoutNotice] = useState<string | null>(null);
@@ -785,6 +853,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setOrders((prev) => [createdOrder, ...prev]);
+    // Cloud Firebase Integration: Sync new booking directly to cloud
+    cloudSyncDoc('orders', createdOrder.id, createdOrder).catch(() => {});
 
     // 1. Automated admin notification to pergi.diantar@gmail.com
     dispatchOrderNotificationEmail(createdOrder, 'new_order').then((adminEmailRec) => {
@@ -819,6 +889,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             orderStatus: isNowPaid && ord.orderStatus === 'baru' ? 'dikonfirmasi' : ord.orderStatus
           };
 
+          // Cloud Firebase Integration: Sync payment status directly
+          cloudSyncDoc('orders', updated.id, updated).catch(() => {});
+
           if (isNowPaid) {
             dispatchOrderNotificationEmail(updated, 'payment_verified').then((emailRec) => {
               setEmailOutbox((prevEmails) => [emailRec, ...prevEmails]);
@@ -843,6 +916,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((ord) => {
         if (ord.id === orderId) {
           const updated = { ...ord, orderStatus: status };
+
+          // Cloud Firebase Integration: Sync order status directly
+          cloudSyncDoc('orders', updated.id, updated).catch(() => {});
 
           // If completed or cancelled, release fleet and driver
           if (status === 'selesai' || status === 'dibatalkan') {
@@ -980,17 +1056,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (selectedOrderForDetail?.id === orderId) {
       setSelectedOrderForDetail(null);
     }
+    // Cloud Firebase Integration: Delete order
+    cloudDeleteDoc('orders', orderId).catch(() => {});
 
     triggerPush('Data Pesanan Dihapus', `Pesanan ${target.orderNumber} telah dihapus permanen oleh admin.`, 'system');
   };
 
   const deleteFleet = (fleetId: string) => {
     setFleet((prev) => prev.filter((f) => f.id !== fleetId));
+    cloudDeleteDoc('fleet', fleetId).catch(() => {});
     triggerPush('Inventaris Armada Dihapus', 'Unit armada berhasil dihapus dari inventaris.', 'fleet');
   };
 
   const deleteDriver = (driverId: string) => {
     setDrivers((prev) => prev.filter((d) => d.id !== driverId));
+    cloudDeleteDoc('drivers', driverId).catch(() => {});
     triggerPush('Data Driver Dihapus', 'Data driver berhasil dihapus dari sistem.', 'system');
   };
 
@@ -1000,6 +1080,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `flt-${Date.now()}`
     };
     setFleet((prev) => [newUnit, ...prev]);
+    cloudSyncDoc('fleet', newUnit.id, newUnit).catch(() => {});
     triggerPush('Armada Baru Ditambahkan', `Unit ${newUnit.name} (${newUnit.plateNumber}) telah masuk sistem.`, 'fleet');
   };
 
@@ -1009,26 +1090,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `drv-${Date.now()}`
     };
     setDrivers((prev) => [newDriver, ...prev]);
+    cloudSyncDoc('drivers', newDriver.id, newDriver).catch(() => {});
     triggerPush('Driver Baru Terdaftar', `Driver ${newDriver.name} telah didaftarkan.`, 'system');
   };
 
   const updateFleet = (unit: FleetUnit) => {
     setFleet((prev) => prev.map((f) => (f.id === unit.id ? unit : f)));
+    cloudSyncDoc('fleet', unit.id, unit).catch(() => {});
     triggerPush('Data Armada Diperbarui', `Informasi armada ${unit.name} (${unit.plateNumber}) berhasil diperbarui.`, 'fleet');
   };
 
   const updateDriver = (driver: DriverCrew) => {
     setDrivers((prev) => prev.map((d) => (d.id === driver.id ? driver : d)));
+    cloudSyncDoc('drivers', driver.id, driver).catch(() => {});
     triggerPush('Data Driver Diperbarui', `Informasi driver ${driver.name} berhasil diperbarui.`, 'system');
   };
 
   const updatePackage = (pkg: TourPackage) => {
     setPackages((prev) => prev.map((p) => (p.id === pkg.id ? pkg : p)));
+    cloudSyncDoc('packages', pkg.id, pkg).catch(() => {});
     triggerPush('Paket Wisata Diperbarui', `Harga & tujuan wisata paket "${pkg.title}" berhasil diperbarui oleh Super Admin.`, 'system');
   };
 
   const deletePackage = (pkgId: string) => {
     setPackages((prev) => prev.filter((p) => p.id !== pkgId));
+    cloudDeleteDoc('packages', pkgId).catch(() => {});
     triggerPush('Paket Wisata Dihapus', 'Paket wisata telah dihapus permanen oleh Super Admin.', 'system');
   };
 
@@ -1038,17 +1124,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `htl-${Date.now()}`
     };
     setHotels((prev) => [newHotel, ...prev]);
+    cloudSyncDoc('hotels', newHotel.id, newHotel).catch(() => {});
     triggerPush('Hotel Mitra Ditambahkan', `Hotel ${newHotel.name} (${newHotel.cityLabel}) dengan kuota ${newHotel.quotaAvailable} kamar berhasil ditambahkan.`, 'system');
   };
 
   const updateHotel = (hotel: HotelPartner) => {
     setHotels((prev) => prev.map((h) => (h.id === hotel.id ? hotel : h)));
+    cloudSyncDoc('hotels', hotel.id, hotel).catch(() => {});
     triggerPush('Data Hotel Diperbarui', `Informasi hotel ${hotel.name} (${hotel.cityLabel}) berhasil diperbarui.`, 'system');
   };
 
   const deleteHotel = (hotelId: string) => {
     const target = hotels.find((h) => h.id === hotelId);
     setHotels((prev) => prev.filter((h) => h.id !== hotelId));
+    cloudDeleteDoc('hotels', hotelId).catch(() => {});
     triggerPush('Hotel Mitra Dihapus', `Data hotel ${target?.name || ''} telah dihapus dari sistem.`, 'system');
   };
 
@@ -1066,6 +1155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
     };
     setVendorPayments((prev) => [newPayment, ...prev]);
+    cloudSyncDoc('vendorPayments', newPayment.id, newPayment).catch(() => {});
     triggerPush(
       'Pembayaran Vendor Berhasil Dicatat',
       `${newPayment.categoryLabel} sebesar Rp ${newPayment.amount.toLocaleString('id-ID')} ke ${newPayment.vendorName} berhasil dicatat.`,
@@ -1075,6 +1165,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateVendorPayment = (payment: VendorPayment) => {
     setVendorPayments((prev) => prev.map((p) => (p.id === payment.id ? payment : p)));
+    cloudSyncDoc('vendorPayments', payment.id, payment).catch(() => {});
     triggerPush(
       'Pembayaran Vendor Diperbarui',
       `Data pembayaran ${payment.paymentNumber} (${payment.vendorName}) berhasil diperbarui.`,
@@ -1085,6 +1176,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteVendorPayment = (paymentId: string) => {
     const target = vendorPayments.find((p) => p.id === paymentId);
     setVendorPayments((prev) => prev.filter((p) => p.id !== paymentId));
+    cloudDeleteDoc('vendorPayments', paymentId).catch(() => {});
     triggerPush(
       'Pembayaran Vendor Dihapus',
       `Data pembayaran ${target?.paymentNumber || ''} telah dihapus dari sistem.`,
@@ -1096,11 +1188,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setVendorPayments((prev) =>
       prev.map((p) => {
         if (p.id === paymentId) {
-          return {
+          const updated = {
             ...p,
             status,
             approvedBy: status === 'selesai' ? (staffUser?.name || 'Super Admin (Benisius)') : p.approvedBy
           };
+          cloudSyncDoc('vendorPayments', p.id, updated).catch(() => {});
+          return updated;
         }
         return p;
       })
@@ -1295,19 +1389,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Admin Purge Center functions (Data permanently deleted, never reappears)
   const purgeOrders = (onlyDummy = false) => {
     if (onlyDummy) {
-      const realOrders = orders.filter(o => 
-        !o.id.startsWith('ord-0') && 
-        !o.orderNumber.includes('0089') && 
-        !o.orderNumber.includes('0090') && 
-        !o.orderNumber.includes('0091') && 
-        !o.orderNumber.includes('0092')
-      );
+      const dummyIds = orders.filter(o => 
+        o.id.startsWith('ord-0') || 
+        o.orderNumber.includes('0089') || 
+        o.orderNumber.includes('0090') || 
+        o.orderNumber.includes('0091') || 
+        o.orderNumber.includes('0092')
+      ).map(o => o.id);
+      cloudPurgeCollection('orders', dummyIds).catch(() => {});
+      const realOrders = orders.filter(o => !dummyIds.includes(o.id));
       setOrders(realOrders);
       localStorage.setItem(LOCAL_STORAGE_KEY_ORDERS, JSON.stringify(realOrders));
       if (realOrders.length === 0) {
         localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_ORDERS, 'true');
       }
     } else {
+      cloudPurgeCollection('orders', orders.map(o => o.id)).catch(() => {});
       setOrders([]);
       localStorage.setItem(LOCAL_STORAGE_KEY_ORDERS, '[]');
       localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_ORDERS, 'true');
@@ -1316,6 +1413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const purgeFleet = () => {
+    cloudPurgeCollection('fleet', fleet.map(f => f.id)).catch(() => {});
     setFleet([]);
     localStorage.setItem(LOCAL_STORAGE_KEY_FLEET, '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_FLEET, 'true');
@@ -1323,6 +1421,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const purgeDrivers = () => {
+    cloudPurgeCollection('drivers', drivers.map(d => d.id)).catch(() => {});
     setDrivers([]);
     localStorage.setItem(LOCAL_STORAGE_KEY_DRIVERS, '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS, 'true');
@@ -1330,6 +1429,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const purgeChats = () => {
+    cloudPurgeCollection('chats', chats.map(c => c.id)).catch(() => {});
     setChats([]);
     localStorage.setItem(LOCAL_STORAGE_KEY_CHATS, '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_CHATS, 'true');
@@ -1343,6 +1443,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const purgePackages = () => {
+    cloudPurgeCollection('packages', packages.map(p => p.id)).catch(() => {});
     setPackages([]);
     localStorage.setItem(LOCAL_STORAGE_KEY_PACKAGES, '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES, 'true');
@@ -1350,6 +1451,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const purgeHotels = () => {
+    cloudPurgeCollection('hotels', hotels.map(h => h.id)).catch(() => {});
     setHotels([]);
     localStorage.setItem(LOCAL_STORAGE_KEY_HOTELS, '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_HOTELS, 'true');
@@ -1357,6 +1459,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const purgeVendorPayments = () => {
+    cloudPurgeCollection('vendorPayments', vendorPayments.map(p => p.id)).catch(() => {});
     setVendorPayments([]);
     localStorage.setItem(LOCAL_STORAGE_KEY_VENDOR_PAYMENTS, '[]');
     localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS, 'true');
@@ -1364,6 +1467,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const purgeCustomers = () => {
+    cloudPurgeCollection('customers', registeredCustomers.map(c => c.uid)).catch(() => {});
     adminPurgeAllCustomers();
     setRegisteredCustomers([]);
     triggerPush('Purge Pelanggan', 'Seluruh data akun pelanggan telah dihapus secara permanen.', 'system');
