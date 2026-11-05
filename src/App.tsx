@@ -22,6 +22,7 @@ import { EditProfileModal } from './components/common/EditProfileModal';
 import { CustomerLiveChat } from './components/customer/CustomerLiveChat';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { TourPackage, PackageCategory, DestinationRegion, PackageTier, BookingOrder } from './types/travel';
+import { Lock } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
   const { 
@@ -38,7 +39,9 @@ const MainAppContent: React.FC = () => {
     setPendingBooking,
     isNotifOpen,
     openNotifications,
-    closeNotifications
+    closeNotifications,
+    autoLogoutNotice,
+    clearAutoLogoutNotice
   } = useApp();
 
   const [selectedCategory, setSelectedCategory] = useState<PackageCategory | 'all'>('all');
@@ -185,6 +188,54 @@ const MainAppContent: React.FC = () => {
         isOpen={!!activeOrderForPayment}
         onClose={() => setActiveOrderForPayment(null)}
       />
+
+      {/* Auto-Logout Inactivity Security Modal */}
+      {autoLogoutNotice && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-neutral-900/70 backdrop-blur-xs transition-opacity"
+            onClick={clearAutoLogoutNotice}
+          />
+          <div className="relative bg-white rounded-3xl max-w-md w-full shadow-2xl p-6 z-10 border border-neutral-200 animate-in fade-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl shrink-0">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  Keamanan Sesi Pengguna
+                </span>
+                <h3 className="text-base font-black text-neutral-900 mt-1">
+                  Sesi Berakhir Otomatis
+                </h3>
+                <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
+                  {autoLogoutNotice}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
+              <button
+                type="button"
+                onClick={clearAutoLogoutNotice}
+                className="py-2 px-3.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-100 rounded-xl"
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  clearAutoLogoutNotice();
+                  openAuthModal('login');
+                }}
+                className="py-2 px-4 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
+              >
+                Masuk Kembali
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

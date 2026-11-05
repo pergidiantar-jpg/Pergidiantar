@@ -37,7 +37,13 @@ import {
   loginCustomer, 
   logoutCustomer,
   updateCustomerProfile,
-  clearStoredCustomer
+  clearStoredCustomer,
+  getAllRegisteredCustomers,
+  saveAllRegisteredCustomers,
+  adminAddCustomer,
+  adminDeleteCustomer,
+  adminUpdateCustomer,
+  adminPurgeAllCustomers
 } from '../services/firebaseAuthService';
 
 interface AppContextType {
@@ -112,6 +118,24 @@ interface AppContextType {
   setIsNotifOpen: (open: boolean) => void;
   openNotifications: () => void;
   closeNotifications: () => void;
+  // User Registry & Admin Management
+  registeredCustomers: RegisteredCustomer[];
+  adminAddUser: (data: { name: string; email: string; role: UserRole; phone: string; password?: string }) => Promise<void>;
+  adminUpdateUser: (id: string, updates: Partial<UserProfile> & { displayName?: string; phoneNumber?: string }) => Promise<void>;
+  adminDeleteUser: (id: string) => Promise<void>;
+  adminToggleUserStatus: (id: string) => Promise<void>;
+  // Purge Center
+  purgeOrders: (onlyDummy?: boolean) => void;
+  purgeFleet: () => void;
+  purgeDrivers: () => void;
+  purgeChats: () => void;
+  purgeNotifications: () => void;
+  purgePackages: () => void;
+  purgeCustomers: () => void;
+  purgeAllDataFactoryReset: () => void;
+  // Inactivity Auto Logout
+  autoLogoutNotice: string | null;
+  clearAutoLogoutNotice: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -125,13 +149,24 @@ const LOCAL_STORAGE_KEY_USERS = 'pergidiantar_users_v2';
 const LOCAL_STORAGE_KEY_STAFF_AUTH = 'pergidiantar_staff_session_v1';
 const LOCAL_STORAGE_KEY_PACKAGES = 'pergidiantar_packages_v1';
 
+// Purge permanence flags
+const LOCAL_STORAGE_KEY_PURGED_ORDERS = 'pergidiantar_purged_orders';
+const LOCAL_STORAGE_KEY_PURGED_FLEET = 'pergidiantar_purged_fleet';
+const LOCAL_STORAGE_KEY_PURGED_DRIVERS = 'pergidiantar_purged_drivers';
+const LOCAL_STORAGE_KEY_PURGED_CHATS = 'pergidiantar_purged_chats';
+const LOCAL_STORAGE_KEY_PURGED_NOTIFS = 'pergidiantar_purged_notifs';
+const LOCAL_STORAGE_KEY_PURGED_PACKAGES = 'pergidiantar_purged_packages';
+const LOCAL_STORAGE_KEY_LAST_ACTIVITY = 'pergidiantar_last_activity_timestamp';
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [packages, setPackages] = useState<TourPackage[]>(() => {
     try {
+      if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_PACKAGES);
-      return saved ? JSON.parse(saved) : INITIAL_PACKAGES;
+      return saved !== null ? JSON.parse(saved) : INITIAL_PACKAGES;
     } catch {
-      return INITIAL_PACKAGES;
+      return [];
     }
   });
 
@@ -148,47 +183,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [orders, setOrders] = useState<BookingOrder[]>(() => {
     try {
+      if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_ORDERS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_ORDERS);
-      return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+      return saved !== null ? JSON.parse(saved) : INITIAL_ORDERS;
     } catch {
-      return INITIAL_ORDERS;
+      return [];
     }
   });
 
   const [fleet, setFleet] = useState<FleetUnit[]>(() => {
     try {
+      if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_FLEET) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_FLEET);
-      return saved ? JSON.parse(saved) : INITIAL_FLEET;
+      return saved !== null ? JSON.parse(saved) : INITIAL_FLEET;
     } catch {
-      return INITIAL_FLEET;
+      return [];
     }
   });
 
   const [drivers, setDrivers] = useState<DriverCrew[]>(() => {
     try {
+      if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_DRIVERS);
-      return saved ? JSON.parse(saved) : INITIAL_DRIVERS;
+      return saved !== null ? JSON.parse(saved) : INITIAL_DRIVERS;
     } catch {
-      return INITIAL_DRIVERS;
+      return [];
     }
   });
 
   const [chats, setChats] = useState<ChatMessage[]>(() => {
     try {
+      if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_CHATS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_CHATS);
-      return saved ? JSON.parse(saved) : INITIAL_CHATS;
+      return saved !== null ? JSON.parse(saved) : INITIAL_CHATS;
     } catch {
-      return INITIAL_CHATS;
+      return [];
     }
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
+      if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_NOTIFS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_NOTIFS);
-      return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+      return saved !== null ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
     } catch {
-      return INITIAL_NOTIFICATIONS;
+      return [];
     }
+  });
+
+  const [registeredCustomers, setRegisteredCustomers] = useState<RegisteredCustomer[]>(() => {
+    return getAllRegisteredCustomers();
   });
 
   const [emailOutbox, setEmailOutbox] = useState<EmailDispatchRecord[]>(() => {
@@ -269,8 +313,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       closeAuthModal();
       triggerPush('Login Berhasil', `Selamat datang kembali di PERGIDIANTAR, ${user.displayName}!`, 'system');
       return true;
-    } catch {
-      return false;
+    } catch (err: any) {
+      throw err;
     }
   };
 
@@ -280,13 +324,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setStaffUser(null);
       localStorage.removeItem(LOCAL_STORAGE_KEY_STAFF_AUTH);
       setCustomerUser(user);
+      setRegisteredCustomers(getAllRegisteredCustomers());
       setCurrentRoleState('customer');
       setActiveTab('catalog');
       closeAuthModal();
-      triggerPush('Pendaftaran Berhasil', `Akun Anda telah terdaftar di cloud server Firebase. Selamat datang, ${user.displayName}!`, 'system');
+      triggerPush('Pendaftaran Berhasil', `Akun Anda telah terdaftar di database PERGIDIANTAR. Selamat datang, ${user.displayName}!`, 'system');
       return true;
-    } catch {
-      return false;
+    } catch (err: any) {
+      throw err;
     }
   };
 
@@ -299,28 +344,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const handleStaffLogin = async (email: string, password?: string): Promise<boolean> => {
-    try {
-      const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-      if (!found) {
-        return false;
-      }
-      if (found.password && password && found.password !== password) {
-        return false;
-      }
-      // Logout customer session
-      setCustomerUser(null);
-      clearStoredCustomer();
-
-      setStaffUser(found);
-      localStorage.setItem(LOCAL_STORAGE_KEY_STAFF_AUTH, JSON.stringify(found));
-      setCurrentRoleState(found.role);
-      setActiveTab('admin-orders');
-      closeAuthModal();
-      triggerPush('Login Staf Berhasil', `Selamat datang, ${found.name} (${found.roleLabel})!`, 'system');
-      return true;
-    } catch {
-      return false;
+    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!found) {
+      throw new Error('Email staf belum terdaftar di database PERGIDIANTAR.');
     }
+    if (found.password && password && found.password !== password) {
+      throw new Error('Kata sandi staf salah. Harap periksa kembali password Anda.');
+    }
+    if (found.status === 'inactive') {
+      throw new Error('Akun staf Anda berstatus non-aktif. Harap hubungi Super Admin.');
+    }
+    // Logout customer session
+    setCustomerUser(null);
+    clearStoredCustomer();
+
+    setStaffUser(found);
+    localStorage.setItem(LOCAL_STORAGE_KEY_STAFF_AUTH, JSON.stringify(found));
+    setCurrentRoleState(found.role);
+    setActiveTab('admin-orders');
+    closeAuthModal();
+    triggerPush('Login Staf Berhasil', `Selamat datang, ${found.name} (${found.roleLabel})!`, 'system');
+    return true;
   };
 
   const handleStaffLogout = async (): Promise<void> => {
@@ -405,30 +449,130 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(users));
   }, [users]);
 
-  // Sync orders to localStorage
+  // Sync orders to localStorage & maintain purge permanence
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY_ORDERS, JSON.stringify(orders));
+    if (orders.length === 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_ORDERS, 'true');
+    } else {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_ORDERS);
+    }
   }, [orders]);
 
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY_PACKAGES, JSON.stringify(packages));
+    if (packages.length === 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES, 'true');
+    } else {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES);
+    }
   }, [packages]);
 
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY_FLEET, JSON.stringify(fleet));
+    if (fleet.length === 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_FLEET, 'true');
+    } else {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_FLEET);
+    }
   }, [fleet]);
 
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY_DRIVERS, JSON.stringify(drivers));
+    if (drivers.length === 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS, 'true');
+    } else {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS);
+    }
   }, [drivers]);
 
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY_CHATS, JSON.stringify(chats));
+    if (chats.length === 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_CHATS, 'true');
+    } else {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_CHATS);
+    }
   }, [chats]);
 
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY_NOTIFS, JSON.stringify(notifications));
+    if (notifications.length === 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_NOTIFS, 'true');
+    } else {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_NOTIFS);
+    }
   }, [notifications]);
+
+  useEffect(() => {
+    saveAllRegisteredCustomers(registeredCustomers);
+  }, [registeredCustomers]);
+
+  // Inactivity auto-logout (30 minutes of inactivity)
+  const [autoLogoutNotice, setAutoLogoutNotice] = useState<string | null>(null);
+  const clearAutoLogoutNotice = () => setAutoLogoutNotice(null);
+
+  useEffect(() => {
+    // 1. Initial mount check: if last activity exceeded 30 mins, expire immediately
+    const storedLastActive = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ACTIVITY);
+    if (storedLastActive && (isCustomerLoggedIn || isStaffLoggedIn)) {
+      const elapsed = Date.now() - parseInt(storedLastActive, 10);
+      if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+        clearStoredCustomer();
+        localStorage.removeItem(LOCAL_STORAGE_KEY_STAFF_AUTH);
+        setCustomerUser(null);
+        setStaffUser(null);
+        setCurrentRoleState('customer');
+        setActiveTab('catalog');
+        setAutoLogoutNotice('Sesi Anda telah berakhir secara otomatis demi keamanan setelah 30 menit tidak aktif. Seluruh navigasi portal disembunyikan. Silakan login kembali.');
+        return;
+      }
+    }
+
+    const markActive = () => {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_LAST_ACTIVITY, Date.now().toString());
+      } catch {}
+    };
+
+    markActive();
+
+    // 2. Listen to interactions to refresh inactivity timer
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    let lastThrottled = 0;
+
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastThrottled > 5000) {
+        lastThrottled = now;
+        markActive();
+      }
+    };
+
+    events.forEach((evt) => window.addEventListener(evt, handleActivity, { passive: true }));
+
+    // 3. Periodic check every 10 seconds
+    const interval = setInterval(() => {
+      if (isLoggedIn) {
+        const lastStr = localStorage.getItem(LOCAL_STORAGE_KEY_LAST_ACTIVITY);
+        const lastTime = lastStr ? parseInt(lastStr, 10) : Date.now();
+        if (Date.now() - lastTime >= INACTIVITY_TIMEOUT_MS) {
+          clearStoredCustomer();
+          localStorage.removeItem(LOCAL_STORAGE_KEY_STAFF_AUTH);
+          setCustomerUser(null);
+          setStaffUser(null);
+          setCurrentRoleState('customer');
+          setActiveTab('catalog');
+          setAutoLogoutNotice('Sesi Anda telah berakhir secara otomatis demi keamanan setelah 30 menit tidak aktif. Seluruh navigasi portal disembunyikan. Silakan login kembali.');
+        }
+      }
+    }, 10000);
+
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, handleActivity));
+      clearInterval(interval);
+    };
+  }, [isLoggedIn, isCustomerLoggedIn, isStaffLoggedIn]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -920,6 +1064,191 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  // Admin User Registry functions
+  const adminAddUser = async (data: { name: string; email: string; role: UserRole; phone: string; password?: string }) => {
+    if (data.role === 'customer') {
+      adminAddCustomer({
+        displayName: data.name,
+        email: data.email,
+        phoneNumber: data.phone,
+        password: data.password
+      });
+      setRegisteredCustomers(getAllRegisteredCustomers());
+    } else {
+      const roleLabels: Record<UserRole, string> = {
+        super_admin: 'Super Admin',
+        ops_admin: 'Admin Operasional',
+        finance: 'Finance & Keuangan',
+        customer_service: 'Customer Service (CS)',
+        customer: 'Pelanggan'
+      };
+      const deptLabels: Record<UserRole, string> = {
+        super_admin: 'Direksi & Operasional Utama',
+        ops_admin: 'Manajemen Armada & Driver',
+        finance: 'Pembukuan & Verifikasi Pembayaran',
+        customer_service: 'Layanan Pelanggan & Konsultasi',
+        customer: 'Portal Wisatawan Publik'
+      };
+      const newStaff: UserProfile = {
+        id: `usr-staff-${Date.now()}`,
+        name: data.name,
+        email: data.email.toLowerCase(),
+        role: data.role,
+        roleLabel: roleLabels[data.role],
+        department: deptLabels[data.role],
+        phone: data.phone,
+        password: data.password || 'admin',
+        status: 'active',
+        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+      };
+      setUsers(prev => [...prev, newStaff]);
+    }
+    triggerPush('User Baru Didaftarkan', `Akun ${data.name} (${data.email}) berhasil didaftarkan ke sistem.`, 'system');
+  };
+
+  const adminUpdateUser = async (id: string, updates: Partial<UserProfile> & { displayName?: string; phoneNumber?: string }) => {
+    const isCust = registeredCustomers.some(c => c.uid === id);
+    if (isCust) {
+      adminUpdateCustomer(id, {
+        displayName: updates.displayName || updates.name,
+        email: updates.email,
+        phoneNumber: updates.phoneNumber || updates.phone,
+        password: updates.password,
+        status: updates.status
+      });
+      setRegisteredCustomers(getAllRegisteredCustomers());
+    } else {
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    }
+  };
+
+  const adminDeleteUser = async (id: string) => {
+    const isCust = registeredCustomers.some(c => c.uid === id);
+    if (isCust) {
+      adminDeleteCustomer(id);
+      setRegisteredCustomers(getAllRegisteredCustomers());
+    } else {
+      const target = users.find(u => u.id === id);
+      if (target?.email.toLowerCase() === 'pergi.diantar@gmail.com') {
+        throw new Error('Akun Super Admin Utama (Benisius Rahmat Basuki) tidak dapat dihapus.');
+      }
+      setUsers(prev => prev.filter(u => u.id !== id));
+    }
+    triggerPush('User Dihapus', 'Data user telah dihapus secara permanen dari sistem.', 'system');
+  };
+
+  const adminToggleUserStatus = async (id: string) => {
+    const isCust = registeredCustomers.some(c => c.uid === id);
+    if (isCust) {
+      const target = registeredCustomers.find(c => c.uid === id);
+      const newStatus = target?.status === 'inactive' ? 'active' : 'inactive';
+      adminUpdateCustomer(id, { status: newStatus });
+      setRegisteredCustomers(getAllRegisteredCustomers());
+    } else {
+      setUsers(prev => prev.map(u => {
+        if (u.id === id) {
+          return { ...u, status: u.status === 'inactive' ? 'active' : 'inactive' };
+        }
+        return u;
+      }));
+    }
+  };
+
+  // Admin Purge Center functions (Data permanently deleted, never reappears)
+  const purgeOrders = (onlyDummy = false) => {
+    if (onlyDummy) {
+      const realOrders = orders.filter(o => 
+        !o.id.startsWith('ord-0') && 
+        !o.orderNumber.includes('0089') && 
+        !o.orderNumber.includes('0090') && 
+        !o.orderNumber.includes('0091') && 
+        !o.orderNumber.includes('0092')
+      );
+      setOrders(realOrders);
+      localStorage.setItem(LOCAL_STORAGE_KEY_ORDERS, JSON.stringify(realOrders));
+      if (realOrders.length === 0) {
+        localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_ORDERS, 'true');
+      }
+    } else {
+      setOrders([]);
+      localStorage.setItem(LOCAL_STORAGE_KEY_ORDERS, '[]');
+      localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_ORDERS, 'true');
+    }
+    triggerPush('Purge Orders', 'Pembersihan data pesanan berhasil dilakukan secara permanen.', 'system');
+  };
+
+  const purgeFleet = () => {
+    setFleet([]);
+    localStorage.setItem(LOCAL_STORAGE_KEY_FLEET, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_FLEET, 'true');
+    triggerPush('Purge Fleet', 'Seluruh unit armada kendaraan telah dihapus secara permanen.', 'system');
+  };
+
+  const purgeDrivers = () => {
+    setDrivers([]);
+    localStorage.setItem(LOCAL_STORAGE_KEY_DRIVERS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS, 'true');
+    triggerPush('Purge Drivers', 'Seluruh data supir dan kru telah dihapus secara permanen.', 'system');
+  };
+
+  const purgeChats = () => {
+    setChats([]);
+    localStorage.setItem(LOCAL_STORAGE_KEY_CHATS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_CHATS, 'true');
+    triggerPush('Purge Chats', 'Riwayat obrolan tamu telah dibersihkan secara permanen.', 'system');
+  };
+
+  const purgeNotifications = () => {
+    setNotifications([]);
+    localStorage.setItem(LOCAL_STORAGE_KEY_NOTIFS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_NOTIFS, 'true');
+  };
+
+  const purgePackages = () => {
+    setPackages([]);
+    localStorage.setItem(LOCAL_STORAGE_KEY_PACKAGES, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES, 'true');
+    triggerPush('Purge Packages', 'Seluruh paket wisata telah dihapus secara permanen.', 'system');
+  };
+
+  const purgeCustomers = () => {
+    adminPurgeAllCustomers();
+    setRegisteredCustomers([]);
+    triggerPush('Purge Pelanggan', 'Seluruh data akun pelanggan telah dihapus secara permanen.', 'system');
+  };
+
+  const purgeAllDataFactoryReset = () => {
+    setOrders([]);
+    setFleet([]);
+    setDrivers([]);
+    setChats([]);
+    setNotifications([]);
+    setPackages([]);
+    setRegisteredCustomers([]);
+
+    // Keep only Super Admin Benisius
+    const superAdmin = users.find(u => u.role === 'super_admin') || INITIAL_USERS[0];
+    setUsers([superAdmin]);
+    localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify([superAdmin]));
+
+    // Set all purge permanence flags
+    localStorage.setItem(LOCAL_STORAGE_KEY_ORDERS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_ORDERS, 'true');
+    localStorage.setItem(LOCAL_STORAGE_KEY_FLEET, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_FLEET, 'true');
+    localStorage.setItem(LOCAL_STORAGE_KEY_DRIVERS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS, 'true');
+    localStorage.setItem(LOCAL_STORAGE_KEY_CHATS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_CHATS, 'true');
+    localStorage.setItem(LOCAL_STORAGE_KEY_NOTIFS, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_NOTIFS, 'true');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PACKAGES, '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES, 'true');
+
+    adminPurgeAllCustomers();
+    triggerPush('Factory Reset', 'RESET PABRIK TOTAL BERHASIL. Seluruh data portal telah dikosongkan permanen.', 'system');
+  };
+
   const unreadNotifCount = notifications.filter((n) => !n.isRead).length;
 
   return (
@@ -994,7 +1323,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isNotifOpen,
         setIsNotifOpen,
         openNotifications,
-        closeNotifications
+        closeNotifications,
+        registeredCustomers,
+        adminAddUser,
+        adminUpdateUser,
+        adminDeleteUser,
+        adminToggleUserStatus,
+        purgeOrders,
+        purgeFleet,
+        purgeDrivers,
+        purgeChats,
+        purgeNotifications,
+        purgePackages,
+        purgeCustomers,
+        purgeAllDataFactoryReset,
+        autoLogoutNotice,
+        clearAutoLogoutNotice
       }}
     >
       {children}

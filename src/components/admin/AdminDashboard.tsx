@@ -8,6 +8,8 @@ import { CustomerSupportChat } from './CustomerSupportChat';
 import { RoleManagement } from './RoleManagement';
 import { EmailOutboxView } from './EmailOutboxView';
 import { PackageManagement } from './PackageManagement';
+import { UserRegisterManagement } from './UserRegisterManagement';
+import { AdminPurgeCenter } from './AdminPurgeCenter';
 import { 
   ShoppingBag, 
   Car, 
@@ -20,7 +22,9 @@ import {
   ExternalLink,
   Mail,
   Compass,
-  Bell
+  Bell,
+  Users,
+  Trash2
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -28,13 +32,15 @@ export const AdminDashboard: React.FC = () => {
 
   const navigationItems = [
     { id: 'admin-orders', label: 'Order Masuk & Status', icon: ShoppingBag, desc: 'Kelola data pemesan & pembayaran' },
+    { id: 'admin-users-registry', label: 'Data User & Register', icon: Users, desc: 'Database user & pendaftaran (Super Admin)' },
     { id: 'admin-packages', label: 'Kelola Paket & Harga', icon: Compass, desc: 'Edit harga & tujuan (Super Admin)' },
     { id: 'admin-inventory', label: 'Manajemen Inventaris', icon: Car, desc: 'Sinkronisasi armada & driver' },
     { id: 'admin-reports', label: 'Laporan Bulanan Transaksi', icon: FileSpreadsheet, desc: 'Rekap omzet, ekspor PDF & CSV' },
     { id: 'admin-analytics', label: 'Analitik Penjualan Visual', icon: TrendingUp, desc: 'Tren pendapatan & performa' },
     { id: 'admin-chat', label: 'Chat Dukungan Tamu', icon: MessageSquare, desc: 'Live CS & template balasan' },
     { id: 'admin-emails', label: 'Email Outbox (pergi.diantar)', icon: Mail, desc: 'Log integrasi email admin' },
-    { id: 'admin-users', label: 'Hak Akses Multi-User', icon: ShieldCheck, desc: 'Izin RBAC & manajemen tim' }
+    { id: 'admin-users', label: 'Hak Akses Multi-User', icon: ShieldCheck, desc: 'Izin RBAC & manajemen tim' },
+    { id: 'admin-purge-center', label: 'Pusat Hapus Data (Purge)', icon: Trash2, desc: 'Hapus data & reset portal permanen' }
   ];
 
   return (
@@ -150,6 +156,7 @@ export const AdminDashboard: React.FC = () => {
         {/* Tab Viewport */}
         <div className="flex-1 min-w-0">
           {activeTab === 'admin-orders' && <OrderManagement />}
+          {activeTab === 'admin-users-registry' && <UserRegisterManagement />}
           {activeTab === 'admin-packages' && <PackageManagement />}
           {activeTab === 'admin-inventory' && <InventoryManagement />}
           {activeTab === 'admin-reports' && <MonthlyReport />}
@@ -157,6 +164,7 @@ export const AdminDashboard: React.FC = () => {
           {activeTab === 'admin-chat' && <CustomerSupportChat />}
           {activeTab === 'admin-emails' && <EmailOutboxView />}
           {activeTab === 'admin-users' && <RoleManagement />}
+          {activeTab === 'admin-purge-center' && <AdminPurgeCenter />}
         </div>
       </div>
     </div>

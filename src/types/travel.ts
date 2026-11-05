@@ -157,6 +157,8 @@ export interface UserProfile {
   phone?: string;
   avatarUrl?: string;
   password?: string;
+  status?: 'active' | 'inactive';
+  createdAt?: string;
 }
 
 export interface ChatMessage {
