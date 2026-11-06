@@ -11,8 +11,12 @@ import {
   Ticket,
   ChevronRight,
   Sparkles,
-  Info
+  Info,
+  Calculator,
+  Percent,
+  Sliders
 } from 'lucide-react';
+import { CustomTripCalculator } from './CustomTripCalculator';
 
 interface PackageCatalogProps {
   packages: TourPackage[];
@@ -35,6 +39,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
 }) => {
   // Global tier preference filter or per card
   const [activeTiers, setActiveTiers] = useState<Record<string, PackageTier>>({});
+  const [catalogViewMode, setCatalogViewMode] = useState<'catalog' | 'custom_calculator'>('catalog');
 
   const categories: { key: PackageCategory | 'all'; label: string; sub: string }[] = [
     { key: 'all', label: 'Semua Paket', sub: 'Katalog Lengkap' },
@@ -68,37 +73,110 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
 
   return (
     <div id="catalog-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Section Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-        <div>
-          <span className="text-xs font-bold text-orange-600 tracking-wider uppercase">
-            PENAWARAN RESMI PERGIDIANTAR
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 mt-1">
-            Pilihan Paket Wisata Lengkap & Terpercaya
-          </h2>
-          <p className="text-sm text-neutral-600 mt-1 max-w-2xl">
-            Tersedia pilihan <strong>Paket Hemat</strong> (kendaraan, driver, bbm, parkir) dan <strong>Paket All In</strong> (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel).
-          </p>
+      {/* Top Level Mode Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-neutral-200/80 shadow-xs mb-8">
+        <div className="flex items-center gap-1.5 p-1 bg-neutral-100/90 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setCatalogViewMode('catalog')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${
+              catalogViewMode === 'catalog'
+                ? 'bg-white text-neutral-900 shadow-sm'
+                : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <span>Katalog Paket Wisata</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-200 text-neutral-700 font-semibold">
+              {filteredPackages.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCatalogViewMode('custom_calculator')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${
+              catalogViewMode === 'custom_calculator'
+                ? 'bg-linear-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20'
+                : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <Calculator className="w-3.5 h-3.5" />
+            <span>Atur Trip & Hitung Biaya</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/20 text-white font-extrabold flex items-center gap-0.5">
+              <Percent className="w-2.5 h-2.5" /> 10% OFF
+            </span>
+          </button>
         </div>
 
-        {/* Destination Quick Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-neutral-100 rounded-xl overflow-x-auto shrink-0 border border-neutral-200">
-          {destinations.map((d) => (
-            <button
-              key={d.key}
-              onClick={() => onSelectDestination(d.key)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
-                selectedDestination === d.key
-                  ? 'bg-white text-orange-600 shadow-2xs font-bold'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
+        <div className="hidden sm:flex items-center gap-2 text-xs text-neutral-500 px-3">
+          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+          <span>Bebas atur rute, durasi 2H1M - 7H6M, bus & add-on dengan diskon paket 10%</span>
         </div>
       </div>
+
+      {catalogViewMode === 'custom_calculator' ? (
+        <CustomTripCalculator defaultDestination={selectedDestination === 'all' ? 'jogja' : selectedDestination} />
+      ) : (
+        <>
+          {/* Quick CTA Banner for Custom Trip */}
+          <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-linear-to-r from-orange-50 via-amber-50 to-orange-100/50 border border-orange-200/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Sliders className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-neutral-900">Ingin Atur Rute & Destinasi Sesuai Keinginan?</h3>
+                  <span className="text-[10px] font-extrabold bg-orange-500 text-white px-2 py-0.5 rounded-full animate-pulse">
+                    Diskon 10% Paket
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-600 mt-0.5">
+                  Tentukan kota tujuan, durasi 2H1M - 7H6M, jumlah peserta, transport, makan, dan add-on. Sistem menghitung otomatis harga per pax & per paket!
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCatalogViewMode('custom_calculator')}
+              className="w-full sm:w-auto px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 shrink-0"
+            >
+              <Calculator className="w-3.5 h-3.5 text-amber-400" />
+              <span>Buka Kalkulator Trip</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Section Header */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+              <span className="text-xs font-bold text-orange-600 tracking-wider uppercase">
+                PENAWARAN RESMI PERGIDIANTAR
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 mt-1">
+                Pilihan Paket Wisata Lengkap & Terpercaya
+              </h2>
+              <p className="text-sm text-neutral-600 mt-1 max-w-2xl">
+                Tersedia pilihan <strong>Paket Hemat</strong> (kendaraan, driver, bbm, parkir) dan <strong>Paket All In</strong> (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel).
+              </p>
+            </div>
+
+            {/* Destination Quick Tabs */}
+            <div className="flex items-center gap-1.5 p-1 bg-neutral-100 rounded-xl overflow-x-auto shrink-0 border border-neutral-200">
+              {destinations.map((d) => (
+                <button
+                  key={d.key}
+                  onClick={() => onSelectDestination(d.key)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+                    selectedDestination === d.key
+                      ? 'bg-white text-orange-600 shadow-2xs font-bold'
+                      : 'text-neutral-600 hover:text-neutral-900'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
       {/* Category Filter Pills (Functional Buttons) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-8 no-scrollbar">
@@ -335,6 +413,8 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   );

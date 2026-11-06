@@ -7,6 +7,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { auth } from './gmailAuth';
+import { cloudSyncDoc, cloudDeleteDoc, cloudPurgeCollection } from './firebase';
 
 export interface RegisteredCustomer {
   uid: string;
@@ -24,7 +25,7 @@ const LOCAL_STORAGE_KEY_CURRENT_CUSTOMER = 'pergidiantar_customer_auth_v1';
 const LOCAL_STORAGE_KEY_ALL_CUSTOMERS = 'pergidiantar_registered_customers_v1';
 const LOCAL_STORAGE_KEY_PURGED_CUSTOMERS = 'pergidiantar_purged_customers';
 
-const DEFAULT_REGISTERED_CUSTOMERS: RegisteredCustomer[] = [
+export const DEFAULT_REGISTERED_CUSTOMERS: RegisteredCustomer[] = [
   {
     uid: 'usr-cust-01',
     displayName: 'Budi Santoso',
@@ -121,6 +122,7 @@ export const updateCustomerProfile = (updated: Partial<RegisteredCustomer>): Reg
   const all = getAllRegisteredCustomers();
   const updatedAll = all.map(c => c.uid === merged.uid || c.email.toLowerCase() === merged.email.toLowerCase() ? { ...c, ...merged } : c);
   saveAllRegisteredCustomers(updatedAll);
+  cloudSyncDoc('customers', merged.uid, merged).catch(() => {});
 
   return merged;
 };
@@ -175,8 +177,9 @@ export async function registerCustomer(
     status: 'active'
   };
 
-  // Save to registered database
+  // Save to registered database and sync to Cloud Firestore
   saveAllRegisteredCustomers([newProfile, ...all]);
+  cloudSyncDoc('customers', newProfile.uid, newProfile).catch(() => {});
   // Remove purge flag since user is actively registering
   localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_CUSTOMERS);
 
@@ -254,6 +257,7 @@ export async function loginWithGoogleFirebase(): Promise<RegisteredCustomer> {
       status: 'active'
     };
     saveAllRegisteredCustomers([matched, ...all]);
+    cloudSyncDoc('customers', matched.uid, matched).catch(() => {});
     localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_CUSTOMERS);
   }
 
@@ -301,6 +305,7 @@ export function adminAddCustomer(data: {
   };
 
   saveAllRegisteredCustomers([newCust, ...all]);
+  cloudSyncDoc('customers', newCust.uid, newCust).catch(() => {});
   localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_CUSTOMERS);
   return newCust;
 }
@@ -312,6 +317,7 @@ export function adminDeleteCustomer(uid: string): boolean {
   const all = getAllRegisteredCustomers();
   const filtered = all.filter(c => c.uid !== uid);
   saveAllRegisteredCustomers(filtered);
+  cloudDeleteDoc('customers', uid).catch(() => {});
 
   // If deleted user was currently logged in, clear their session
   const current = getStoredCustomer();
@@ -333,6 +339,10 @@ export function adminUpdateCustomer(uid: string, updates: Partial<RegisteredCust
     return c;
   });
   saveAllRegisteredCustomers(updatedList);
+  const target = updatedList.find(c => c.uid === uid);
+  if (target) {
+    cloudSyncDoc('customers', uid, target).catch(() => {});
+  }
 
   const current = getStoredCustomer();
   if (current && current.uid === uid) {
@@ -345,7 +355,10 @@ export function adminUpdateCustomer(uid: string, updates: Partial<RegisteredCust
  * Admin: Purge all registered customers
  */
 export function adminPurgeAllCustomers(): void {
+  const existing = getAllRegisteredCustomers();
+  const ids = existing.map((c) => c.uid);
   localStorage.setItem(LOCAL_STORAGE_KEY_ALL_CUSTOMERS, '[]');
   localStorage.setItem(LOCAL_STORAGE_KEY_PURGED_CUSTOMERS, 'true');
+  cloudPurgeCollection('customers', ids).catch(() => {});
   clearStoredCustomer();
 }

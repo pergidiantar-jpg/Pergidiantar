@@ -600,30 +600,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Real-time Cloud Firebase Synchronization across all online devices
   useEffect(() => {
+    // 1. Subscribe to Orders
     const unsubOrders = cloudSubscribeCollection<BookingOrder>('orders', (cloudOrders) => {
       if (cloudOrders && cloudOrders.length > 0) {
         setOrders(cloudOrders);
       }
     });
+
+    // 2. Subscribe to Vendor Disbursements
     const unsubPayments = cloudSubscribeCollection<VendorPayment>('vendorPayments', (cloudPayments) => {
       if (cloudPayments && cloudPayments.length > 0) {
         setVendorPayments(cloudPayments);
       }
     });
+
+    // 3. Subscribe to Fleet Inventory
     const unsubFleet = cloudSubscribeCollection<FleetUnit>('fleet', (cloudFleet) => {
       if (cloudFleet && cloudFleet.length > 0) {
         setFleet(cloudFleet);
       }
     });
+
+    // 4. Subscribe to Drivers & Crew
     const unsubDrivers = cloudSubscribeCollection<DriverCrew>('drivers', (cloudDrivers) => {
       if (cloudDrivers && cloudDrivers.length > 0) {
         setDrivers(cloudDrivers);
       }
     });
+
+    // 5. Subscribe to Hotel Partners
     const unsubHotels = cloudSubscribeCollection<HotelPartner>('hotels', (cloudHotels) => {
       if (cloudHotels && cloudHotels.length > 0) {
         setHotels(cloudHotels);
       }
+    });
+
+    // 6. Subscribe to Tour Packages
+    const unsubPackages = cloudSubscribeCollection<TourPackage>('packages', (cloudPkgs) => {
+      if (cloudPkgs && cloudPkgs.length > 0) {
+        setPackages(cloudPkgs);
+      }
+    });
+
+    // 7. Subscribe to Registered Customers (any device can login immediately)
+    const unsubCustomers = cloudSubscribeCollection<RegisteredCustomer>('customers', (cloudCustomers) => {
+      if (cloudCustomers && cloudCustomers.length > 0) {
+        setRegisteredCustomers(cloudCustomers);
+        saveAllRegisteredCustomers(cloudCustomers);
+      }
+    });
+
+    // 8. Subscribe to Staff / Super Admin Users
+    const unsubUsers = cloudSubscribeCollection<UserProfile>('users', (cloudUsers) => {
+      if (cloudUsers && cloudUsers.length > 0) {
+        setUsers(cloudUsers);
+        localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(cloudUsers));
+      }
+    });
+
+    // 9. Subscribe to Live Consultations Chat
+    const unsubChats = cloudSubscribeCollection<ChatMessage>('chats', (cloudChats) => {
+      if (cloudChats && cloudChats.length > 0) {
+        setChats(cloudChats);
+      }
+    });
+
+    // 10. Subscribe to Real-time Notifications
+    const unsubNotifs = cloudSubscribeCollection<NotificationItem>('notifications', (cloudNotifs) => {
+      if (cloudNotifs && cloudNotifs.length > 0) {
+        setNotifications(cloudNotifs);
+      }
+    });
+
+    // Seed initial users & customers if cloud is fresh
+    INITIAL_USERS.forEach((u) => {
+      cloudSyncDoc('users', u.id, u).catch(() => {});
     });
 
     return () => {
@@ -632,6 +683,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubFleet();
       unsubDrivers();
       unsubHotels();
+      unsubPackages();
+      unsubCustomers();
+      unsubUsers();
+      unsubChats();
+      unsubNotifs();
     };
   }, []);
 

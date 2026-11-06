@@ -73,6 +73,12 @@ service cloud.firestore {
       allow write: if isValidId(customerId);
     }
 
+    // Portal Staff & User Accounts
+    match /users/{userId} {
+      allow read: if isValidId(userId);
+      allow write: if isValidId(userId);
+    }
+
     // Live Consultations Chat
     match /chats/{chatId} {
       allow read: if isValidId(chatId);
