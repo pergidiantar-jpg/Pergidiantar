@@ -8,86 +8,81 @@ service cloud.firestore {
 
     // Helper functions
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
+      return id is string && id.size() <= 128;
     }
 
     // Connection testing document
     match /test/{testId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
-    // Tour Packages (Public catalog read, staff write)
+    // Tour Packages (Public catalog read & staff write)
     match /packages/{packageId} {
-      allow read: if isValidId(packageId);
+      allow get: if isValidId(packageId);
+      allow list: if true;
       allow write: if isValidId(packageId);
     }
 
     // Booking Orders
     match /orders/{orderId} {
-      allow read: if isValidId(orderId);
-      allow create: if isValidId(orderId);
-      allow update: if isValidId(orderId);
-      allow delete: if isValidId(orderId);
+      allow get: if isValidId(orderId);
+      allow list: if true;
+      allow write: if isValidId(orderId);
     }
 
     // Fleet Inventory
     match /fleet/{fleetId} {
-      allow read: if isValidId(fleetId);
+      allow get: if isValidId(fleetId);
+      allow list: if true;
       allow write: if isValidId(fleetId);
     }
 
     // Driver & Crew
     match /drivers/{driverId} {
-      allow read: if isValidId(driverId);
+      allow get: if isValidId(driverId);
+      allow list: if true;
       allow write: if isValidId(driverId);
     }
 
     // Partner Hotels
     match /hotels/{hotelId} {
-      allow read: if isValidId(hotelId);
+      allow get: if isValidId(hotelId);
+      allow list: if true;
       allow write: if isValidId(hotelId);
     }
 
     // Vendor & Partner Disbursements (Driver, Hotel, Armada, Tiket Wisata)
     match /vendorPayments/{paymentId} {
-      allow read: if isValidId(paymentId);
+      allow get: if isValidId(paymentId);
+      allow list: if true;
       allow write: if isValidId(paymentId);
     }
 
     // Registered Customer Profiles
     match /customers/{customerId} {
-      allow read: if isValidId(customerId);
+      allow get: if isValidId(customerId);
+      allow list: if true;
       allow write: if isValidId(customerId);
     }
 
     // Portal Staff & User Accounts
     match /users/{userId} {
-      allow read: if isValidId(userId);
+      allow get: if isValidId(userId);
+      allow list: if true;
       allow write: if isValidId(userId);
     }
 
     // Live Consultations Chat
     match /chats/{chatId} {
-      allow read: if isValidId(chatId);
+      allow get: if isValidId(chatId);
+      allow list: if true;
       allow write: if isValidId(chatId);
     }
 
     // Notification Log
     match /notifications/{notifId} {
-      allow read: if isValidId(notifId);
+      allow get: if isValidId(notifId);
+      allow list: if true;
       allow write: if isValidId(notifId);
     }
   }

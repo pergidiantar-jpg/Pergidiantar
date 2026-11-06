@@ -45,14 +45,17 @@ import {
   adminAddCustomer,
   adminDeleteCustomer,
   adminUpdateCustomer,
-  adminPurgeAllCustomers
+  adminPurgeAllCustomers,
+  DEFAULT_REGISTERED_CUSTOMERS
 } from '../services/firebaseAuthService';
 import {
   cloudSyncDoc,
   cloudDeleteDoc,
   cloudPurgeCollection,
-  cloudSubscribeCollection
+  cloudSubscribeCollection,
+  db
 } from '../services/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 interface AppContextType {
   packages: TourPackage[];
@@ -183,6 +186,7 @@ const LOCAL_STORAGE_KEY_PURGED_NOTIFS = 'pergidiantar_purged_notifs';
 const LOCAL_STORAGE_KEY_PURGED_PACKAGES = 'pergidiantar_purged_packages';
 const LOCAL_STORAGE_KEY_PURGED_HOTELS = 'pergidiantar_purged_hotels';
 const LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS = 'pergidiantar_purged_vendor_payments';
+const LOCAL_STORAGE_KEY_PURGED_CUSTOMERS = 'pergidiantar_purged_customers';
 const LOCAL_STORAGE_KEY_LAST_ACTIVITY = 'pergidiantar_last_activity_timestamp';
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -401,13 +405,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('Kata sandi wajib diisi.');
     }
 
-    const found = users.find(u => 
+    let found = users.find(u => 
       u.email.toLowerCase() === cleanId ||
       u.name.toLowerCase() === cleanId ||
       (cleanId.includes('benisius') && u.role === 'super_admin') ||
       (cleanId === 'superadmin' && u.role === 'super_admin') ||
       (cleanId === 'admin' && u.role === 'super_admin')
     );
+
+    // Fallback: Query live Cloud Firestore so any staff or superadmin can log in from any device
+    if (!found) {
+      try {
+        const snap = await getDocs(collection(db, 'users'));
+        const remoteUsers: UserProfile[] = [];
+        snap.forEach(d => remoteUsers.push(d.data() as UserProfile));
+        if (remoteUsers.length > 0) {
+          setUsers(remoteUsers);
+          localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(remoteUsers));
+          found = remoteUsers.find(u => 
+            u.email.toLowerCase() === cleanId ||
+            u.name.toLowerCase() === cleanId ||
+            (cleanId.includes('benisius') && u.role === 'super_admin') ||
+            (cleanId === 'superadmin' && u.role === 'super_admin') ||
+            (cleanId === 'admin' && u.role === 'super_admin')
+          );
+        }
+      } catch (err) {
+        console.warn('Direct Firestore staff lookup error:', err);
+      }
+    }
 
     if (!found) {
       throw new Error('Username atau Email tidak terdaftar di database PERGIDIANTAR.');
@@ -491,6 +517,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
         setStaffUser(updatedStaff);
         localStorage.setItem(LOCAL_STORAGE_KEY_STAFF_AUTH, JSON.stringify(updatedStaff));
+        cloudSyncDoc('users', updatedStaff.id, updatedStaff).catch(() => {});
 
         // Update in users list
         setUsers(prev => prev.map(u => {
@@ -672,10 +699,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    // Seed initial users & customers if cloud is fresh
+    // Seed initial users, customers, packages, hotels, fleet, drivers, orders, and payments to Cloud Firestore
     INITIAL_USERS.forEach((u) => {
       cloudSyncDoc('users', u.id, u).catch(() => {});
     });
+
+    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_CUSTOMERS) !== 'true') {
+      DEFAULT_REGISTERED_CUSTOMERS.forEach((c) => {
+        cloudSyncDoc('customers', c.uid, c).catch(() => {});
+      });
+    }
+
+    INITIAL_PACKAGES.forEach((p) => {
+      cloudSyncDoc('packages', p.id, p).catch(() => {});
+    });
+
+    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_FLEET) !== 'true') {
+      INITIAL_FLEET.forEach((f) => {
+        cloudSyncDoc('fleet', f.id, f).catch(() => {});
+      });
+    }
+
+    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS) !== 'true') {
+      INITIAL_DRIVERS.forEach((d) => {
+        cloudSyncDoc('drivers', d.id, d).catch(() => {});
+      });
+    }
+
+    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_HOTELS) !== 'true') {
+      INITIAL_HOTELS.forEach((h) => {
+        cloudSyncDoc('hotels', h.id, h).catch(() => {});
+      });
+    }
+
+    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_ORDERS) !== 'true') {
+      INITIAL_ORDERS.forEach((o) => {
+        cloudSyncDoc('orders', o.id, o).catch(() => {});
+      });
+    }
+
+    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS) !== 'true') {
+      INITIAL_VENDOR_PAYMENTS.forEach((v) => {
+        cloudSyncDoc('vendorPayments', v.id, v).catch(() => {});
+      });
+    }
 
     return () => {
       unsubOrders();
@@ -822,6 +889,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setNotifications((prev) => [newNotif, ...prev]);
+    cloudSyncDoc('notifications', newNotif.id, newNotif).catch(() => {});
 
     // Push notif browser real-time HANYA aktif dan muncul untuk role Super Admin
     if (currentRole === 'super_admin' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -897,6 +965,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         )
       );
 
+      const targetUnit = fleet.find(f => f.id === allocatedFleetId);
+      if (targetUnit) {
+        cloudSyncDoc('fleet', allocatedFleetId, {
+          ...targetUnit,
+          status: 'ditugaskan',
+          currentOrderId: createdOrder.orderNumber,
+          assignedTour: `${createdOrder.packageTitle} (${createdOrder.customer.fullName})`,
+          driverId: allocatedDriverId,
+          driverName: allocatedDriverName
+        }).catch(() => {});
+      }
+
       // Update driver state
       if (allocatedDriverId) {
         setDrivers((prev) =>
@@ -906,6 +986,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               : d
           )
         );
+
+        const targetDriver = drivers.find(d => d.id === allocatedDriverId);
+        if (targetDriver) {
+          cloudSyncDoc('drivers', allocatedDriverId, {
+            ...targetDriver,
+            status: 'ditugaskan',
+            currentOrderId: createdOrder.orderNumber
+          }).catch(() => {});
+        }
       }
     }
 
@@ -1040,46 +1129,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Assign new
     if (fleetUnit) {
+      const updatedF = {
+        ...fleetUnit,
+        status: 'ditugaskan' as const,
+        currentOrderId: targetOrder.orderNumber,
+        assignedTour: `${targetOrder.packageTitle} (${targetOrder.customer.fullName})`,
+        driverId: driver?.id,
+        driverName: driver?.name
+      };
       setFleet((prev) =>
-        prev.map((f) =>
-          f.id === fleetId
-            ? {
-                ...f,
-                status: 'ditugaskan',
-                currentOrderId: targetOrder.orderNumber,
-                assignedTour: `${targetOrder.packageTitle} (${targetOrder.customer.fullName})`,
-                driverId: driver?.id,
-                driverName: driver?.name
-              }
-            : f
-        )
+        prev.map((f) => (f.id === fleetId ? updatedF : f))
       );
+      cloudSyncDoc('fleet', fleetId, updatedF).catch(() => {});
     }
 
     if (driver) {
+      const updatedD = {
+        ...driver,
+        status: 'ditugaskan' as const,
+        currentOrderId: targetOrder.orderNumber
+      };
       setDrivers((prev) =>
-        prev.map((d) =>
-          d.id === driverId ? { ...d, status: 'ditugaskan', currentOrderId: targetOrder.orderNumber } : d
-        )
+        prev.map((d) => (d.id === driverId ? updatedD : d))
       );
+      cloudSyncDoc('drivers', driverId, updatedD).catch(() => {});
     }
 
+    const updatedOrder: BookingOrder = {
+      ...targetOrder,
+      assignedFleetId: fleetUnit?.id,
+      assignedFleetName: fleetUnit ? `${fleetUnit.name} (${fleetUnit.plateNumber})` : targetOrder.assignedFleetName,
+      assignedDriverId: driver?.id,
+      assignedDriverName: driver?.name,
+      assignedDriverPhone: driver?.phone,
+      orderStatus: targetOrder.orderStatus === 'baru' ? 'armada_ditugaskan' : targetOrder.orderStatus
+    };
+
     setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id === orderId) {
-          return {
-            ...ord,
-            assignedFleetId: fleetUnit?.id,
-            assignedFleetName: fleetUnit ? `${fleetUnit.name} (${fleetUnit.plateNumber})` : ord.assignedFleetName,
-            assignedDriverId: driver?.id,
-            assignedDriverName: driver?.name,
-            assignedDriverPhone: driver?.phone,
-            orderStatus: ord.orderStatus === 'baru' ? 'armada_ditugaskan' : ord.orderStatus
-          };
-        }
-        return ord;
-      })
+      prev.map((ord) => (ord.id === orderId ? updatedOrder : ord))
     );
+    cloudSyncDoc('orders', updatedOrder.id, updatedOrder).catch(() => {});
 
     triggerPush(
       'Armada & Driver Ditetapkan',
@@ -1289,6 +1378,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setChats((prev) => [...prev, newMsg]);
+    cloudSyncDoc('chats', newMsg.id, newMsg).catch(() => {});
 
     // If sent by customer, simulate CS auto acknowledgment or alert
     if (sender === 'customer') {
@@ -1304,12 +1394,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           isRead: false
         };
         setChats((prev) => [...prev, autoReply]);
+        cloudSyncDoc('chats', autoReply.id, autoReply).catch(() => {});
       }, 1800);
     }
   };
 
   const markChatAsRead = (id: string) => {
-    setChats((prev) => prev.map((c) => (c.id === id ? { ...c, isRead: true } : c)));
+    setChats((prev) => prev.map((c) => {
+      if (c.id === id) {
+        const updated = { ...c, isRead: true };
+        cloudSyncDoc('chats', id, updated).catch(() => {});
+        return updated;
+      }
+      return c;
+    }));
   };
 
   const markNotificationAsRead = (id: string) => {

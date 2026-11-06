@@ -6,8 +6,9 @@ import {
   signOut, 
   updateProfile
 } from 'firebase/auth';
+import { collection, getDocs } from 'firebase/firestore';
 import { auth } from './gmailAuth';
-import { cloudSyncDoc, cloudDeleteDoc, cloudPurgeCollection } from './firebase';
+import { cloudSyncDoc, cloudDeleteDoc, cloudPurgeCollection, db } from './firebase';
 
 export interface RegisteredCustomer {
   uid: string;
@@ -179,7 +180,11 @@ export async function registerCustomer(
 
   // Save to registered database and sync to Cloud Firestore
   saveAllRegisteredCustomers([newProfile, ...all]);
-  cloudSyncDoc('customers', newProfile.uid, newProfile).catch(() => {});
+  try {
+    await cloudSyncDoc('customers', newProfile.uid, newProfile);
+  } catch (err) {
+    console.warn('Cloud sync customer error:', err);
+  }
   // Remove purge flag since user is actively registering
   localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_CUSTOMERS);
 
@@ -190,16 +195,35 @@ export async function registerCustomer(
 
 /**
  * Login customer with STRICT verification:
- * Only users who exist in the database can log in!
+ * Checks local cache AND live Cloud Firestore so any registered device can log in instantly!
  */
 export async function loginCustomer(
   email: string,
   password: string
 ): Promise<RegisteredCustomer> {
   const normalizedEmail = email.trim().toLowerCase();
-  const all = getAllRegisteredCustomers();
+  let all = getAllRegisteredCustomers();
 
-  const matched = all.find(c => c.email.toLowerCase() === normalizedEmail);
+  let matched = all.find(c => c.email.toLowerCase() === normalizedEmail);
+
+  // If not found in local state (e.g. registered on a different device), query Cloud Firestore directly
+  if (!matched) {
+    try {
+      const snap = await getDocs(collection(db, 'customers'));
+      const remoteCustomers: RegisteredCustomer[] = [];
+      snap.forEach(d => {
+        remoteCustomers.push(d.data() as RegisteredCustomer);
+      });
+      if (remoteCustomers.length > 0) {
+        saveAllRegisteredCustomers(remoteCustomers);
+        all = remoteCustomers;
+        matched = remoteCustomers.find(c => c.email.toLowerCase() === normalizedEmail);
+      }
+    } catch (err) {
+      console.warn('Real-time Cloud Firestore customer query:', err);
+    }
+  }
+
   if (!matched) {
     throw new Error('Email belum terdaftar di sistem dan database PERGIDIANTAR. Silakan klik tab "Daftar Baru" untuk membuat akun.');
   }
