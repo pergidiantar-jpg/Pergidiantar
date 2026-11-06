@@ -26,28 +26,7 @@ const LOCAL_STORAGE_KEY_CURRENT_CUSTOMER = 'pergidiantar_customer_auth_v1';
 const LOCAL_STORAGE_KEY_ALL_CUSTOMERS = 'pergidiantar_registered_customers_v1';
 const LOCAL_STORAGE_KEY_PURGED_CUSTOMERS = 'pergidiantar_purged_customers';
 
-export const DEFAULT_REGISTERED_CUSTOMERS: RegisteredCustomer[] = [
-  {
-    uid: 'usr-cust-01',
-    displayName: 'Budi Santoso',
-    email: 'budi.santoso@gmail.com',
-    phoneNumber: '081234567890',
-    isRegistered: true,
-    createdAt: '2026-10-15 09:30',
-    password: 'password123',
-    status: 'active'
-  },
-  {
-    uid: 'usr-cust-02',
-    displayName: 'Siti Aminah',
-    email: 'siti.aminah@gmail.com',
-    phoneNumber: '081398765432',
-    isRegistered: true,
-    createdAt: '2026-10-20 14:15',
-    password: 'password123',
-    status: 'active'
-  }
-];
+export const DEFAULT_REGISTERED_CUSTOMERS: RegisteredCustomer[] = [];
 
 /**
  * Get all registered customers from database
@@ -64,9 +43,7 @@ export const getAllRegisteredCustomers = (): RegisteredCustomer[] => {
     if (data !== null) {
       return JSON.parse(data);
     }
-    // Initialize default customers
-    localStorage.setItem(LOCAL_STORAGE_KEY_ALL_CUSTOMERS, JSON.stringify(DEFAULT_REGISTERED_CUSTOMERS));
-    return DEFAULT_REGISTERED_CUSTOMERS;
+    return [];
   } catch (err) {
     console.error('Error fetching registered customers:', err);
     return [];

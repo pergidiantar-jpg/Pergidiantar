@@ -1,9 +1,9 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { ShieldCheck, UserCheck, KeyRound, Check, Lock, RotateCcw, UserCog } from 'lucide-react';
+import { ShieldCheck, UserCog, Check, Lock } from 'lucide-react';
 
 export const RoleManagement: React.FC = () => {
-  const { users, currentRole, setCurrentRole, resetToDemoData, openEditProfileModal } = useApp();
+  const { users, openEditProfileModal } = useApp();
 
   const permissionsMatrix = [
     { module: 'Lihat Katalog & Booking Online', customer: true, cs: true, ops: true, fin: true, super: true },
@@ -23,18 +23,18 @@ export const RoleManagement: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-neutral-900">
-              Hak Akses Multi-Pengguna (Role-Based Access Control)
+              Hak Akses & Manajemen Akun Administrator
             </h2>
             <p className="text-xs text-neutral-500 mt-0.5">
-              Pemisahan tingkat izin pengguna sesuai jabatan operasional: Super Admin, Operasional, Keuangan, Customer Service & Pelanggan.
+              Akun resmi eksekutif Super Admin PERGIDIANTAR dengan wewenang penuh atas seluruh operasional travel dan database cloud.
             </p>
           </div>
           <button
-            onClick={resetToDemoData}
-            className="py-2 px-3.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors self-start sm:self-auto"
+            onClick={openEditProfileModal}
+            className="py-2 px-3.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors self-start sm:self-auto shadow-xs cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Data Demo Sistem</span>
+            <UserCog className="w-3.5 h-3.5" />
+            <span>Edit Profil Administrator</span>
           </button>
         </div>
       </div>
@@ -42,56 +42,38 @@ export const RoleManagement: React.FC = () => {
       {/* Users Card List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {users.map((usr) => {
-          const isCurrentActive = usr.role === currentRole;
-
           return (
             <div
               key={usr.id}
-              className={`bg-white rounded-2xl border p-5 shadow-2xs space-y-3 transition-all ${
-                isCurrentActive ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-neutral-200'
-              }`}
+              className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-2xs space-y-3 transition-all"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-orange-700 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
                     {usr.roleLabel}
                   </span>
                   <h3 className="text-sm font-bold text-neutral-900 mt-1.5">{usr.name}</h3>
                   <span className="text-xs text-neutral-500">{usr.email}</span>
                 </div>
-                {isCurrentActive && (
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
-                    Sedang Digunakan
-                  </span>
-                )}
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Akun Utama Aktif
+                </span>
               </div>
 
               <div className="p-3 bg-neutral-50 rounded-xl text-xs text-neutral-600 border border-neutral-100">
-                <span className="text-[10px] text-neutral-400 uppercase font-bold block">Departemen:</span>
+                <span className="text-[10px] text-neutral-400 uppercase font-bold block">Departemen & Wewenang:</span>
                 <span className="font-medium text-neutral-800">{usr.department}</span>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-1">
                 <button
-                  onClick={() => setCurrentRole(usr.role)}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-colors ${
-                    isCurrentActive
-                      ? 'bg-neutral-900 text-white cursor-default'
-                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
-                  }`}
+                  onClick={openEditProfileModal}
+                  title="Edit Profil Akun Ini"
+                  className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-neutral-900 hover:bg-neutral-800 text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 >
-                  {isCurrentActive ? 'Peran Aktif' : 'Beralih Akun'}
+                  <UserCog className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Kelola Profil Akun</span>
                 </button>
-                {isCurrentActive && (
-                  <button
-                    onClick={openEditProfileModal}
-                    title="Edit Profil Akun Ini"
-                    className="py-2 px-3 rounded-xl text-xs font-bold bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 flex items-center gap-1 transition-colors"
-                  >
-                    <UserCog className="w-3.5 h-3.5" />
-                    <span>Edit Profil</span>
-                  </button>
-                )}
               </div>
             </div>
           );

@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { BookingOrder } from '../../types/travel';
 import { generateBookingInvoicePdf } from '../../utils/invoicePdfGenerator';
 import { CustomerInvoiceModal } from './CustomerInvoiceModal';
+import { CustomerPrintTripModal } from './CustomerPrintTripModal';
 import { 
   FileText, 
   CheckCircle2, 
@@ -17,34 +18,38 @@ import {
   DollarSign,
   Printer,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  LogIn,
+  Compass
 } from 'lucide-react';
 
 export const CustomerInvoicesView: React.FC = () => {
   const { 
     orders, 
     customerUser, 
+    packages,
     setActiveOrderForPayment,
     selectedInvoiceForModal,
-    setSelectedInvoiceForModal 
+    setSelectedInvoiceForModal,
+    openAuthModal
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending'>('all');
   const [downloadSuccessId, setDownloadSuccessId] = useState<string | null>(null);
+  const [printTripOrder, setPrintTripOrder] = useState<BookingOrder | null>(null);
 
-  // Filter orders for the current customer (if customer has email, match it, or fallback to all orders in demo)
+  // Production clean filtering: Show orders belonging to the logged-in customer, or search by Order Number
   const customerOrders = orders.filter(o => {
     if (customerUser?.email) {
-      // If customer has orders matching their email, show them
-      const matchesEmail = o.customer.email.toLowerCase() === customerUser.email.toLowerCase();
-      // If none match exactly in demo, show all orders so customer can test invoice feature
-      const hasAnyMatched = orders.some(ord => ord.customer.email.toLowerCase() === customerUser.email.toLowerCase());
-      if (hasAnyMatched) {
-        return matchesEmail;
-      }
+      return o.customer.email.toLowerCase() === customerUser.email.toLowerCase();
     }
-    return true;
+    // If not logged in, allow customer to view/print by searching their specific Order Number or email
+    if (searchQuery.trim().length >= 3) {
+      const q = searchQuery.toLowerCase().trim();
+      return o.orderNumber.toLowerCase().includes(q) || o.customer.email.toLowerCase().includes(q);
+    }
+    return false;
   });
 
   // Apply search and status filter
@@ -244,13 +249,28 @@ export const CustomerInvoicesView: React.FC = () => {
               ? 'Tidak ada invoice yang cocok dengan kriteria pencarian Anda. Coba sesuaikan filter atau reset kata kunci.'
               : 'Anda belum memiliki riwayat pemesanan atau tagihan paket wisata di akun ini.'}
           </p>
+          {/* Not logged in helper notice */}
+          {!customerUser && (
+            <div className="pt-2 flex flex-col items-center gap-2">
+              <p className="text-xs text-neutral-600">
+                Sudah memesan paket wisata? Masuk ke akun Anda atau cari berdasarkan Nomor Pesanan (PGD-...) di kolom pencarian.
+              </p>
+              <button
+                onClick={() => openAuthModal('login')}
+                className="py-2.5 px-5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Masuk ke Akun Pelanggan</span>
+              </button>
+            </div>
+          )}
           {(searchQuery || statusFilter !== 'all') && (
             <button
               onClick={() => {
                 setSearchQuery('');
                 setStatusFilter('all');
               }}
-              className="py-1.5 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-colors"
+              className="py-1.5 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
             >
               Reset Filter
             </button>
@@ -322,10 +342,20 @@ export const CustomerInvoicesView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Print Trip Button */}
+                    <button
+                      onClick={() => setPrintTripOrder(order)}
+                      className="py-2 px-3 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                      title="Cetak Rencana Perjalanan Wisata & Itinerary (Print-Friendly Itinerary)"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-orange-400" />
+                      <span>Print Trip</span>
+                    </button>
+
                     <button
                       onClick={() => setSelectedInvoiceForModal(order)}
-                      className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-neutral-200"
+                      className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-neutral-200 cursor-pointer"
                       title="Lihat Invoice Digital Lengkap"
                     >
                       <Eye className="w-3.5 h-3.5 text-neutral-600" />
@@ -334,7 +364,7 @@ export const CustomerInvoicesView: React.FC = () => {
 
                     <button
                       onClick={() => handleDownloadPdf(order)}
-                      className="py-2 px-3 bg-orange-50 hover:bg-orange-100 text-orange-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-orange-200"
+                      className="py-2 px-3 bg-orange-50 hover:bg-orange-100 text-orange-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-orange-200 cursor-pointer"
                       title="Unduh Invoice PDF"
                     >
                       {downloadSuccessId === order.id ? (
@@ -353,7 +383,7 @@ export const CustomerInvoicesView: React.FC = () => {
                     {!isPaid && (
                       <button
                         onClick={() => setActiveOrderForPayment(order)}
-                        className="py-2 px-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                        className="py-2 px-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
                         title="Bayar tagihan sekarang"
                       >
                         <CreditCard className="w-3.5 h-3.5" />
@@ -377,6 +407,14 @@ export const CustomerInvoicesView: React.FC = () => {
           setSelectedInvoiceForModal(null);
           setActiveOrderForPayment(order);
         }}
+      />
+
+      {/* Print-Friendly Trip Itinerary Modal */}
+      <CustomerPrintTripModal
+        order={printTripOrder}
+        isOpen={!!printTripOrder}
+        onClose={() => setPrintTripOrder(null)}
+        packages={packages}
       />
     </div>
   );

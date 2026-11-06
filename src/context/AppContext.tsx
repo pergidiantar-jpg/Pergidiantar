@@ -215,7 +215,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_VENDOR_PAYMENTS);
-      return saved !== null ? JSON.parse(saved) : INITIAL_VENDOR_PAYMENTS;
+      if (!saved) return INITIAL_VENDOR_PAYMENTS;
+      const parsed: VendorPayment[] = JSON.parse(saved);
+      // Clean legacy dummy payments
+      return parsed.filter(v => !v.id.startsWith('pay-drv-0') && !v.id.startsWith('pay-htl-0') && !v.id.startsWith('pay-tkt-0') && !v.id.startsWith('pay-veh-0'));
     } catch {
       return [];
     }
@@ -226,7 +229,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [users, setUsers] = useState<UserProfile[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_USERS);
-      return saved ? JSON.parse(saved) : INITIAL_USERS;
+      if (!saved) return INITIAL_USERS;
+      const parsed: UserProfile[] = JSON.parse(saved);
+      // Clean legacy dummy test roles
+      const filtered = parsed.filter(u => u.role === 'super_admin');
+      return filtered.length > 0 ? filtered : INITIAL_USERS;
     } catch {
       return INITIAL_USERS;
     }
@@ -236,7 +243,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_ORDERS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_ORDERS);
-      return saved !== null ? JSON.parse(saved) : INITIAL_ORDERS;
+      if (!saved) return INITIAL_ORDERS;
+      const parsed: BookingOrder[] = JSON.parse(saved);
+      // Clean legacy dummy test orders
+      return parsed.filter(o => !['ord-01', 'ord-02', 'ord-03', 'ord-04', 'ord-05'].includes(o.id));
     } catch {
       return [];
     }
@@ -266,7 +276,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_CHATS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_CHATS);
-      return saved !== null ? JSON.parse(saved) : INITIAL_CHATS;
+      if (!saved) return INITIAL_CHATS;
+      const parsed: ChatMessage[] = JSON.parse(saved);
+      return parsed.filter(c => !['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id));
     } catch {
       return [];
     }
@@ -276,7 +288,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_NOTIFS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_NOTIFS);
-      return saved !== null ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+      if (!saved) return INITIAL_NOTIFICATIONS;
+      const parsed: NotificationItem[] = JSON.parse(saved);
+      return parsed.filter(n => !['n1', 'n2', 'n3', 'n4', 'n5'].includes(n.id));
     } catch {
       return [];
     }

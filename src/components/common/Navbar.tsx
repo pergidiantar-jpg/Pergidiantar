@@ -43,18 +43,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
 
   const isCustomer = currentRole === 'customer';
 
-  const staffRoles: { role: UserRole; label: string; desc: string }[] = [
-    { role: 'super_admin', label: 'Super Admin', desc: 'Akses penuh seluruh modul sistem' },
-    { role: 'ops_admin', label: 'Admin Operasional', desc: 'Penugasan armada & driver' },
-    { role: 'finance', label: 'Finance & Keuangan', desc: 'Verifikasi bayar & laporan bulanan' },
-    { role: 'customer_service', label: 'Customer Service (CS)', desc: 'Live chat & konsultasi pelanggan' }
-  ];
-
-  const handleRoleSelect = (role: UserRole) => {
-    setCurrentRole(role);
-    setIsUserMenuOpen(false);
-  };
-
   const handleLogout = async () => {
     setIsUserMenuOpen(false);
     if (isStaffLoggedIn) {
@@ -310,30 +298,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
                             <span>Edit Profil Saya</span>
                           </button>
                         </div>
-
-                        {/* If Super Admin: Quick switch among internal staff roles for preview */}
-                        {isStaffLoggedIn && staffUser?.role === 'super_admin' && (
-                          <div className="py-1 border-b border-neutral-100">
-                            <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                              Uji Tampilan Role Staf:
-                            </div>
-                            {staffRoles.map((r) => {
-                              const isSel = r.role === currentRole;
-                              return (
-                                <button
-                                  key={r.role}
-                                  onClick={() => handleRoleSelect(r.role)}
-                                  className={`w-full text-left px-4 py-1.5 text-xs flex items-center justify-between transition-colors ${
-                                    isSel ? 'bg-blue-50 text-blue-900 font-bold' : 'text-neutral-600 hover:bg-neutral-50'
-                                  }`}
-                                >
-                                  <span>{r.label}</span>
-                                  {isSel && <span className="text-[10px] text-blue-600 font-bold">Aktif</span>}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
 
                         {/* Logout Option */}
                         <div className="pt-1">
