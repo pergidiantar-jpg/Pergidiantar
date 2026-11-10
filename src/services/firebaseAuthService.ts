@@ -9,6 +9,15 @@ import {
 import { collection, getDocs } from 'firebase/firestore';
 import { auth } from './gmailAuth';
 import { cloudSyncDoc, cloudDeleteDoc, cloudPurgeCollection, db } from './firebase';
+import { 
+  checkLoginLockout, 
+  recordFailedLogin, 
+  resetLoginLockout, 
+  verifySecurePassword, 
+  logSecurityEvent, 
+  generateSessionToken,
+  sanitizeAuthInput 
+} from './secureAuthService';
 
 export interface RegisteredCustomer {
   uid: string;
@@ -20,6 +29,8 @@ export interface RegisteredCustomer {
   createdAt: string;
   password?: string;
   status?: 'active' | 'inactive';
+  sessionToken?: string;
+  lastLoginAt?: string;
 }
 
 const LOCAL_STORAGE_KEY_CURRENT_CUSTOMER = 'pergidiantar_customer_auth_v1';
@@ -123,7 +134,22 @@ export async function registerCustomer(
   password: string,
   phone: string
 ): Promise<RegisteredCustomer> {
-  const normalizedEmail = email.trim().toLowerCase();
+  const cleanName = sanitizeAuthInput(name);
+  const normalizedEmail = sanitizeAuthInput(email).toLowerCase();
+  const cleanPhone = sanitizeAuthInput(phone);
+
+  if (!cleanName || cleanName.length < 2) {
+    throw new Error('Nama lengkap wajib diisi minimal 2 karakter.');
+  }
+
+  if (!normalizedEmail || !normalizedEmail.includes('@') || !normalizedEmail.includes('.')) {
+    throw new Error('Format alamat email tidak valid.');
+  }
+
+  if (!password || password.length < 6) {
+    throw new Error('Kata sandi wajib diisi minimal 6 karakter demi keamanan akun.');
+  }
+
   const all = getAllRegisteredCustomers();
 
   // Check if email already exists
@@ -135,24 +161,27 @@ export async function registerCustomer(
   // Attempt Firebase auth registration if possible
   let firebaseUid: string | null = null;
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
     if (cred.user) {
-      await updateProfile(cred.user, { displayName: name.trim() });
+      await updateProfile(cred.user, { displayName: cleanName });
       firebaseUid = cred.user.uid;
     }
   } catch (firebaseErr: any) {
     console.warn('Firebase registration notice (using persistent database):', firebaseErr.message);
   }
 
+  const sessionToken = generateSessionToken(firebaseUid || `usr-cust-${Date.now()}`, 'customer');
   const newProfile: RegisteredCustomer = {
     uid: firebaseUid || `usr-cust-${Date.now()}`,
-    displayName: name.trim(),
+    displayName: cleanName,
     email: normalizedEmail,
-    phoneNumber: phone.trim() || '087716443331',
+    phoneNumber: cleanPhone || '087716443331',
     isRegistered: true,
     createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
     password,
-    status: 'active'
+    status: 'active',
+    sessionToken,
+    lastLoginAt: new Date().toISOString()
   };
 
   // Save to registered database and sync to Cloud Firestore
@@ -165,25 +194,54 @@ export async function registerCustomer(
   // Remove purge flag since user is actively registering
   localStorage.removeItem(LOCAL_STORAGE_KEY_PURGED_CUSTOMERS);
 
+  // Security audit log to Cloud Firestore
+  logSecurityEvent({
+    email: normalizedEmail,
+    role: 'customer',
+    status: 'success',
+    reason: 'Registrasi Pelanggan Baru Berhasil'
+  });
+
   // Set active session
   saveCustomerProfile(newProfile);
   return newProfile;
 }
 
 /**
- * Login customer with STRICT verification:
- * Checks local cache AND live Cloud Firestore so any registered device can log in instantly!
+ * Login customer with SECURE verification:
+ * Enforces brute-force lockout, password verification, audit logging,
+ * and live Cloud Firestore synchronization across all devices.
  */
 export async function loginCustomer(
   email: string,
   password: string
 ): Promise<RegisteredCustomer> {
-  const normalizedEmail = email.trim().toLowerCase();
-  let all = getAllRegisteredCustomers();
+  const normalizedEmail = sanitizeAuthInput(email).toLowerCase();
+  const cleanPass = (password || '').trim();
 
+  if (!normalizedEmail) {
+    throw new Error('Alamat email wajib diisi.');
+  }
+  if (!cleanPass) {
+    throw new Error('Kata sandi wajib diisi.');
+  }
+
+  // 1. Brute-force Lockout Check
+  const lockout = checkLoginLockout(normalizedEmail);
+  if (lockout.isLocked) {
+    logSecurityEvent({
+      email: normalizedEmail,
+      role: 'customer',
+      status: 'locked',
+      reason: 'Akses diblokir sementara karena proteksi brute force'
+    });
+    throw new Error(`Akses ditolak sementara: Terlalu banyak percobaan login salah. Akun Anda dikunci selama ${lockout.remainingSeconds} detik demi keamanan data.`);
+  }
+
+  let all = getAllRegisteredCustomers();
   let matched = all.find(c => c.email.toLowerCase() === normalizedEmail);
 
-  // If not found in local state (e.g. registered on a different device), query Cloud Firestore directly
+  // If not found in local cache (e.g. registered on a different device), query Cloud Firestore directly
   if (!matched) {
     try {
       const snap = await getDocs(collection(db, 'customers'));
@@ -202,26 +260,71 @@ export async function loginCustomer(
   }
 
   if (!matched) {
-    throw new Error('Email belum terdaftar di sistem dan database PERGIDIANTAR. Silakan klik tab "Daftar Baru" untuk membuat akun.');
+    recordFailedLogin(normalizedEmail);
+    logSecurityEvent({
+      email: normalizedEmail,
+      role: 'customer',
+      status: 'failed',
+      reason: 'Email tidak ditemukan di sistem'
+    });
+    throw new Error('Alamat email tidak terdaftar di sistem PERGIDIANTAR. Silakan daftar akun baru terlebih dahulu.');
   }
 
   if (matched.status === 'inactive') {
+    logSecurityEvent({
+      email: normalizedEmail,
+      role: 'customer',
+      status: 'failed',
+      reason: 'Akun pelanggan non-aktif'
+    });
     throw new Error('Akun pelanggan Anda berstatus non-aktif. Harap hubungi Customer Service PERGIDIANTAR.');
   }
 
-  if (matched.password && matched.password !== password) {
-    throw new Error('Kata sandi (password) salah. Harap periksa kembali kata sandi Anda.');
+  // 2. Strict Password Verification
+  const isPassValid = await verifySecurePassword(cleanPass, matched.password);
+  if (!isPassValid) {
+    const fail = recordFailedLogin(normalizedEmail);
+    logSecurityEvent({
+      email: normalizedEmail,
+      role: 'customer',
+      status: fail.isLocked ? 'locked' : 'failed',
+      reason: 'Kata sandi salah'
+    });
+
+    if (fail.isLocked) {
+      throw new Error(`Kata sandi salah. Akun Anda dikunci sementara selama 5 menit untuk proteksi keamanan (${fail.attempts}x percobaan gagal).`);
+    }
+    throw new Error(`Kata sandi salah. Harap periksa kembali kata sandi Anda. (Sisa percobaan login: ${5 - fail.attempts}x)`);
   }
 
-  // Try syncing with Firebase Auth
+  // 3. Login Success: Reset lockout counter, generate session token, record audit
+  resetLoginLockout(normalizedEmail);
+
+  const sessionToken = generateSessionToken(matched.uid, 'customer');
+  const updatedCustomer: RegisteredCustomer = {
+    ...matched,
+    sessionToken,
+    lastLoginAt: new Date().toISOString()
+  };
+
+  // Sync session and audit log to Cloud Firestore
+  cloudSyncDoc('customers', matched.uid, updatedCustomer).catch(() => {});
+  logSecurityEvent({
+    email: normalizedEmail,
+    role: 'customer',
+    status: 'success',
+    reason: 'Login Pelanggan Berhasil (Sesi Aman)'
+  });
+
+  // Try syncing with Firebase Auth in background
   try {
-    await signInWithEmailAndPassword(auth, email.trim(), password);
+    await signInWithEmailAndPassword(auth, normalizedEmail, cleanPass);
   } catch (e: any) {
-    console.warn('Firebase sign-in sync notice:', e.message);
+    console.warn('Firebase sign-in notice:', e.message);
   }
 
-  saveCustomerProfile(matched);
-  return matched;
+  saveCustomerProfile(updatedCustomer);
+  return updatedCustomer;
 }
 
 /**

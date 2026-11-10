@@ -92,5 +92,19 @@ service cloud.firestore {
       allow list: if true;
       allow write: if isValidId(destId);
     }
+
+    // Site Visitor Statistics & Real-time Analytics
+    match /site_stats/{statId} {
+      allow get: if isValidId(statId);
+      allow list: if true;
+      allow write: if isValidId(statId);
+    }
+
+    // Secure Login Audit Logs
+    match /login_logs/{logId} {
+      allow get: if isValidId(logId);
+      allow list: if true;
+      allow write: if isValidId(logId);
+    }
   }
 }

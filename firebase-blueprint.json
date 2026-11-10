@@ -167,6 +167,35 @@
         "imageUrl": { "type": "string", "maxLength": 512 }
       },
       "required": ["id", "name", "city", "avgTicketPrice", "rating"]
+    },
+    "SiteStats": {
+      "title": "SiteStats",
+      "description": "Total visitor metrics and platform analytics synchronized across devices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "totalVisitors": { "type": "number" },
+        "todayVisitors": { "type": "number" },
+        "uniqueVisitors": { "type": "number" },
+        "activeNow": { "type": "number" },
+        "lastVisitedAt": { "type": "string", "maxLength": 64 },
+        "lastResetDate": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["id", "totalVisitors", "todayVisitors", "uniqueVisitors"]
+    },
+    "LoginSecurityLog": {
+      "title": "LoginSecurityLog",
+      "description": "Security audit logs for user logins across devices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 32 },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "userAgent": { "type": "string", "maxLength": 256 }
+      },
+      "required": ["id", "email", "status", "timestamp"]
     }
   },
   "firestore": {
@@ -201,6 +230,14 @@
     "/trip_destinations/{destId}": {
       "schema": { "$ref": "#/entities/DestinationOption" },
       "description": "Curated viral travel destinations for custom trip calculator"
+    },
+    "/site_stats/{statId}": {
+      "schema": { "$ref": "#/entities/SiteStats" },
+      "description": "Real-time visitor counters and platform statistics"
+    },
+    "/login_logs/{logId}": {
+      "schema": { "$ref": "#/entities/LoginSecurityLog" },
+      "description": "Security login audit logs and lockout tracking"
     },
     "/test/{testId}": {
       "schema": { "$ref": "#/entities/TestConnection" },

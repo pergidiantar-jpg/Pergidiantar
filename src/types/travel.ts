@@ -159,6 +159,8 @@ export interface UserProfile {
   password?: string;
   status?: 'active' | 'inactive';
   createdAt?: string;
+  sessionToken?: string;
+  lastLoginAt?: string;
 }
 
 export interface ChatMessage {

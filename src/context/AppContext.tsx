@@ -65,6 +65,22 @@ import {
   getMaxDestinationsForDuration,
   BonusDestinationInfo
 } from '../data/destinationsData';
+import { 
+  checkLoginLockout, 
+  recordFailedLogin, 
+  resetLoginLockout, 
+  verifySecurePassword, 
+  logSecurityEvent, 
+  generateSessionToken, 
+  sanitizeAuthInput,
+  LoginAuditLog 
+} from '../services/secureAuthService';
+import { 
+  trackSiteVisit, 
+  subscribeToLiveSiteStats, 
+  SiteVisitorStats, 
+  DEFAULT_SITE_STATS 
+} from '../services/visitorTrackingService';
 
 interface AppContextType {
   packages: TourPackage[];
@@ -175,6 +191,10 @@ interface AppContextType {
   // Inactivity Auto Logout
   autoLogoutNotice: string | null;
   clearAutoLogoutNotice: () => void;
+  // Real-time Visitor & Analytics
+  visitorStats: SiteVisitorStats;
+  securityAuditLogs: LoginAuditLog[];
+  trackVisit: (role?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -357,6 +377,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeTab, setActiveTab] = useState<string>('catalog');
   const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
 
+  // Real-time Visitor Tracking & Security Audit Logs
+  const [visitorStats, setVisitorStats] = useState<SiteVisitorStats>(() => {
+    try {
+      const saved = localStorage.getItem('pergidiantar_cached_site_stats');
+      return saved ? JSON.parse(saved) : DEFAULT_SITE_STATS;
+    } catch {
+      return DEFAULT_SITE_STATS;
+    }
+  });
+  const [securityAuditLogs, setSecurityAuditLogs] = useState<LoginAuditLog[]>([]);
+
+  const trackVisit = async (role?: string) => {
+    try {
+      const updated = await trackSiteVisit(role || currentRole || 'Pengunjung');
+      setVisitorStats(updated);
+    } catch {}
+  };
+
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<BookingOrder | null>(null);
   const [selectedPackageForBooking, setSelectedPackageForBooking] = useState<TourPackage | null>(null);
   const [activeOrderForPayment, setActiveOrderForPayment] = useState<BookingOrder | null>(null);
@@ -436,7 +474,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const handleStaffLogin = async (identifier: string, password?: string): Promise<boolean> => {
-    const cleanId = (identifier || '').trim().toLowerCase();
+    const cleanId = sanitizeAuthInput(identifier).toLowerCase();
     const cleanPass = (password || '').trim();
 
     if (!cleanId) {
@@ -444,6 +482,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (!cleanPass) {
       throw new Error('Kata sandi wajib diisi.');
+    }
+
+    // 1. Brute-force Lockout Check
+    const lockout = checkLoginLockout(cleanId);
+    if (lockout.isLocked) {
+      logSecurityEvent({
+        email: cleanId,
+        role: 'staff',
+        status: 'locked',
+        reason: 'Akses staf dikunci karena percobaan salah berulang kali'
+      });
+      throw new Error(`Akses staf diblokir sementara: Terlalu banyak percobaan login salah. Akun Anda dikunci selama ${lockout.remainingSeconds} detik demi keamanan.`);
     }
 
     let found = users.find(u => 
@@ -477,31 +527,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (!found) {
+      const fail = recordFailedLogin(cleanId);
+      logSecurityEvent({
+        email: cleanId,
+        role: 'staff',
+        status: 'failed',
+        reason: 'Username staf tidak terdaftar'
+      });
       throw new Error('Username atau Email tidak terdaftar di database PERGIDIANTAR.');
     }
-    if (found.password && found.password !== cleanPass) {
-      throw new Error('Kata sandi salah. Harap periksa kembali password Anda.');
-    }
+
     if (found.status === 'inactive') {
+      logSecurityEvent({
+        email: found.email,
+        role: found.role,
+        status: 'failed',
+        reason: 'Akun staf berstatus non-aktif'
+      });
       throw new Error('Akun staf Anda berstatus non-aktif. Harap hubungi Super Admin.');
     }
+
+    // 2. Strict Password Verification
+    const isPassValid = await verifySecurePassword(cleanPass, found.password);
+    if (!isPassValid) {
+      const fail = recordFailedLogin(cleanId);
+      logSecurityEvent({
+        email: found.email,
+        role: found.role,
+        status: fail.isLocked ? 'locked' : 'failed',
+        reason: 'Password staf salah'
+      });
+
+      if (fail.isLocked) {
+        throw new Error(`Kata sandi salah. Akun staf dikunci sementara selama 5 menit untuk proteksi keamanan (${fail.attempts}x percobaan salah).`);
+      }
+      throw new Error(`Kata sandi salah. Harap periksa kembali password Anda. (Sisa percobaan: ${5 - fail.attempts}x)`);
+    }
+
+    // 3. Login Success: Reset lockout, generate session token, record audit
+    resetLoginLockout(cleanId);
+    const sessionToken = generateSessionToken(found.id, found.role);
+    const updatedStaff: UserProfile = {
+      ...found,
+      sessionToken,
+      lastLoginAt: new Date().toISOString()
+    };
 
     // Logout customer session
     setCustomerUser(null);
     clearStoredCustomer();
 
-    setStaffUser(found);
-    localStorage.setItem(LOCAL_STORAGE_KEY_STAFF_AUTH, JSON.stringify(found));
+    setStaffUser(updatedStaff);
+    localStorage.setItem(LOCAL_STORAGE_KEY_STAFF_AUTH, JSON.stringify(updatedStaff));
     setCurrentRoleState(found.role);
     setActiveTab('admin-orders');
     closeAuthModal();
     triggerPush('Login Staf Berhasil', `Selamat datang, ${found.name} (${found.roleLabel})!`, 'system');
 
-    // Cloud Firebase Integration: Record verified login audit
-    cloudSyncDoc('users', found.id, {
-      ...found,
-      lastLoginAt: new Date().toISOString()
-    }).catch(() => {});
+    // Cloud Firebase Integration: Record verified login audit & update user document
+    cloudSyncDoc('users', found.id, updatedStaff).catch(() => {});
+    logSecurityEvent({
+      email: found.email,
+      role: found.role,
+      status: 'success',
+      reason: 'Login Staf Berhasil (Sesi Aman)'
+    });
 
     return true;
   };
@@ -754,6 +844,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    // 12. Real-time Visitor Tracking & Cloud Synchronization Across All Devices
+    trackSiteVisit(staffUser?.roleLabel || (customerUser ? 'Pelanggan' : 'Pengunjung')).then(st => {
+      setVisitorStats(st);
+    }).catch(() => {});
+
+    const unsubVisitor = subscribeToLiveSiteStats((stats) => {
+      setVisitorStats(stats);
+    });
+
+    // 13. Real-time Login Security Audit Logs (Multi-device)
+    const unsubSecurityLogs = cloudSubscribeCollection<LoginAuditLog>('login_logs', (logs) => {
+      if (logs && logs.length > 0) {
+        setSecurityAuditLogs(logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+      }
+    });
+
     // Seed initial users, customers, packages, hotels, fleet, drivers, and destinations to Cloud Firestore
     // CRITICAL: We use cloudSyncDocIfNotExists so any customized data, additions, or updates made by admin
     // are PERMANENTLY PRESERVED and never wiped out or reset by system updates or reloads!
@@ -818,6 +924,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubChats();
       unsubNotifs();
       unsubDestinations();
+      unsubVisitor();
+      unsubSecurityLogs();
     };
   }, []);
 
@@ -1576,6 +1684,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
       };
       setUsers(prev => [...prev, newStaff]);
+      await cloudSyncDoc('users', newStaff.id, newStaff);
     }
     triggerPush('User Baru Didaftarkan', `Akun ${data.name} (${data.email}) berhasil didaftarkan ke sistem.`, 'system');
   };
@@ -1593,6 +1702,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setRegisteredCustomers(getAllRegisteredCustomers());
     } else {
       setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+      const targetUser = users.find(u => u.id === id);
+      if (targetUser) {
+        await cloudSyncDoc('users', id, { ...targetUser, ...updates });
+      }
     }
   };
 
@@ -1607,6 +1720,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         throw new Error('Akun Super Admin Utama (Benisius Rahmat Basuki) tidak dapat dihapus.');
       }
       setUsers(prev => prev.filter(u => u.id !== id));
+      await cloudDeleteDoc('users', id);
     }
     triggerPush('User Dihapus', 'Data user telah dihapus secara permanen dari sistem.', 'system');
   };
@@ -1619,12 +1733,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       adminUpdateCustomer(id, { status: newStatus });
       setRegisteredCustomers(getAllRegisteredCustomers());
     } else {
+      const targetUser = users.find(u => u.id === id);
+      const newStatus = targetUser?.status === 'inactive' ? 'active' : 'inactive';
       setUsers(prev => prev.map(u => {
         if (u.id === id) {
-          return { ...u, status: u.status === 'inactive' ? 'active' : 'inactive' };
+          return { ...u, status: newStatus };
         }
         return u;
       }));
+      if (targetUser) {
+        await cloudSyncDoc('users', id, { ...targetUser, status: newStatus });
+      }
     }
   };
 
@@ -1859,7 +1978,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         purgeCustomers,
         purgeAllDataFactoryReset,
         autoLogoutNotice,
-        clearAutoLogoutNotice
+        clearAutoLogoutNotice,
+        visitorStats,
+        securityAuditLogs,
+        trackVisit
       }}
     >
       {children}

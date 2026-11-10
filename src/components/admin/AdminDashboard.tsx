@@ -26,11 +26,27 @@ import {
   Bell, 
   Users, 
   Trash2,
-  CreditCard
+  CreditCard,
+  Eye,
+  Activity,
+  Globe,
+  Smartphone,
+  Laptop,
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
-  const { activeTab, setActiveTab, currentUser, currentRole, setCurrentRole, openNotifications, unreadNotifCount } = useApp();
+  const { 
+    activeTab, 
+    setActiveTab, 
+    currentUser, 
+    currentRole, 
+    setCurrentRole, 
+    openNotifications, 
+    unreadNotifCount,
+    visitorStats 
+  } = useApp();
 
   const navigationItems = [
     { id: 'admin-orders', label: 'Order Masuk & Status', icon: ShoppingBag, desc: 'Kelola data pemesan & pembayaran' },
@@ -97,6 +113,115 @@ export const AdminDashboard: React.FC = () => {
             <span>Buka Tampilan Pelanggan</span>
             <ExternalLink className="w-3.5 h-3.5 text-neutral-500" />
           </button>
+        </div>
+      </div>
+
+      {/* Real-Time Total Visitor & Cloud Sync Metrics Bar */}
+      <div className="mt-6 space-y-3">
+        {/* Sync & Security Status Header */}
+        <div className="bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white rounded-2xl p-4 shadow-sm border border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-white tracking-wide">
+                  Cloud Firebase Multi-Perangkat Aktif
+                </span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
+                  Live Real-Time
+                </span>
+              </div>
+              <p className="text-[11px] text-neutral-400">
+                Semua data pesanan, user, armada, dan penghitungan paket otomatis tersinkronisasi antar perangkat.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-neutral-300 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl shrink-0">
+            <Lock className="w-3.5 h-3.5 text-orange-400" />
+            <span>Sistem Login Aman (SHA-256 & Rate Limiting)</span>
+          </div>
+        </div>
+
+        {/* 4 Cards: Total Visitor, Hari Ini, Unik, Aktif Sekarang */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Total Visitor All Time */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-2xs hover:border-orange-300 transition-colors">
+            <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
+              <span>Total Visitor</span>
+              <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                <Eye className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-extrabold text-neutral-900 font-mono tracking-tight" data-tabular>
+                {visitorStats.totalVisitors.toLocaleString('id-ID')}
+              </span>
+              <span className="text-[11px] text-neutral-400 font-medium">kunjungan</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50 w-fit px-2 py-0.5 rounded-md font-semibold">
+              <Activity className="w-3 h-3" />
+              <span>Semua Waktu (All-Time)</span>
+            </div>
+          </div>
+
+          {/* Pengunjung Hari Ini */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-2xs hover:border-blue-300 transition-colors">
+            <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
+              <span>Pengunjung Hari Ini</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Globe className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-extrabold text-neutral-900 font-mono tracking-tight" data-tabular>
+                {visitorStats.todayVisitors.toLocaleString('id-ID')}
+              </span>
+              <span className="text-[11px] text-neutral-400 font-medium">hari ini</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-[10px] text-blue-700 bg-blue-50 w-fit px-2 py-0.5 rounded-md font-semibold">
+              <span>Hari Ini: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+            </div>
+          </div>
+
+          {/* Pengunjung Unik */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-2xs hover:border-purple-300 transition-colors">
+            <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
+              <span>Pengunjung Unik</span>
+              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Users className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-extrabold text-neutral-900 font-mono tracking-tight" data-tabular>
+                {visitorStats.uniqueVisitors.toLocaleString('id-ID')}
+              </span>
+              <span className="text-[11px] text-neutral-400 font-medium">perangkat</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-[10px] text-purple-700 bg-purple-50 w-fit px-2 py-0.5 rounded-md font-semibold">
+              <span>ID Perangkat Unik</span>
+            </div>
+          </div>
+
+          {/* Aktif Sekarang (Live) */}
+          <div className="bg-white rounded-2xl border border-emerald-200 p-4 shadow-2xs hover:border-emerald-300 transition-colors relative overflow-hidden">
+            <div className="flex items-center justify-between text-neutral-500 text-xs font-medium">
+              <span>Aktif Sekarang</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center relative">
+                <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600 font-mono tracking-tight" data-tabular>
+                {visitorStats.activeNow}
+              </span>
+              <span className="text-[11px] text-neutral-400 font-medium">tamu online</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50 w-fit px-2 py-0.5 rounded-md font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Online Real-Time</span>
+            </div>
+          </div>
         </div>
       </div>
 

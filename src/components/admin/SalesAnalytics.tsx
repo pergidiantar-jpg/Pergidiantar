@@ -8,12 +8,19 @@ import {
   Car, 
   CheckCircle2, 
   BarChart3,
-  Percent
+  Percent,
+  Eye,
+  Smartphone,
+  Laptop,
+  Globe,
+  Lock
 } from 'lucide-react';
 
 export const SalesAnalytics: React.FC = () => {
-  const { orders, packages, fleet } = useApp();
+  const { orders, packages, fleet, visitorStats, securityAuditLogs } = useApp();
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
+
+  const totalDeviceHits = (visitorStats.deviceBreakdown.mobile + visitorStats.deviceBreakdown.desktop + visitorStats.deviceBreakdown.tablet) || 1;
 
   // Revenue by months (simulate 6 months trend with real current orders included)
   const monthlyTrends = [
@@ -265,6 +272,164 @@ export const SalesAnalytics: React.FC = () => {
           <p className="text-[11px] text-neutral-500 pt-2 border-t border-neutral-100">
             Family Gathering dan Study Tour menghasilkan volume transaksi tertinggi per rombongan dengan penggunaan armada Big Bus.
           </p>
+        </div>
+      </div>
+
+      {/* Visitor Analytics & Cross-Device Security Log Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Device Breakdown & Visitor Traffic */}
+        <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-orange-600" /> Analisis Perangkat Pengunjung
+            </h3>
+            <span className="text-[10px] bg-orange-50 text-orange-700 font-mono font-bold px-2 py-0.5 rounded border border-orange-200">
+              {visitorStats.totalVisitors.toLocaleString('id-ID')} Total
+            </span>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            {/* Mobile */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center font-medium">
+                <span className="text-neutral-700 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-orange-500" /> Smartphone / Mobile
+                </span>
+                <span className="font-mono font-bold text-neutral-900" data-tabular>
+                  {visitorStats.deviceBreakdown.mobile} ({totalDeviceHits > 0 ? Math.round((visitorStats.deviceBreakdown.mobile / totalDeviceHits) * 100) : 0}%)
+                </span>
+              </div>
+              <div className="w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden">
+                <div
+                  style={{ width: `${totalDeviceHits > 0 ? Math.round((visitorStats.deviceBreakdown.mobile / totalDeviceHits) * 100) : 0}%` }}
+                  className="h-full rounded-full bg-orange-500"
+                />
+              </div>
+            </div>
+
+            {/* Desktop */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center font-medium">
+                <span className="text-neutral-700 flex items-center gap-1.5">
+                  <Laptop className="w-3.5 h-3.5 text-blue-500" /> Komputer / Desktop
+                </span>
+                <span className="font-mono font-bold text-neutral-900" data-tabular>
+                  {visitorStats.deviceBreakdown.desktop} ({totalDeviceHits > 0 ? Math.round((visitorStats.deviceBreakdown.desktop / totalDeviceHits) * 100) : 0}%)
+                </span>
+              </div>
+              <div className="w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden">
+                <div
+                  style={{ width: `${totalDeviceHits > 0 ? Math.round((visitorStats.deviceBreakdown.desktop / totalDeviceHits) * 100) : 0}%` }}
+                  className="h-full rounded-full bg-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Tablet */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center font-medium">
+                <span className="text-neutral-700 flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-purple-500" /> Tablet / iPad
+                </span>
+                <span className="font-mono font-bold text-neutral-900" data-tabular>
+                  {visitorStats.deviceBreakdown.tablet} ({totalDeviceHits > 0 ? Math.round((visitorStats.deviceBreakdown.tablet / totalDeviceHits) * 100) : 0}%)
+                </span>
+              </div>
+              <div className="w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden">
+                <div
+                  style={{ width: `${totalDeviceHits > 0 ? Math.round((visitorStats.deviceBreakdown.tablet / totalDeviceHits) * 100) : 0}%` }}
+                  className="h-full rounded-full bg-purple-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[11px] text-neutral-600 space-y-1">
+            <div className="flex justify-between text-neutral-700 font-semibold">
+              <span>Pengunjung Hari Ini:</span>
+              <span className="font-mono font-bold text-neutral-900">{visitorStats.todayVisitors} sesi</span>
+            </div>
+            <div className="flex justify-between text-neutral-700 font-semibold">
+              <span>Pengunjung Unik:</span>
+              <span className="font-mono font-bold text-neutral-900">{visitorStats.uniqueVisitors} perangkat</span>
+            </div>
+            <div className="flex justify-between text-emerald-700 font-semibold">
+              <span>Pengunjung Aktif Live:</span>
+              <span className="font-mono font-bold text-emerald-600">{visitorStats.activeNow} online</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Security Audit Log */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-neutral-200 p-6 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider flex items-center gap-1.5">
+                <Lock className="w-4 h-4 text-emerald-600" /> Audit Log Keamanan Login (Multi-Perangkat)
+              </h3>
+              <p className="text-[11px] text-neutral-500 mt-0.5">
+                Sistem login aman tersinkronisasi Firebase dengan proteksi brute-force lockout & hash password SHA-256.
+              </p>
+            </div>
+            <span className="text-[10px] bg-emerald-50 text-emerald-700 font-mono font-bold px-2 py-0.5 rounded border border-emerald-200">
+              Cloud Real-Time
+            </span>
+          </div>
+
+          {securityAuditLogs.length === 0 ? (
+            <div className="text-center py-8 text-neutral-400 text-xs">
+              Belum ada aktivitas login baru yang tercatat pada sesi ini.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-neutral-200 text-neutral-400 text-[10px] uppercase font-bold tracking-wider">
+                    <th className="pb-2">Waktu</th>
+                    <th className="pb-2">Akun / Email</th>
+                    <th className="pb-2">Role</th>
+                    <th className="pb-2">Status</th>
+                    <th className="pb-2">Detail Keamanan</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {securityAuditLogs.slice(0, 6).map((log) => (
+                    <tr key={log.id} className="hover:bg-neutral-50">
+                      <td className="py-2.5 font-mono text-[11px] text-neutral-500 whitespace-nowrap">
+                        {log.timestamp.replace('T', ' ').substring(11, 19)}
+                      </td>
+                      <td className="py-2.5 font-medium text-neutral-900">
+                        {log.email}
+                      </td>
+                      <td className="py-2.5">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 uppercase">
+                          {log.role}
+                        </span>
+                      </td>
+                      <td className="py-2.5">
+                        {log.status === 'success' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3" /> Berhasil
+                          </span>
+                        ) : log.status === 'locked' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                            Terkunci (Lockout)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                            Gagal
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 text-[11px] text-neutral-500 truncate max-w-xs">
+                        {log.reason || 'Verifikasi SHA-256 Valid & Sesi Aktif'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>
