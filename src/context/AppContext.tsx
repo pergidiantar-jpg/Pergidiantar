@@ -131,7 +131,6 @@ interface AppContextType {
   markChatAsRead: (id: string) => void;
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
-  resetToDemoData: () => void;
   getMonthlySummary: (month: number, year: number) => MonthlyReportSummary;
   selectedOrderForDetail: BookingOrder | null;
   setSelectedOrderForDetail: (order: BookingOrder | null) => void;
@@ -224,18 +223,35 @@ const LOCAL_STORAGE_KEY_PURGED_CUSTOMERS = 'pergidiantar_purged_customers';
 const LOCAL_STORAGE_KEY_LAST_ACTIVITY = 'pergidiantar_last_activity_timestamp';
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
+const LEGACY_DEMO_IDS = new Set([
+  'pkg-jogja-01', 'pkg-jogja-02', 'pkg-malang-01', 'pkg-malang-02', 'pkg-bali-01', 'pkg-bali-02', 'pkg-jogja-03', 'pkg-jogja-study-01',
+  'flt-avanza-01', 'flt-innova-01', 'flt-01', 'flt-02', 'flt-03', 'flt-04', 'flt-05',
+  'drv-01', 'drv-02', 'drv-03', 'drv-04', 'drv-05', 'drv-06',
+  'htl-01', 'htl-02', 'htl-03', 'htl-04', 'htl-05', 'htl-06', 'htl-07',
+  'ord-001', 'ord-002', 'ord-003', 'ord-004', 'ord-005', 'ord-01', 'ord-02', 'ord-03', 'ord-04', 'ord-05',
+  'vp-01', 'vp-02', 'vp-03', 'vp-04', 'vp-05'
+]);
+
+export const isLegacyDemoId = (id?: string): boolean => {
+  if (!id) return false;
+  if (LEGACY_DEMO_IDS.has(id)) return true;
+  if (id.startsWith('ord-0') || id.includes('0089') || id.includes('0090') || id.includes('0091') || id.includes('0092')) return true;
+  if (id.startsWith('pay-drv-0') || id.startsWith('pay-htl-0') || id.startsWith('pay-tkt-0') || id.startsWith('pay-veh-0')) return true;
+  return false;
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [packages, setPackages] = useState<TourPackage[]>(() => {
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_PACKAGES);
       const raw: TourPackage[] = saved !== null ? JSON.parse(saved) : INITIAL_PACKAGES;
-      return raw.map(p => ({
+      return raw.filter(p => !isLegacyDemoId(p.id)).map(p => ({
         ...p,
         heroImage: normalizeImagePath(p.heroImage, p.destinations?.[0] as any)
       }));
     } catch {
-      return INITIAL_PACKAGES;
+      return [];
     }
   });
 
@@ -243,7 +259,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_HOTELS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_HOTELS);
-      return saved !== null ? JSON.parse(saved) : INITIAL_HOTELS;
+      const raw: HotelPartner[] = saved !== null ? JSON.parse(saved) : INITIAL_HOTELS;
+      return raw.filter(h => !isLegacyDemoId(h.id));
     } catch {
       return [];
     }
@@ -253,10 +270,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_VENDOR_PAYMENTS);
-      if (!saved) return INITIAL_VENDOR_PAYMENTS;
+      if (!saved) return [];
       const parsed: VendorPayment[] = JSON.parse(saved);
-      // Clean legacy dummy payments
-      return parsed.filter(v => !v.id.startsWith('pay-drv-0') && !v.id.startsWith('pay-htl-0') && !v.id.startsWith('pay-tkt-0') && !v.id.startsWith('pay-veh-0'));
+      return parsed.filter(v => !isLegacyDemoId(v.id));
     } catch {
       return [];
     }
@@ -269,7 +285,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_USERS);
       if (!saved) return INITIAL_USERS;
       const parsed: UserProfile[] = JSON.parse(saved);
-      // Clean legacy dummy test roles
       const filtered = parsed.filter(u => u.role === 'super_admin');
       return filtered.length > 0 ? filtered : INITIAL_USERS;
     } catch {
@@ -281,10 +296,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_ORDERS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_ORDERS);
-      if (!saved) return INITIAL_ORDERS;
+      if (!saved) return [];
       const parsed: BookingOrder[] = JSON.parse(saved);
-      // Clean legacy dummy test orders
-      return parsed.filter(o => !['ord-01', 'ord-02', 'ord-03', 'ord-04', 'ord-05'].includes(o.id));
+      return parsed.filter(o => !isLegacyDemoId(o.id));
     } catch {
       return [];
     }
@@ -294,7 +308,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_FLEET) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_FLEET);
-      return saved !== null ? JSON.parse(saved) : INITIAL_FLEET;
+      const raw: FleetUnit[] = saved !== null ? JSON.parse(saved) : INITIAL_FLEET;
+      return raw.filter(f => !isLegacyDemoId(f.id));
     } catch {
       return [];
     }
@@ -304,7 +319,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_DRIVERS);
-      return saved !== null ? JSON.parse(saved) : INITIAL_DRIVERS;
+      const raw: DriverCrew[] = saved !== null ? JSON.parse(saved) : INITIAL_DRIVERS;
+      return raw.filter(d => !isLegacyDemoId(d.id));
     } catch {
       return [];
     }
@@ -314,9 +330,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_CHATS) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_CHATS);
-      if (!saved) return INITIAL_CHATS;
+      if (!saved) return [];
       const parsed: ChatMessage[] = JSON.parse(saved);
-      return parsed.filter(c => !['c1', 'c2', 'c3', 'c4', 'c5'].includes(c.id));
+      return parsed.filter(c => !isLegacyDemoId(c.id));
     } catch {
       return [];
     }
@@ -764,46 +780,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     // 1. Subscribe to Orders
     const unsubOrders = cloudSubscribeCollection<BookingOrder>('orders', (cloudOrders) => {
-      if (cloudOrders && cloudOrders.length > 0) {
-        setOrders(cloudOrders);
+      if (cloudOrders) {
+        const clean = cloudOrders.filter(o => !isLegacyDemoId(o.id));
+        setOrders(clean);
+        cloudOrders.filter(o => isLegacyDemoId(o.id)).forEach(o => cloudDeleteDoc('orders', o.id).catch(() => {}));
       }
     });
 
     // 2. Subscribe to Vendor Disbursements
     const unsubPayments = cloudSubscribeCollection<VendorPayment>('vendorPayments', (cloudPayments) => {
-      if (cloudPayments && cloudPayments.length > 0) {
-        setVendorPayments(cloudPayments);
+      if (cloudPayments) {
+        const clean = cloudPayments.filter(v => !isLegacyDemoId(v.id));
+        setVendorPayments(clean);
+        cloudPayments.filter(v => isLegacyDemoId(v.id)).forEach(v => cloudDeleteDoc('vendorPayments', v.id).catch(() => {}));
       }
     });
 
     // 3. Subscribe to Fleet Inventory
     const unsubFleet = cloudSubscribeCollection<FleetUnit>('fleet', (cloudFleet) => {
-      if (cloudFleet && cloudFleet.length > 0) {
-        setFleet(cloudFleet);
+      if (cloudFleet) {
+        const clean = cloudFleet.filter(f => !isLegacyDemoId(f.id));
+        setFleet(clean);
+        cloudFleet.filter(f => isLegacyDemoId(f.id)).forEach(f => cloudDeleteDoc('fleet', f.id).catch(() => {}));
       }
     });
 
     // 4. Subscribe to Drivers & Crew
     const unsubDrivers = cloudSubscribeCollection<DriverCrew>('drivers', (cloudDrivers) => {
-      if (cloudDrivers && cloudDrivers.length > 0) {
-        setDrivers(cloudDrivers);
+      if (cloudDrivers) {
+        const clean = cloudDrivers.filter(d => !isLegacyDemoId(d.id));
+        setDrivers(clean);
+        cloudDrivers.filter(d => isLegacyDemoId(d.id)).forEach(d => cloudDeleteDoc('drivers', d.id).catch(() => {}));
       }
     });
 
     // 5. Subscribe to Hotel Partners
     const unsubHotels = cloudSubscribeCollection<HotelPartner>('hotels', (cloudHotels) => {
-      if (cloudHotels && cloudHotels.length > 0) {
-        setHotels(cloudHotels);
+      if (cloudHotels) {
+        const clean = cloudHotels.filter(h => !isLegacyDemoId(h.id));
+        setHotels(clean);
+        cloudHotels.filter(h => isLegacyDemoId(h.id)).forEach(h => cloudDeleteDoc('hotels', h.id).catch(() => {}));
       }
     });
 
     // 6. Subscribe to Tour Packages
     const unsubPackages = cloudSubscribeCollection<TourPackage>('packages', (cloudPkgs) => {
-      if (cloudPkgs && cloudPkgs.length > 0) {
-        setPackages(cloudPkgs.map(p => ({
+      if (cloudPkgs) {
+        const clean = cloudPkgs.filter(p => !isLegacyDemoId(p.id));
+        setPackages(clean.map(p => ({
           ...p,
           heroImage: normalizeImagePath(p.heroImage, p.destinations?.[0] as any)
         })));
+        cloudPkgs.filter(p => isLegacyDemoId(p.id)).forEach(p => cloudDeleteDoc('packages', p.id).catch(() => {}));
       }
     });
 
@@ -826,7 +854,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 9. Subscribe to Live Consultations Chat
     const unsubChats = cloudSubscribeCollection<ChatMessage>('chats', (cloudChats) => {
       if (cloudChats && cloudChats.length > 0) {
-        setChats(cloudChats);
+        setChats(cloudChats.filter(c => !isLegacyDemoId(c.id)));
       }
     });
 
@@ -860,56 +888,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    // Seed initial users, customers, packages, hotels, fleet, drivers, and destinations to Cloud Firestore
-    // CRITICAL: We use cloudSyncDocIfNotExists so any customized data, additions, or updates made by admin
-    // are PERMANENTLY PRESERVED and never wiped out or reset by system updates or reloads!
+    // Seed master official Super Admin user to Cloud Firestore
     INITIAL_USERS.forEach((u) => {
       cloudSyncDocIfNotExists('users', u.id, u).catch(() => {});
     });
 
-    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_CUSTOMERS) !== 'true') {
-      DEFAULT_REGISTERED_CUSTOMERS.forEach((c) => {
-        cloudSyncDocIfNotExists('customers', c.uid, c).catch(() => {});
-      });
-    }
-
-    INITIAL_PACKAGES.forEach((p) => {
-      cloudSyncDocIfNotExists('packages', p.id, p).catch(() => {});
-    });
-
-    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_FLEET) !== 'true') {
-      INITIAL_FLEET.forEach((f) => {
-        cloudSyncDocIfNotExists('fleet', f.id, f).catch(() => {});
-      });
-    }
-
-    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS) !== 'true') {
-      INITIAL_DRIVERS.forEach((d) => {
-        cloudSyncDocIfNotExists('drivers', d.id, d).catch(() => {});
-      });
-    }
-
-    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_HOTELS) !== 'true') {
-      INITIAL_HOTELS.forEach((h) => {
-        cloudSyncDocIfNotExists('hotels', h.id, h).catch(() => {});
-      });
-    }
-
-    // Seed 60 initial viral destinations (20 Jogja, 20 Malang, 20 Bali)
+    // Seed 60 real tourism spots in Jogja, Malang, Bali
     INITIAL_DESTINATIONS.forEach((d) => {
       cloudSyncDocIfNotExists('trip_destinations', d.id, d).catch(() => {});
     });
 
-    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_ORDERS) !== 'true') {
-      INITIAL_ORDERS.forEach((o) => {
-        cloudSyncDocIfNotExists('orders', o.id, o).catch(() => {});
-      });
-    }
+    // One-time automated purge of legacy demo records from Cloud Firestore
+    const LEGACY_PURGE_VERSION_KEY = 'pergidiantar_clean_prod_launch_v2';
+    if (localStorage.getItem(LEGACY_PURGE_VERSION_KEY) !== 'true') {
+      const legacyPackageIds = ['pkg-jogja-01', 'pkg-jogja-02', 'pkg-malang-01', 'pkg-malang-02', 'pkg-bali-01', 'pkg-bali-02', 'pkg-jogja-03', 'pkg-jogja-study-01'];
+      const legacyFleetIds = ['flt-avanza-01', 'flt-innova-01', 'flt-01', 'flt-02', 'flt-03', 'flt-04', 'flt-05'];
+      const legacyDriverIds = ['drv-01', 'drv-02', 'drv-03', 'drv-04', 'drv-05', 'drv-06'];
+      const legacyHotelIds = ['htl-01', 'htl-02', 'htl-03', 'htl-04', 'htl-05', 'htl-06', 'htl-07'];
+      const legacyOrderIds = ['ord-001', 'ord-002', 'ord-003', 'ord-004', 'ord-005', 'ord-01', 'ord-02', 'ord-03', 'ord-04', 'ord-05'];
+      const legacyVendorIds = ['vp-01', 'vp-02', 'vp-03', 'vp-04', 'vp-05'];
 
-    if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS) !== 'true') {
-      INITIAL_VENDOR_PAYMENTS.forEach((v) => {
-        cloudSyncDocIfNotExists('vendorPayments', v.id, v).catch(() => {});
-      });
+      cloudPurgeCollection('packages', legacyPackageIds).catch(() => {});
+      cloudPurgeCollection('fleet', legacyFleetIds).catch(() => {});
+      cloudPurgeCollection('drivers', legacyDriverIds).catch(() => {});
+      cloudPurgeCollection('hotels', legacyHotelIds).catch(() => {});
+      cloudPurgeCollection('orders', legacyOrderIds).catch(() => {});
+      cloudPurgeCollection('vendorPayments', legacyVendorIds).catch(() => {});
+
+      localStorage.setItem(LEGACY_PURGE_VERSION_KEY, 'true');
     }
 
     return () => {
@@ -1602,16 +1608,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
-  const resetToDemoData = () => {
-    setOrders(INITIAL_ORDERS);
-    setFleet(INITIAL_FLEET);
-    setDrivers(INITIAL_DRIVERS);
-    setChats(INITIAL_CHATS);
-    setNotifications(INITIAL_NOTIFICATIONS);
-    localStorage.clear();
-    triggerPush('Sistem Direset', 'Data sistem telah dikembalikan ke kondisi demo awal.', 'system');
-  };
-
   const getMonthlySummary = (month: number, year: number): MonthlyReportSummary => {
     const monthNames = [
       'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -1933,7 +1929,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markChatAsRead,
         markNotificationAsRead,
         markAllNotificationsAsRead,
-        resetToDemoData,
         getMonthlySummary,
         selectedOrderForDetail,
         setSelectedOrderForDetail,

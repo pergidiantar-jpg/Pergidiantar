@@ -465,7 +465,7 @@ export const INITIAL_DESTINATIONS: DestinationOption[] = [
     rating: 4.7,
     reviewCount: '26rb+ ulasan',
     badge: 'Edukasi Lingkungan',
-    highlight: 'Kandang burung raksasa berjalan, simulasi gempa bumi dan pengolahan limbah ramah lingkungan'
+    highlight: 'Kandang burung raksasa berjalan, wahana edukasi sains gempa bumi dan pengolahan limbah ramah lingkungan'
   },
   {
     id: 'mlg-16',

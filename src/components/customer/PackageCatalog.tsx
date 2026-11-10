@@ -201,21 +201,36 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
 
       {/* Package Grid */}
       {filteredPackages.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center">
-          <Info className="w-10 h-10 text-neutral-400 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-neutral-800">Paket Belum Ditemukan</h3>
-          <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
-            Tidak ada paket wisata untuk kombinasi kategori dan destinasi yang dipilih. Silakan pilih kategori atau kota lain.
-          </p>
-          <button
-            onClick={() => {
-              onSelectCategory('all');
-              onSelectDestination('all');
-            }}
-            className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-semibold hover:bg-orange-600"
-          >
-            Reset Semua Filter
-          </button>
+        <div className="bg-white rounded-3xl border border-neutral-200 p-10 sm:p-14 text-center max-w-2xl mx-auto shadow-2xs space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center mx-auto">
+            <Sliders className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-neutral-900">
+              Katalog Paket Sedang Disiapkan
+            </h3>
+            <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto leading-relaxed">
+              Anda dapat merancang rencana liburan fleksibel secara instan menggunakan fitur <strong>Kalkulator Trip & Pilih Destinasi Wisata</strong> dengan penghitungan biaya otomatis per pax.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => setCatalogViewMode('custom_calculator')}
+              className="w-full sm:w-auto px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Calculator className="w-4 h-4" />
+              <span>Atur Rute & Cek Harga di Kalkulator Trip</span>
+            </button>
+            <button
+              onClick={() => {
+                onSelectCategory('all');
+                onSelectDestination('all');
+              }}
+              className="w-full sm:w-auto px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-semibold transition-colors"
+            >
+              Reset Filter Kategori
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

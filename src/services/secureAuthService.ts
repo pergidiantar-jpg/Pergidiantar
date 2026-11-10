@@ -147,7 +147,7 @@ export async function verifySecurePassword(inputPassword: string, storedCredenti
   if (!storedCredential) return true; // if no password required
   const cleanInput = inputPassword.trim();
 
-  // Direct match (legacy plain text or standard demo accounts)
+  // Direct match (legacy plain text or standard initial accounts)
   if (cleanInput === storedCredential) return true;
 
   // Hash match

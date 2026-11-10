@@ -104,7 +104,7 @@ export const AdminPurgeCenter: React.FC = () => {
             </h2>
             <p className="text-xs text-neutral-300 leading-relaxed">
               Super Admin dapat menghapus data portal secara selektif berdasarkan jenisnya atau melakukan reset total. 
-              <strong> Data yang sudah dihapus akan hilang secara permanen dan tidak akan muncul lagi</strong> (termasuk data dummy bawaan).
+              <strong> Data yang sudah dihapus akan hilang secara permanen dari Cloud Firestore dan tidak akan muncul lagi</strong> di seluruh perangkat.
             </p>
           </div>
 
@@ -534,7 +534,7 @@ export const AdminPurgeCenter: React.FC = () => {
                   <li>Seluruh pelanggan terdaftar ({registeredCustomers.length})</li>
                 </ul>
                 <p className="text-xs text-rose-700 font-bold mt-2">
-                  Data dummy maupun data asli tidak akan muncul lagi setelah reset ini dilakukan.
+                  Seluruh data operasional yang terdaftar akan dibersihkan permanen setelah reset ini dilakukan.
                 </p>
               </div>
               <button

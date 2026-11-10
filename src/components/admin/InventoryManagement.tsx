@@ -438,8 +438,28 @@ export const InventoryManagement: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredFleet.map((unit) => (
+          {filteredFleet.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-neutral-200 p-12 text-center shadow-2xs space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center mx-auto">
+                <Car className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-neutral-900">Belum Ada Unit Armada Terdaftar</h3>
+              <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                Data armada operasional masih kosong. Super Admin dapat mendaftarkan unit kendaraan resmi melalui tombol Tambah Armada.
+              </p>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setIsAddFleetOpen(true)}
+                  className="mt-2 py-2 px-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah Unit Armada Pertama</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredFleet.map((unit) => (
               <div
                 key={unit.id}
                 className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-2xs space-y-4 relative overflow-hidden flex flex-col justify-between"
@@ -518,77 +538,102 @@ export const InventoryManagement: React.FC = () => {
                     *Hak akses edit & hapus khusus Super Admin
                   </div>
                 )}
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Tab 2: Driver & Crew */}
       {activeTab === 'driver' && (
         <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-2xs">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 uppercase text-[11px] font-bold">
-              <tr>
-                <th className="py-3 px-4">Nama Driver</th>
-                <th className="py-3 px-4">Kontak WhatsApp</th>
-                <th className="py-3 px-4">Lisensi Mengemudi</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Pesanan Aktif</th>
-                <th className="py-3 px-4">Total Trip & Rating</th>
-                {isSuperAdmin && <th className="py-3 px-4 text-center">Aksi Super Admin</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {drivers.map((drv) => (
-                <tr key={drv.id} className="hover:bg-neutral-50/70">
-                  <td className="py-3.5 px-4 font-bold text-neutral-900">{drv.name}</td>
-                  <td className="py-3.5 px-4 font-mono text-neutral-700">{drv.phone}</td>
-                  <td className="py-3.5 px-4 font-semibold text-neutral-800">{drv.licenseType}</td>
-                  <td className="py-3.5 px-4">
-                    {drv.status === 'tersedia' ? (
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-100 text-emerald-800">Tersedia</span>
-                    ) : drv.status === 'ditugaskan' ? (
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-blue-100 text-blue-800">Ditugaskan</span>
-                    ) : (
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-neutral-100 text-neutral-700">Istirahat</span>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    {drv.currentOrderId ? (
-                      <span className="font-mono text-xs font-bold text-orange-800">#{drv.currentOrderId}</span>
-                    ) : (
-                      <span className="text-neutral-400 italic">Siaga</span>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="font-bold text-neutral-800">{drv.totalTripsCompleted} Trip</span>
-                    <span className="text-amber-500 font-bold ml-2">★ {drv.rating}</span>
-                  </td>
-                  {isSuperAdmin && (
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => openDriverEdit(drv)}
-                          className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
-                          title="Edit Driver"
-                        >
-                          <Edit3 className="w-3.5 h-3.5 text-orange-500" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingDriver(drv)}
-                          className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                          title="Hapus Driver"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {drivers.length === 0 ? (
+            <div className="p-12 text-center space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center mx-auto">
+                <Users className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-neutral-900">Belum Ada Driver Terdaftar</h3>
+              <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                Data kru supir/pengemudi masih kosong. Super Admin dapat mendaftarkan kru supir resmi melalui tombol Tambah Driver di bawah.
+              </p>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setIsAddDriverOpen(true)}
+                  className="mt-2 py-2 px-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah Driver Pertama</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 uppercase text-[11px] font-bold">
+                  <tr>
+                    <th className="py-3 px-4">Nama Driver</th>
+                    <th className="py-3 px-4">Kontak WhatsApp</th>
+                    <th className="py-3 px-4">Lisensi Mengemudi</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Pesanan Aktif</th>
+                    <th className="py-3 px-4">Total Trip & Rating</th>
+                    {isSuperAdmin && <th className="py-3 px-4 text-center">Aksi Super Admin</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {drivers.map((drv) => (
+                    <tr key={drv.id} className="hover:bg-neutral-50/70">
+                      <td className="py-3.5 px-4 font-bold text-neutral-900">{drv.name}</td>
+                      <td className="py-3.5 px-4 font-mono text-neutral-700">{drv.phone}</td>
+                      <td className="py-3.5 px-4 font-semibold text-neutral-800">{drv.licenseType}</td>
+                      <td className="py-3.5 px-4">
+                        {drv.status === 'tersedia' ? (
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-100 text-emerald-800">Tersedia</span>
+                        ) : drv.status === 'ditugaskan' ? (
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-blue-100 text-blue-800">Ditugaskan</span>
+                        ) : (
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-neutral-100 text-neutral-700">Istirahat</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {drv.currentOrderId ? (
+                          <span className="font-mono text-xs font-bold text-orange-800">#{drv.currentOrderId}</span>
+                        ) : (
+                          <span className="text-neutral-400 italic">Siaga</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="font-bold text-neutral-800">{drv.totalTripsCompleted} Trip</span>
+                        <span className="text-amber-500 font-bold ml-2">★ {drv.rating}</span>
+                      </td>
+                      {isSuperAdmin && (
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => openDriverEdit(drv)}
+                              className="py-1 px-2.5 text-xs font-bold text-neutral-700 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-lg flex items-center gap-1 transition-colors"
+                              title="Edit Data Driver"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-orange-500" />
+                              <span>Edit Driver</span>
+                            </button>
+                            <button
+                              onClick={() => setDeletingDriver(drv)}
+                              className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                              title="Hapus Driver"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
