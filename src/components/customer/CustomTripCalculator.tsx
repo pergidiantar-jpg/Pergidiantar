@@ -24,7 +24,10 @@ import {
   AlertCircle,
   Star,
   Gift,
-  AlertTriangle
+  AlertTriangle,
+  Hotel,
+  Bed,
+  Moon
 } from 'lucide-react';
 import { handleImageFallback } from '../../utils/imageUtils';
 import {
@@ -34,6 +37,52 @@ import {
   getMaxDestinationsForDuration,
   BonusDestinationInfo
 } from '../../data/destinationsData';
+
+export type HotelLodgingTier = 'none' | 'bintang_3' | 'bintang_4' | 'bintang_5';
+
+export interface HotelTierOption {
+  id: HotelLodgingTier;
+  title: string;
+  badge: string;
+  ratePerRoomNight: number;
+  description: string;
+  facilities: string[];
+}
+
+export const HOTEL_TIER_OPTIONS: HotelTierOption[] = [
+  {
+    id: 'none',
+    title: 'Tanpa Penginapan (Akomodasi Mandiri)',
+    badge: 'Pilihan Mandiri',
+    ratePerRoomNight: 0,
+    description: 'Pelanggan mengatur penginapan/akomodasi sendiri atau trip transit tanpa sewa kamar dari kami.',
+    facilities: ['Tanpa Biaya Kamar', 'Bebas Pilih Penginapan Sendiri']
+  },
+  {
+    id: 'bintang_3',
+    title: 'Hotel Bintang 3 / Setaraf',
+    badge: 'Paling Populer',
+    ratePerRoomNight: 450000,
+    description: 'Standar akomodasi nyaman & higienis dengan fasilitas esensial pariwisata modern.',
+    facilities: ['Kamar AC & WiFi Kencang', 'Water Heater (Air Hangat)', 'TV Layar Datar', 'Termasuk Sarapan Hotel']
+  },
+  {
+    id: 'bintang_4',
+    title: 'Hotel Bintang 4 / Superior Deluxe',
+    badge: 'Kenyamanan Ekstra',
+    ratePerRoomNight: 750000,
+    description: 'Hotel modern kelas superior dengan fasilitas rekreasi premium dan lokasi strategis.',
+    facilities: ['Kolam Renang & Gym', 'Kamar Luas Superior / Deluxe', 'Restoran & Room Service', 'Lokasi Dekat Pusat Kota']
+  },
+  {
+    id: 'bintang_5',
+    title: 'Hotel Bintang 5 / Luxury Resort',
+    badge: 'Kemewahan Eksklusif',
+    ratePerRoomNight: 1500000,
+    description: 'Akomodasi mewah bintang lima berkelas internasional dengan pelayanan dan view terbaik.',
+    facilities: ['Layanan Bintang Lima', 'Infinity Pool & Spa', 'Balkon Private & View Indah', 'Buffet Breakfast Premium']
+  }
+];
 
 interface CustomTripCalculatorProps {
   onProceedToPayment?: (order: BookingOrder) => void;
@@ -70,6 +119,10 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
   const [lunchCount, setLunchCount] = useState<number>(3); // 0 to durationDays
   const [dinnerCount, setDinnerCount] = useState<number>(2); // 0 to durationDays
 
+  // Add-on Hotel & Penginapan (Tidak menampilkan nama hotel spesifik)
+  const [hotelTier, setHotelTier] = useState<HotelLodgingTier>('bintang_3');
+  const [hotelRoomCount, setHotelRoomCount] = useState<number>(() => Math.max(1, Math.ceil(6 / 2)));
+
   // Quota and notification states
   const [quotaNotice, setQuotaNotice] = useState<string | null>(null);
 
@@ -90,6 +143,10 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     mealCostTotal: number;
     addOnDocTotal: number;
     addOnOutboundTotal: number;
+    hotelCostTotal: number;
+    hotelTierLabel: string;
+    hotelRoomCount: number;
+    hotelNights: number;
     pickupSurchargeTotal: number;
     baseSubtotal: number;
     pricePerPaxNormal: number;
@@ -234,13 +291,18 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     const dinnerTotal = dinnerCount * 50000 * paxCount;
     const mealCostTotal = breakfastTotal + lunchTotal + dinnerTotal;
 
-    // 4. Add-ons
+    // 4. Hotel & Penginapan Add-on (Tidak menampilkan nama hotel spesifik)
+    const hotelNights = Math.max(1, durationDays - 1);
+    const selectedHotelOption = HOTEL_TIER_OPTIONS.find(h => h.id === hotelTier) || HOTEL_TIER_OPTIONS[0];
+    const hotelCostTotal = selectedHotelOption.ratePerRoomNight * hotelRoomCount * hotelNights;
+
+    // 5. Add-ons
     // Dokumentasi: Rp 750.000 per trip (Foto, Video & Drone)
     const addOnDocTotal = hasDocumentation ? 750000 * Math.max(1, Math.ceil(durationDays / 2)) : 0;
     // Outbound + Fasilitator: Rp 1.500.000
     const addOnOutboundTotal = hasOutbound ? 1500000 : 0;
 
-    // 5. Pickup Surcharge if picked up from outside primary city
+    // 6. Pickup Surcharge if picked up from outside primary city
     let pickupSurchargeTotal = 0;
     const cleanPickup = pickupCity.toLowerCase();
     const isBaseCity = 
@@ -258,7 +320,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     }
 
     // Totals
-    const baseSubtotal = transportCostTotal + ticketCostTotal + mealCostTotal + addOnDocTotal + addOnOutboundTotal + pickupSurchargeTotal;
+    const baseSubtotal = transportCostTotal + ticketCostTotal + mealCostTotal + addOnDocTotal + addOnOutboundTotal + hotelCostTotal + pickupSurchargeTotal;
     const pricePerPaxNormal = Math.round(baseSubtotal / paxCount);
 
     // 10% Discount for Package Pricing Option
@@ -273,6 +335,10 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       mealCostTotal,
       addOnDocTotal,
       addOnOutboundTotal,
+      hotelCostTotal,
+      hotelTierLabel: selectedHotelOption.title,
+      hotelRoomCount,
+      hotelNights,
       pickupSurchargeTotal,
       baseSubtotal,
       pricePerPaxNormal,
@@ -299,7 +365,12 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       ? calculationResult.packagePricePerPaxDiscounted 
       : calculationResult.pricePerPaxNormal;
 
+    const selectedHotelOption = HOTEL_TIER_OPTIONS.find(h => h.id === hotelTier) || HOTEL_TIER_OPTIONS[0];
+
     const selectedAddOnsList: string[] = [];
+    if (hotelTier !== 'none') {
+      selectedAddOnsList.push(`Penginapan: ${selectedHotelOption.title} (${hotelRoomCount} Kamar x ${nights} Malam = Rp ${calculationResult.hotelCostTotal.toLocaleString('id-ID')})`);
+    }
     if (hasDocumentation) selectedAddOnsList.push(`Dokumentasi Foto/Video (Rp ${calculationResult.addOnDocTotal.toLocaleString('id-ID')})`);
     if (hasOutbound) selectedAddOnsList.push(`Outbound & Team Building + Fasilitator (Rp ${calculationResult.addOnOutboundTotal.toLocaleString('id-ID')})`);
     if (breakfastCount > 0) selectedAddOnsList.push(`Makan Pagi (${breakfastCount}x)`);
@@ -319,20 +390,23 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       paxCount,
       pricePerPax: chosenFinalPerPax,
       subtotal: chosenFinalPrice,
-      addOnsTotal: calculationResult.addOnDocTotal + calculationResult.addOnOutboundTotal,
+      addOnsTotal: calculationResult.addOnDocTotal + calculationResult.addOnOutboundTotal + calculationResult.hotelCostTotal,
       addOnsList: selectedAddOnsList,
       grandTotal: chosenFinalPrice,
       paymentMethod: 'qris',
       paymentStatus: 'pending',
       orderStatus: 'baru',
       selectedVehicle: `${selectedTransport} (${calculationResult.vehicleUnitCount} Unit)`,
+      hotelAllotment: hotelTier === 'none' 
+        ? 'Tanpa Hotel (Akomodasi Mandiri)' 
+        : `${selectedHotelOption.title} (${hotelRoomCount} Kamar, ${nights} Malam)`,
       customer: {
         fullName: customerUser?.displayName || 'Pelanggan PERGIDIANTAR',
         whatsapp: customerUser?.phoneNumber || '087716443331',
         email: customerUser?.email || 'wisatawan@gmail.com',
         city: pickupCity || 'Yogyakarta',
         pickupAddress: `${pickupCity} (Titik Jemput Kustom Pelanggan)`,
-        specialRequests: `Custom Tour: ${calculationResult.destinationsList.map(d => d.name).join(', ')}. Termasuk Bonus Ikonik & Oleh-Oleh: ${activeBonus.items.join(', ')}. Inklusi: Transport ${selectedTransport}, Makan (${breakfastCount}x pagi, ${lunchCount}x siang, ${dinnerCount}x malam)${hasDocumentation ? ', Dokumentasi Foto/Video' : ''}${hasOutbound ? ', Outbound + Fasilitator' : ''}.${selectedPricingOption === 'package_discount' ? ' (Mendapatkan Diskon 10% Harga Paket)' : ''}`
+        specialRequests: `Custom Tour: ${calculationResult.destinationsList.map(d => d.name).join(', ')}. Termasuk Bonus Ikonik & Oleh-Oleh: ${activeBonus.items.join(', ')}. Inklusi: Transport ${selectedTransport}, Penginapan: ${hotelTier === 'none' ? 'Akomodasi Mandiri' : `${selectedHotelOption.title} (${hotelRoomCount} Kamar, ${nights} Malam)`}, Makan (${breakfastCount}x pagi, ${lunchCount}x siang, ${dinnerCount}x malam)${hasDocumentation ? ', Dokumentasi Foto/Video' : ''}${hasOutbound ? ', Outbound + Fasilitator' : ''}.${selectedPricingOption === 'package_discount' ? ' (Mendapatkan Diskon 10% Harga Paket)' : ''}`
       },
       notes: `Order Custom Trip dihitung via Kalkulator Biaya Online PERGIDIANTAR. Diskon Paket: ${selectedPricingOption === 'package_discount' ? '10% Diterapkan' : 'Tarif Normal Per Pax'}.`
     };
@@ -521,7 +595,11 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setPaxCount(prev => Math.max(1, prev - 1));
+                    setPaxCount(prev => {
+                      const next = Math.max(1, prev - 1);
+                      setHotelRoomCount(Math.max(1, Math.ceil(next / 2)));
+                      return next;
+                    });
                     setCalculationResult(null);
                   }}
                   className="w-10 h-10 rounded-lg bg-white hover:bg-neutral-200 text-neutral-800 flex items-center justify-center font-bold transition-colors shadow-2xs"
@@ -536,7 +614,9 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                   value={paxCount}
                   onChange={(e) => {
                     const val = parseInt(e.target.value, 10);
-                    setPaxCount(isNaN(val) ? 1 : Math.max(1, val));
+                    const next = isNaN(val) ? 1 : Math.max(1, val);
+                    setPaxCount(next);
+                    setHotelRoomCount(Math.max(1, Math.ceil(next / 2)));
                     setCalculationResult(null);
                   }}
                   required
@@ -545,7 +625,11 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setPaxCount(prev => prev + 1);
+                    setPaxCount(prev => {
+                      const next = prev + 1;
+                      setHotelRoomCount(Math.max(1, Math.ceil(next / 2)));
+                      return next;
+                    });
                     setCalculationResult(null);
                   }}
                   className="w-10 h-10 rounded-lg bg-white hover:bg-neutral-200 text-neutral-800 flex items-center justify-center font-bold transition-colors shadow-2xs"
@@ -810,13 +894,155 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
           </div>
         </div>
 
-        {/* STEP 5: ADD ON & KOTA PENJEMPUTAN */}
-        <div className="space-y-4 pt-4 border-t border-neutral-100">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-black flex items-center justify-center">6</span>
-            <label className="text-sm font-extrabold text-neutral-900 uppercase tracking-wide">
-              Tambahan Add-On, Konsumsi & Kota Penjemputan
-            </label>
+        {/* STEP 6: ADD ON PENGINAPAN, FASILITAS & KOTA PENJEMPUTAN */}
+        <div className="space-y-5 pt-4 border-t border-neutral-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-black flex items-center justify-center">6</span>
+              <label className="text-sm font-extrabold text-neutral-900 uppercase tracking-wide">
+                Tambahan Add-On Penginapan (Hotel), Fasilitas & Penjemputan
+              </label>
+            </div>
+            <span className="text-xs text-neutral-500 font-medium">
+              Kustomisasi bebas akomodasi & add-on sesuai kebutuhan rombongan
+            </span>
+          </div>
+
+          {/* ADD-ON HOTEL & PENGINAPAN (TIDAK MENAMPILKAN NAMA HOTEL) */}
+          <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-600 shrink-0">
+                  <Hotel className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs sm:text-sm font-extrabold text-neutral-900">
+                      Add-on Hotel & Penginapan
+                    </h4>
+                    <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                      Durasi {durationDays - 1} Malam
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500">
+                    Pilih standar bintang akomodasi rombongan Anda (tanpa perlu repot reservasi mandiri).
+                  </p>
+                </div>
+              </div>
+
+              {/* Room count adjuster */}
+              {hotelTier !== 'none' && (
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-neutral-300 self-start sm:self-auto shadow-2xs">
+                  <Bed className="w-4 h-4 text-orange-500 shrink-0" />
+                  <span className="text-xs font-bold text-neutral-700">Jumlah Kamar:</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHotelRoomCount(prev => Math.max(1, prev - 1));
+                        setCalculationResult(null);
+                      }}
+                      className="w-6 h-6 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold flex items-center justify-center text-xs"
+                      title="Kurangi kamar"
+                    >
+                      -
+                    </button>
+                    <span className="w-7 text-center font-mono font-black text-xs text-neutral-900">
+                      {hotelRoomCount}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHotelRoomCount(prev => Math.min(paxCount, prev + 1));
+                        setCalculationResult(null);
+                      }}
+                      className="w-6 h-6 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold flex items-center justify-center text-xs"
+                      title="Tambah kamar"
+                    >
+                      +
+                    </button>
+                    <span className="text-[10px] text-neutral-400">kamar</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Grid of 4 Hotel Options (Tanpa Menampilkan Nama Hotel Spesifik) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {HOTEL_TIER_OPTIONS.map((opt) => {
+                const isSelected = hotelTier === opt.id;
+                const totalEstimatedForThis = opt.ratePerRoomNight * hotelRoomCount * (durationDays - 1);
+
+                return (
+                  <div
+                    key={opt.id}
+                    onClick={() => {
+                      setHotelTier(opt.id);
+                      setCalculationResult(null);
+                    }}
+                    className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-orange-50/90 border-orange-500 shadow-sm ring-2 ring-orange-500/20'
+                        : 'bg-white hover:bg-neutral-100/70 border-neutral-200'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                          isSelected ? 'bg-orange-500 text-white' : 'bg-neutral-200 text-neutral-700'
+                        }`}>
+                          {opt.badge}
+                        </span>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-neutral-300'
+                        }`}>
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                      </div>
+
+                      <h5 className="font-extrabold text-xs text-neutral-900 leading-tight">
+                        {opt.title}
+                      </h5>
+                      <p className="text-[11px] text-neutral-500 mt-1 leading-snug">
+                        {opt.description}
+                      </p>
+
+                      <div className="mt-2.5 space-y-1">
+                        {opt.facilities.map((fac, fIdx) => (
+                          <div key={fIdx} className="flex items-center gap-1.5 text-[10px] text-neutral-600">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{fac}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-neutral-200/80">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-[10px] text-neutral-500">Tarif Kamar:</span>
+                        <span className="font-mono font-bold text-xs text-neutral-900">
+                          {opt.ratePerRoomNight === 0 ? 'Rp 0' : `Rp ${opt.ratePerRoomNight.toLocaleString('id-ID')} / kmr / mlm`}
+                        </span>
+                      </div>
+                      {opt.ratePerRoomNight > 0 && (
+                        <div className="text-right text-[10px] text-orange-600 font-bold mt-0.5 font-mono">
+                          Total {durationDays - 1} Malam ({hotelRoomCount} Kamar): Rp {totalEstimatedForThis.toLocaleString('id-ID')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {hotelTier !== 'none' && (
+              <p className="text-[11px] text-neutral-500 flex items-center gap-1.5 bg-white p-2.5 rounded-xl border border-neutral-200">
+                <Info className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                <span>
+                  Standar pariwisata 1 kamar untuk 2 orang (Twin / Double share). Rombongan {paxCount} orang disarankan menggunakan {Math.ceil(paxCount / 2)} kamar selama {durationDays - 1} malam.
+                </span>
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1019,7 +1245,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
             </div>
 
             {/* Breakdown itemized list */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
               <div className="p-3 bg-neutral-800/80 rounded-xl border border-neutral-700">
                 <span className="text-neutral-400 block text-[11px]">Sewa Armada & Kru:</span>
                 <span className="font-mono font-bold text-white text-sm">
@@ -1037,6 +1263,18 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                 </span>
                 <span className="text-[10px] text-neutral-400 block mt-0.5">
                   {calculationResult.destinationsList.length} Destinasi x {paxCount} Pax
+                </span>
+              </div>
+
+              <div className="p-3 bg-neutral-800/80 rounded-xl border border-neutral-700">
+                <span className="text-neutral-400 block text-[11px]">Penginapan & Hotel:</span>
+                <span className="font-mono font-bold text-white text-sm">
+                  {calculationResult.hotelCostTotal > 0 ? `Rp ${calculationResult.hotelCostTotal.toLocaleString('id-ID')}` : 'Rp 0'}
+                </span>
+                <span className="text-[10px] text-neutral-400 block mt-0.5">
+                  {calculationResult.hotelCostTotal > 0 
+                    ? `${calculationResult.hotelTierLabel.split(' /')[0]} (${calculationResult.hotelRoomCount} Kamar, ${calculationResult.hotelNights} Malam)`
+                    : 'Akomodasi Mandiri'}
                 </span>
               </div>
 
