@@ -19,68 +19,45 @@ import {
   ShieldCheck, 
   Info, 
   Plus, 
-  Minus,
-  Check,
-  AlertCircle
+  Minus, 
+  Check, 
+  AlertCircle,
+  Star,
+  Gift,
+  AlertTriangle
 } from 'lucide-react';
+import { handleImageFallback } from '../../utils/imageUtils';
+import {
+  DestinationOption,
+  INITIAL_DESTINATIONS,
+  BONUS_DESTINATIONS,
+  getMaxDestinationsForDuration,
+  BonusDestinationInfo
+} from '../../data/destinationsData';
 
 interface CustomTripCalculatorProps {
   onProceedToPayment?: (order: BookingOrder) => void;
   defaultDestination?: DestinationRegion;
 }
 
-interface DestinationOption {
-  id: string;
-  name: string;
-  city: DestinationRegion;
-  category: string;
-  avgTicketPrice: number;
-}
-
-const DESTINATION_DATABASE: DestinationOption[] = [
-  // JOGJA
-  { id: 'jog-1', name: 'Candi Borobudur & Museum', city: 'jogja', category: 'Cagar Budaya', avgTicketPrice: 50000 },
-  { id: 'jog-2', name: 'Candi Prambanan & Roro Jonggrang', city: 'jogja', category: 'Cagar Budaya', avgTicketPrice: 50000 },
-  { id: 'jog-3', name: 'Lava Tour Merapi (Jeep 4x4)', city: 'jogja', category: 'Petualangan Alam', avgTicketPrice: 90000 },
-  { id: 'jog-4', name: 'HeHa Sky View Patuk', city: 'jogja', category: 'Panorama & Foto', avgTicketPrice: 35000 },
-  { id: 'jog-5', name: 'Obelix Hills Sunset Deck', city: 'jogja', category: 'Panorama & Sunset', avgTicketPrice: 30000 },
-  { id: 'jog-6', name: 'Cave Tubing Goa Pindul & Sungai Oya', city: 'jogja', category: 'Wisata Air & Rafting', avgTicketPrice: 65000 },
-  { id: 'jog-7', name: 'Keraton Yogyakarta & Tamansari', city: 'jogja', category: 'Sejarah & Budaya', avgTicketPrice: 30000 },
-  { id: 'jog-8', name: 'Tebing Breksi & Amphitheater', city: 'jogja', category: 'Spot Foto Unik', avgTicketPrice: 20000 },
-  { id: 'jog-9', name: 'Pantai Timang (Gondola / Jembatan)', city: 'jogja', category: 'Petualangan Bahari', avgTicketPrice: 80000 },
-  { id: 'jog-10', name: 'Pusat Oleh-oleh Malioboro & Bakpia', city: 'jogja', category: 'Belanja & Kuliner', avgTicketPrice: 15000 },
-
-  // MALANG
-  { id: 'mlg-1', name: 'Bromo Sunrise Jeep Adventure (Penanjakan & Kawah)', city: 'malang', category: 'Petualangan Gunung', avgTicketPrice: 120000 },
-  { id: 'mlg-2', name: 'Museum Angkut Batu', city: 'malang', category: 'Edukasi & Foto', avgTicketPrice: 100000 },
-  { id: 'mlg-3', name: 'Jatim Park 2 (Batu Secret Zoo)', city: 'malang', category: 'Wisata Keluarga', avgTicketPrice: 125000 },
-  { id: 'mlg-4', name: 'Jatim Park 3 (Dino Park)', city: 'malang', category: 'Theme Park', avgTicketPrice: 110000 },
-  { id: 'mlg-5', name: 'Coban Rondo Air Terjun & Taman Labirin', city: 'malang', category: 'Alam Sejuk', avgTicketPrice: 40000 },
-  { id: 'mlg-6', name: 'Flora Wisata San Terra de Laponte', city: 'malang', category: 'Taman Bunga', avgTicketPrice: 35000 },
-  { id: 'mlg-7', name: 'Petik Apel Agro Kusuma Batu', city: 'malang', category: 'Agrowisata', avgTicketPrice: 50000 },
-  { id: 'mlg-8', name: 'Pantai Balekambang (Tanah Lot Jawa)', city: 'malang', category: 'Pantai Selatan', avgTicketPrice: 30000 },
-  { id: 'mlg-9', name: 'Batu Night Spectacular (BNS)', city: 'malang', category: 'Hiburan Malam', avgTicketPrice: 45000 },
-
-  // BALI
-  { id: 'bli-1', name: 'Pura Uluwatu & Tari Kecak Sunset', city: 'bali', category: 'Budaya & Sunset', avgTicketPrice: 100000 },
-  { id: 'bli-2', name: 'Pura Tanah Lot & Karang Bolong', city: 'bali', category: 'Ikon Wisata Bali', avgTicketPrice: 60000 },
-  { id: 'bli-3', name: 'Kintamani & Panorama Danau Batur', city: 'bali', category: 'Pegunungan & Danau', avgTicketPrice: 50000 },
-  { id: 'bli-4', name: 'Pantai Pandawa & Melasti Tebing Kapur', city: 'bali', category: 'Pantai Eksotis', avgTicketPrice: 30000 },
-  { id: 'bli-5', name: 'Ubud Monkey Forest Sanctuary', city: 'bali', category: 'Hutan Lindung & Satwa', avgTicketPrice: 80000 },
-  { id: 'bli-6', name: 'Pura Tirta Empul (Mata Air Suci)', city: 'bali', category: 'Religi & Spiritual', avgTicketPrice: 50000 },
-  { id: 'bli-7', name: 'Danau Beratan Bedugul & Kebun Raya', city: 'bali', category: 'Danau & Bunga', avgTicketPrice: 60000 },
-  { id: 'bli-8', name: 'Watersport Tanjung Benoa (Banana Boat)', city: 'bali', category: 'Wahana Bahari', avgTicketPrice: 120000 },
-  { id: 'bli-9', name: 'Nusa Penida Kelingking & Broken Beach', city: 'bali', category: 'Kepulauan Eksotis', avgTicketPrice: 150000 }
-];
-
 export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({ 
   onProceedToPayment,
   defaultDestination = 'jogja'
 }) => {
-  const { customerUser, createBooking, setActiveOrderForPayment } = useApp();
+  const { 
+    customerUser, 
+    createBooking, 
+    setActiveOrderForPayment,
+    destinations: cloudDestinations,
+    bonusDestinations: ctxBonusDestinations,
+    getMaxDestinationsForDuration: ctxGetMaxDestinationsForDuration
+  } = useApp();
+
+  const allDestinations = cloudDestinations && cloudDestinations.length > 0 ? cloudDestinations : INITIAL_DESTINATIONS;
 
   // State: Inputs
   const [destination, setDestination] = useState<DestinationRegion>(defaultDestination);
+  const activeBonus = (ctxBonusDestinations && ctxBonusDestinations[destination]) || BONUS_DESTINATIONS[destination];
   const [durationDays, setDurationDays] = useState<number>(3); // 2 to 7 days
   const [paxCount, setPaxCount] = useState<number>(6); // must be number >= 1
   const [selectedTransport, setSelectedTransport] = useState<'Innova' | 'HiAce' | 'Medium Bus' | 'Big Bus'>('Innova');
@@ -93,8 +70,14 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
   const [lunchCount, setLunchCount] = useState<number>(3); // 0 to durationDays
   const [dinnerCount, setDinnerCount] = useState<number>(2); // 0 to durationDays
 
-  // Selected Destinations (minimum 1 wajib pilih)
-  const [selectedDestIds, setSelectedDestIds] = useState<string[]>(['jog-1', 'jog-3', 'jog-4']);
+  // Quota and notification states
+  const [quotaNotice, setQuotaNotice] = useState<string | null>(null);
+
+  // Selected Destinations (minimum 1 wajib pilih, maksimal dibatasi durasi)
+  const [selectedDestIds, setSelectedDestIds] = useState<string[]>(() => {
+    const initialCityDests = INITIAL_DESTINATIONS.filter(d => d.city === defaultDestination);
+    return initialCityDests.slice(0, 4).map(d => d.id);
+  });
 
   // Selected pricing model: 'package_discount' (10% off) or 'per_pax'
   const [selectedPricingOption, setSelectedPricingOption] = useState<'package_discount' | 'per_pax'>('package_discount');
@@ -119,36 +102,67 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
 
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Filter available destinations by active city
-  const availableDestinations = DESTINATION_DATABASE.filter(d => d.city === destination);
+  // Filter available destinations by active city (20 destinasi per kota)
+  const availableDestinations = allDestinations.filter(d => d.city === destination);
+  const maxAllowedDestinations = (ctxGetMaxDestinationsForDuration || getMaxDestinationsForDuration)(durationDays);
 
   // Auto-switch default pickup city when destination changes
   const handleDestinationChange = (newDest: DestinationRegion) => {
     setDestination(newDest);
+    setQuotaNotice(null);
+    setValidationError(null);
+    const maxAllowed = (ctxGetMaxDestinationsForDuration || getMaxDestinationsForDuration)(durationDays);
+    const cityDests = allDestinations.filter(d => d.city === newDest);
     if (newDest === 'jogja') {
       setPickupCity('Yogyakarta');
-      setSelectedDestIds(['jog-1', 'jog-3', 'jog-4']);
+      setSelectedDestIds(cityDests.slice(0, Math.min(4, maxAllowed)).map(d => d.id));
     } else if (newDest === 'malang') {
       setPickupCity('Malang');
-      setSelectedDestIds(['mlg-1', 'mlg-2', 'mlg-5']);
+      setSelectedDestIds(cityDests.slice(0, Math.min(4, maxAllowed)).map(d => d.id));
     } else {
       setPickupCity('Denpasar / Bandara Ngurah Rai');
-      setSelectedDestIds(['bli-1', 'bli-2', 'bli-4']);
+      setSelectedDestIds(cityDests.slice(0, Math.min(4, maxAllowed)).map(d => d.id));
     }
     // reset calculation
     setCalculationResult(null);
   };
 
+  // Duration change handler enforcing strict destination quota limits
+  const handleDurationChange = (days: number) => {
+    setDurationDays(days);
+    const newMax = (ctxGetMaxDestinationsForDuration || getMaxDestinationsForDuration)(days);
+    if (selectedDestIds.length > newMax) {
+      setSelectedDestIds(prev => prev.slice(0, newMax));
+      setQuotaNotice(`Durasi tour diatur ke ${days}D${days - 1}N (maksimal ${newMax} destinasi). Pilihan destinasi otomatis disesuaikan dengan kuota maksimal.`);
+    } else {
+      setQuotaNotice(null);
+    }
+    // Adjust meal limits
+    setBreakfastCount(prev => Math.min(days, prev));
+    setLunchCount(prev => Math.min(days, prev));
+    setDinnerCount(prev => Math.min(days, prev));
+    setCalculationResult(null);
+  };
+
   const toggleDestination = (destId: string) => {
     setValidationError(null);
-    setSelectedDestIds(prev => {
-      if (prev.includes(destId)) {
-        return prev.filter(id => id !== destId);
-      } else {
-        return [...prev, destId];
+    setQuotaNotice(null);
+    if (selectedDestIds.includes(destId)) {
+      if (selectedDestIds.length <= 1) {
+        setValidationError('Jumlah destinasi wisata wajib dipilih minimal 1 destinasi.');
+        return;
       }
-    });
-    setCalculationResult(null);
+      setSelectedDestIds(prev => prev.filter(id => id !== destId));
+      setCalculationResult(null);
+    } else {
+      const maxAllowed = (ctxGetMaxDestinationsForDuration || getMaxDestinationsForDuration)(durationDays);
+      if (selectedDestIds.length >= maxAllowed) {
+        setQuotaNotice(`Batas kuota maksimal untuk durasi ${durationDays}D${durationDays - 1}N adalah ${maxAllowed} destinasi wisata. Hapus salah satu destinasi terlebih dahulu atau pilih durasi yang lebih panjang.`);
+        return;
+      }
+      setSelectedDestIds(prev => [...prev, destId]);
+      setCalculationResult(null);
+    }
   };
 
   // Smart Transport Suggestion helper
@@ -210,7 +224,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     const transportCostTotal = vehicleRatePerDay * durationDays * vehicleUnitCount;
 
     // 2. Destinations & Tickets Cost
-    const selectedDestObjects = DESTINATION_DATABASE.filter(d => selectedDestIds.includes(d.id));
+    const selectedDestObjects = allDestinations.filter(d => selectedDestIds.includes(d.id));
     const avgTicketSum = selectedDestObjects.reduce((acc, d) => acc + d.avgTicketPrice, 0);
     const ticketCostTotal = avgTicketSum * paxCount;
 
@@ -318,7 +332,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
         email: customerUser?.email || 'wisatawan@gmail.com',
         city: pickupCity || 'Yogyakarta',
         pickupAddress: `${pickupCity} (Titik Jemput Kustom Pelanggan)`,
-        specialRequests: `Custom Tour: ${calculationResult.destinationsList.map(d => d.name).join(', ')}. Inklusi: Transport ${selectedTransport}, Makan (${breakfastCount}x pagi, ${lunchCount}x siang, ${dinnerCount}x malam)${hasDocumentation ? ', Dokumentasi Foto/Video' : ''}${hasOutbound ? ', Outbound + Fasilitator' : ''}.${selectedPricingOption === 'package_discount' ? ' (Mendapatkan Diskon 10% Harga Paket)' : ''}`
+        specialRequests: `Custom Tour: ${calculationResult.destinationsList.map(d => d.name).join(', ')}. Termasuk Bonus Ikonik & Oleh-Oleh: ${activeBonus.items.join(', ')}. Inklusi: Transport ${selectedTransport}, Makan (${breakfastCount}x pagi, ${lunchCount}x siang, ${dinnerCount}x malam)${hasDocumentation ? ', Dokumentasi Foto/Video' : ''}${hasOutbound ? ', Outbound + Fasilitator' : ''}.${selectedPricingOption === 'package_discount' ? ' (Mendapatkan Diskon 10% Harga Paket)' : ''}`
       },
       notes: `Order Custom Trip dihitung via Kalkulator Biaya Online PERGIDIANTAR. Diskon Paket: ${selectedPricingOption === 'package_discount' ? '10% Diterapkan' : 'Tarif Normal Per Pax'}.`
     };
@@ -333,9 +347,27 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
   };
 
   const destinationCities = [
-    { key: 'jogja' as const, label: 'Yogyakarta (Jogja)', desc: 'Budaya, Candi & Wisata Alam', color: 'orange' },
-    { key: 'malang' as const, label: 'Malang & Bromo', desc: 'Sunrise Bromo, Apel & Theme Park', color: 'blue' },
-    { key: 'bali' as const, label: 'Bali Pulau Dewata', desc: 'Pantai, Pura & Tari Tradisional', color: 'emerald' }
+    { 
+      key: 'jogja' as const, 
+      label: 'Yogyakarta (Jogja)', 
+      desc: 'Budaya, Candi & Wisata Alam', 
+      image: '/assets/images/dest_jogja_heritage_1793579234240.jpg',
+      color: 'orange' 
+    },
+    { 
+      key: 'malang' as const, 
+      label: 'Malang & Bromo', 
+      desc: 'Sunrise Bromo, Apel & Theme Park', 
+      image: '/assets/images/dest_malang_bromo_1793579235303.jpg',
+      color: 'blue' 
+    },
+    { 
+      key: 'bali' as const, 
+      label: 'Bali Pulau Dewata', 
+      desc: 'Pantai, Pura & Tari Tradisional', 
+      image: '/assets/images/dest_bali_paradise_1793579235747.jpg',
+      color: 'emerald' 
+    }
   ];
 
   const popularPickupCities = ['Yogyakarta', 'Solo', 'Semarang', 'Surabaya', 'Malang', 'Denpasar', 'Jakarta', 'Bandung'];
@@ -398,21 +430,35 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                   key={c.key}
                   type="button"
                   onClick={() => handleDestinationChange(c.key)}
-                  className={`p-4 rounded-2xl border text-left transition-all ${
+                  className={`p-3.5 rounded-2xl border text-left transition-all group overflow-hidden ${
                     isSelected
-                      ? 'bg-orange-50/80 border-orange-500 shadow-sm ring-2 ring-orange-500/20'
-                      : 'bg-neutral-50 hover:bg-neutral-100 border-neutral-200'
+                      ? 'bg-orange-50/90 border-orange-500 shadow-sm ring-2 ring-orange-500/20'
+                      : 'bg-white hover:bg-neutral-50 border-neutral-200'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-sm text-neutral-900 block">{c.label}</span>
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-neutral-400 bg-white'
-                    }`}>
-                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                  <div className="relative h-28 rounded-xl overflow-hidden mb-3 bg-neutral-100">
+                    <img
+                      src={c.image}
+                      alt={c.label}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => handleImageFallback(e, c.key)}
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between text-white">
+                      <span className="text-[11px] font-bold tracking-wide flex items-center gap-1 drop-shadow-sm">
+                        <MapPin className="w-3.5 h-3.5 text-orange-400" />
+                        {c.label.split(' ')[0]}
+                      </span>
+                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                        isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-white/70 bg-black/40 text-transparent'
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
                     </div>
                   </div>
-                  <span className="text-xs text-neutral-500 mt-1 block">{c.desc}</span>
+                  <span className="font-extrabold text-sm text-neutral-900 block leading-tight">{c.label}</span>
+                  <span className="text-xs text-neutral-500 mt-1 block line-clamp-1">{c.desc}</span>
                 </button>
               );
             })}
@@ -441,19 +487,16 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                   <button
                     key={days}
                     type="button"
-                    onClick={() => {
-                      setDurationDays(days);
-                      setCalculationResult(null);
-                    }}
-                    className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                    onClick={() => handleDurationChange(days)}
+                    className={`py-2 px-1.5 rounded-xl text-xs font-bold border transition-all text-center ${
                       isSelected
-                        ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-md ring-2 ring-orange-400/30'
                         : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'
                     }`}
                   >
                     <span className="block font-black text-sm">{days}D{nights}N</span>
-                    <span className={`text-[10px] block ${isSelected ? 'text-orange-100' : 'text-neutral-500'}`}>
-                      {days} Hari
+                    <span className={`text-[9px] sm:text-[10px] block mt-0.5 font-medium leading-tight ${isSelected ? 'text-orange-100 font-bold' : 'text-neutral-500'}`}>
+                      Maks. {getMaxDestinationsForDuration(days)} Wisata
                     </span>
                   </button>
                 );
@@ -611,49 +654,155 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
           </div>
         </div>
 
-        {/* STEP 4: JUMLAH DESTINASI WISATA (WAJIB PILIH) */}
-        <div className="space-y-3 pt-4 border-t border-neutral-100">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+        {/* STEP 4: JUMLAH DESTINASI WISATA (WAJIB PILIH DENGAN BATAS KUOTA DURASI) */}
+        <div className="space-y-4 pt-4 border-t border-neutral-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-black flex items-center justify-center">5</span>
               <label className="text-sm font-extrabold text-neutral-900 uppercase tracking-wide">
-                Pilih Destinasi Wisata ({selectedDestIds.length} Terpilih) - Wajib Pilih *
+                Pilih Destinasi Wisata
               </label>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold font-mono ${
+                selectedDestIds.length >= maxAllowedDestinations 
+                  ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                  : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+              }`}>
+                {selectedDestIds.length} / {maxAllowedDestinations} Terpilih
+              </span>
             </div>
-            <span className="text-xs text-neutral-500">
-              Rekomendasi durasi {durationDays} Hari: {durationDays * 2} - {durationDays * 3} objek wisata
+
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500 bg-neutral-100 px-3 py-1 rounded-xl">
+              <Info className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+              <span>Paket <strong>{durationDays}D{durationDays - 1}N</strong>: Maksimal <strong>{maxAllowedDestinations} Destinasi</strong></span>
+            </div>
+          </div>
+
+          {/* Quota Rules Quick Guide */}
+          <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-600 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-neutral-700 font-semibold">
+              <Compass className="w-4 h-4 text-orange-500" />
+              <span>Aturan Kuota Destinasi PERGIDIANTAR:</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-[11px] font-mono">
+              <span className={`px-2 py-0.5 rounded ${durationDays === 2 ? 'bg-orange-500 text-white font-bold' : 'bg-white border border-neutral-200 text-neutral-600'}`}>2D1N (Maks. 4)</span>
+              <span className={`px-2 py-0.5 rounded ${durationDays === 3 ? 'bg-orange-500 text-white font-bold' : 'bg-white border border-neutral-200 text-neutral-600'}`}>3D2N (Maks. 6)</span>
+              <span className={`px-2 py-0.5 rounded ${durationDays === 4 ? 'bg-orange-500 text-white font-bold' : 'bg-white border border-neutral-200 text-neutral-600'}`}>4D3N (Maks. 8)</span>
+              <span className={`px-2 py-0.5 rounded ${durationDays === 5 ? 'bg-orange-500 text-white font-bold' : 'bg-white border border-neutral-200 text-neutral-600'}`}>5D4N (Maks. 10)</span>
+              <span className={`px-2 py-0.5 rounded ${durationDays === 6 ? 'bg-orange-500 text-white font-bold' : 'bg-white border border-neutral-200 text-neutral-600'}`}>6D5N (Maks. 12)</span>
+              <span className={`px-2 py-0.5 rounded ${durationDays === 7 ? 'bg-orange-500 text-white font-bold' : 'bg-white border border-neutral-200 text-neutral-600'}`}>7D6N (Maks. 14)</span>
+            </div>
+          </div>
+
+          {/* Quota Alert / Notice */}
+          {quotaNotice && (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl text-amber-900 text-xs flex items-center gap-2.5 animate-in fade-in">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              <div className="flex-1">
+                <span className="font-bold block">Pemberitahuan Kuota Destinasi:</span>
+                <span className="text-[11px] leading-relaxed">{quotaNotice}</span>
+              </div>
+            </div>
+          )}
+
+          {/* BONUS DESTINASI KHUSUS (SUDAH TERMASUK OTOMATIS) */}
+          <div className="p-4 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-emerald-500/10 border border-orange-200 rounded-2xl space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
+                  <Gift className="w-3 h-3" />
+                  BONUS SUDAH TERMASUK
+                </span>
+                <h4 className="font-extrabold text-xs sm:text-sm text-neutral-900">
+                  {activeBonus.title}
+                </h4>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg shrink-0">
+                ✓ Gratis Tanpa Memotong Kuota Pilihan
+              </span>
+            </div>
+
+            <p className="text-xs text-neutral-600">
+              {activeBonus.description}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+              {activeBonus.items.map((bonusItem, bIdx) => (
+                <div key={bIdx} className="bg-white/90 backdrop-blur-xs border border-orange-200/80 rounded-xl p-2.5 flex items-center gap-2 text-xs font-semibold text-neutral-800 shadow-2xs">
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span className="leading-tight">{bonusItem}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-neutral-500 pt-1">
+            <span>
+              Pilihan <strong>20 Destinasi Wisata Terpopuler & Viral di {destination === 'jogja' ? 'Yogyakarta' : destination === 'malang' ? 'Malang & Bromo' : 'Bali'}</strong> (Rating 4.6–4.9, review ribuan wisatawan):
+            </span>
+            <span className="font-semibold text-neutral-700">
+              Tersisa {Math.max(0, maxAllowedDestinations - selectedDestIds.length)} Slot Pilihan
             </span>
           </div>
 
-          <p className="text-xs text-neutral-500">
-            Klik pada destinasi yang ingin Anda kunjungi di <strong>{destination === 'jogja' ? 'Yogyakarta' : destination === 'malang' ? 'Malang & Bromo' : 'Bali'}</strong>. Tiket masuk akan dihitung otomatis:
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-1 border border-neutral-200 rounded-2xl bg-neutral-50/50">
+          {/* Grid 20 Destinasi Wisata Terkurasi */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-1.5 border border-neutral-200 rounded-2xl bg-neutral-50/50">
             {availableDestinations.map((d) => {
               const isChecked = selectedDestIds.includes(d.id);
+              const isMaxReached = selectedDestIds.length >= maxAllowedDestinations;
+              const isDisabled = !isChecked && isMaxReached;
 
               return (
                 <div
                   key={d.id}
                   onClick={() => toggleDestination(d.id)}
-                  className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5 ${
+                  className={`p-3.5 rounded-2xl border text-xs cursor-pointer transition-all flex flex-col justify-between ${
                     isChecked
-                      ? 'bg-white border-orange-500 shadow-2xs ring-1 ring-orange-500/20'
-                      : 'bg-white/80 border-neutral-200 hover:border-neutral-300'
+                      ? 'bg-white border-orange-500 shadow-sm ring-2 ring-orange-500/20'
+                      : isDisabled
+                      ? 'bg-neutral-100/60 border-neutral-200 opacity-60 hover:opacity-100 hover:border-neutral-300'
+                      : 'bg-white border-neutral-200 hover:border-orange-300 hover:shadow-2xs'
                   }`}
                 >
-                  <div className={`mt-0.5 w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${
-                    isChecked ? 'border-orange-500 bg-orange-500 text-white' : 'border-neutral-300 bg-white'
-                  }`}>
-                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                  </div>
-                  <div className="flex-1">
-                    <span className="font-bold text-neutral-900 block leading-tight">{d.name}</span>
-                    <div className="flex items-center justify-between text-[11px] text-neutral-500 mt-1">
-                      <span>{d.category}</span>
-                      <span className="font-mono font-medium text-orange-700">~Rp {d.avgTicketPrice.toLocaleString('id-ID')}</span>
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${
+                          isChecked ? 'border-orange-500 bg-orange-500 text-white' : 'border-neutral-300 bg-white'
+                        }`}>
+                          {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                        <span className="font-extrabold text-neutral-900 leading-tight">
+                          {d.name}
+                        </span>
+                      </div>
+                      {d.badge && (
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 shrink-0">
+                          {d.badge}
+                        </span>
+                      )}
                     </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-neutral-500 mt-2">
+                      <span className="px-2 py-0.5 rounded bg-neutral-100 font-medium text-neutral-700">
+                        {d.category}
+                      </span>
+                      <span className="flex items-center gap-1 font-bold text-amber-600">
+                        <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                        {d.rating}
+                      </span>
+                      <span className="text-neutral-400">({d.reviewCount})</span>
+                    </div>
+
+                    <p className="text-[11px] text-neutral-600 mt-1.5 leading-snug line-clamp-2">
+                      {d.highlight}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px]">
+                    <span className="text-neutral-500">Estimasi Tiket:</span>
+                    <span className="font-mono font-bold text-orange-700">
+                      ~Rp {d.avgTicketPrice.toLocaleString('id-ID')} / pax
+                    </span>
                   </div>
                 </div>
               );
@@ -909,6 +1058,32 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                 <span className="text-[10px] text-neutral-400 block mt-0.5">
                   {pickupCity} {hasDocumentation ? '· Foto/Video' : ''} {hasOutbound ? '· Outbound' : ''}
                 </span>
+              </div>
+            </div>
+
+            {/* BONUS DESTINASI TERMASUK (IKON KOTA & SENTRA OLEH-OLEH) */}
+            <div className="p-3.5 bg-gradient-to-r from-emerald-950/60 via-neutral-900 to-amber-950/40 border border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Gift className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-emerald-300">
+                      Bonus Wisata Termasuk:
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                      GRATIS / INCLUDE
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-neutral-300 block">
+                    {activeBonus.title} &bull; Kunjungan: {activeBonus.items.join(', ')}
+                  </span>
+                </div>
+              </div>
+              <div className="text-left sm:text-right shrink-0">
+                <span className="text-[11px] text-emerald-400 font-bold block font-mono">Rp 0 (Bonus Trip)</span>
+                <span className="text-[10px] text-neutral-400">Termasuk oleh-oleh & ikon kota</span>
               </div>
             </div>
 

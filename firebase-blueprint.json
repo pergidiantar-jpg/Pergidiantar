@@ -149,6 +149,24 @@
       "properties": {
         "connected": { "type": "boolean" }
       }
+    },
+    "DestinationOption": {
+      "title": "DestinationOption",
+      "description": "Curated viral travel destination with ratings and benchmark ticket pricing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "city": { "type": "string", "maxLength": 64 },
+        "category": { "type": "string", "maxLength": 64 },
+        "avgTicketPrice": { "type": "number" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "string", "maxLength": 32 },
+        "badge": { "type": "string", "maxLength": 64 },
+        "highlight": { "type": "string", "maxLength": 256 },
+        "imageUrl": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["id", "name", "city", "avgTicketPrice", "rating"]
     }
   },
   "firestore": {
@@ -179,6 +197,10 @@
     "/customers/{customerId}": {
       "schema": { "$ref": "#/entities/RegisteredCustomer" },
       "description": "Registered customer profiles"
+    },
+    "/trip_destinations/{destId}": {
+      "schema": { "$ref": "#/entities/DestinationOption" },
+      "description": "Curated viral travel destinations for custom trip calculator"
     },
     "/test/{testId}": {
       "schema": { "$ref": "#/entities/TestConnection" },

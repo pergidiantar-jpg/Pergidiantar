@@ -17,6 +17,7 @@ import {
   Sliders
 } from 'lucide-react';
 import { CustomTripCalculator } from './CustomTripCalculator';
+import { normalizeImagePath, handleImageFallback } from '../../utils/imageUtils';
 
 interface PackageCatalogProps {
   packages: TourPackage[];
@@ -231,10 +232,12 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
                 {/* Image Banner */}
                 <div className="relative aspect-16/10 overflow-hidden bg-neutral-100">
                   <img
-                    src={pkg.heroImage}
+                    src={normalizeImagePath(pkg.heroImage, pkg.destinations?.[0] as any)}
                     alt={pkg.title}
                     className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
                     referrerPolicy="no-referrer"
+                    onError={(e) => handleImageFallback(e, pkg.destinations?.[0] || pkg.destinationLabel)}
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 

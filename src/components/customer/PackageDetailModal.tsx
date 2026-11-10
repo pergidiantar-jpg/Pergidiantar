@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Calendar
 } from 'lucide-react';
+import { normalizeImagePath, handleImageFallback } from '../../utils/imageUtils';
 
 interface PackageDetailModalProps {
   packageData: TourPackage | null;
@@ -47,10 +48,11 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
         {/* Header with image */}
         <div className="relative h-56 sm:h-64 bg-neutral-900 shrink-0">
           <img
-            src={packageData.heroImage}
+            src={normalizeImagePath(packageData.heroImage, packageData.destinations?.[0] as any)}
             alt={packageData.title}
             className="w-full h-full object-cover opacity-60"
             referrerPolicy="no-referrer"
+            onError={(e) => handleImageFallback(e, packageData.destinations?.[0] || packageData.destinationLabel)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
           

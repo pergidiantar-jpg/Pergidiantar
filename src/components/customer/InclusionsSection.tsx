@@ -11,6 +11,7 @@ import {
   Compass,
   FileCheck
 } from 'lucide-react';
+import { handleImageFallback } from '../../utils/imageUtils';
 
 export const InclusionsSection: React.FC = () => {
   const fleetTypes = [
@@ -19,21 +20,21 @@ export const InclusionsSection: React.FC = () => {
       capacity: '14 Penumpang',
       bestFor: 'Single Trip & Family Trip',
       features: 'Reclining leather seats, AC dingin, charger USB di setiap baris, peredam kabin senyap.',
-      image: '/src/assets/images/hero_pergidiantar_travel_1793579233622.jpg'
+      image: '/assets/images/hero_pergidiantar_travel_1793579233622.jpg'
     },
     {
       title: 'Medium Bus Jetbus 5',
       capacity: '31 - 33 Kursi',
       bestFor: 'Family Gathering & Outbound',
       features: 'Konfigurasi 2-2 nyaman, audio karaoke dual mic, Smart TV, bagasi luas bawah dan samping.',
-      image: '/src/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg'
+      image: '/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg'
     },
     {
       title: 'Big Bus Pariwisata SHD',
       capacity: '48 - 50 Kursi',
       bestFor: 'Company Gathering & Study Tour',
       features: 'Air suspension empuk, toilet higienis, dispenser air panas, fasilitas keselamatan standar Kemenhub.',
-      image: '/src/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg'
+      image: '/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg'
     }
   ];
 
@@ -137,6 +138,7 @@ export const InclusionsSection: React.FC = () => {
                     alt={flt.title}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
+                    onError={(e) => handleImageFallback(e, 'fleet')}
                   />
                   <div className="absolute bottom-2 left-2 px-2.5 py-1 bg-neutral-900/80 backdrop-blur-md text-white rounded text-[11px] font-bold">
                     {flt.capacity}

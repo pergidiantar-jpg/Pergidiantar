@@ -11,6 +11,7 @@ import {
   setDoc, 
   deleteDoc, 
   getDocFromServer,
+  getDoc,
   collection,
   onSnapshot,
   writeBatch
@@ -98,6 +99,26 @@ export async function cloudSyncDoc(collectionName: string, docId: string, data: 
     return true;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `${collectionName}/${docId}`);
+    return false;
+  }
+}
+
+/**
+ * Real-time cloud sync: Seed a document ONLY IF it does not already exist in Firestore.
+ * This guarantees that custom data created, modified, or customized by admin
+ * is NEVER overwritten or erased during system updates or app restarts.
+ */
+export async function cloudSyncDocIfNotExists(collectionName: string, docId: string, data: any): Promise<boolean> {
+  try {
+    const docRef = doc(db, collectionName, String(docId));
+    const snap = await getDoc(docRef).catch(() => null);
+    if (!snap || !snap.exists()) {
+      const sanitized = JSON.parse(JSON.stringify(data));
+      await setDoc(docRef, sanitized);
+      return true;
+    }
+    return false;
+  } catch (error) {
     return false;
   }
 }

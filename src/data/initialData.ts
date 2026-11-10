@@ -10,7 +10,7 @@ export const INITIAL_PACKAGES: TourPackage[] = [
     destinationLabel: 'Yogyakarta',
     durationDays: 2,
     durationNights: 1,
-    heroImage: '/src/assets/images/dest_jogja_heritage_1793579234240.jpg',
+    heroImage: '/assets/images/dest_jogja_heritage_1793579234240.jpg',
     priceHematPerPax: 950000,
     priceAllInPerPax: 1450000,
     minPax: 1,
@@ -75,7 +75,7 @@ export const INITIAL_PACKAGES: TourPackage[] = [
     destinationLabel: 'Yogyakarta',
     durationDays: 3,
     durationNights: 2,
-    heroImage: '/src/assets/images/hero_pergidiantar_travel_1793579233622.jpg',
+    heroImage: '/assets/images/hero_pergidiantar_travel_1793579233622.jpg',
     priceHematPerPax: 1350000,
     priceAllInPerPax: 1980000,
     minPax: 4,
@@ -152,7 +152,7 @@ export const INITIAL_PACKAGES: TourPackage[] = [
     destinationLabel: 'Yogyakarta',
     durationDays: 3,
     durationNights: 2,
-    heroImage: '/src/assets/images/dest_jogja_heritage_1793579234240.jpg',
+    heroImage: '/assets/images/dest_jogja_heritage_1793579234240.jpg',
     priceHematPerPax: 1550000,
     priceAllInPerPax: 2250000,
     minPax: 15,
@@ -226,7 +226,7 @@ export const INITIAL_PACKAGES: TourPackage[] = [
     destinationLabel: 'Malang & Bromo',
     durationDays: 3,
     durationNights: 2,
-    heroImage: '/src/assets/images/dest_malang_bromo_1793579235303.jpg',
+    heroImage: '/assets/images/dest_malang_bromo_1793579235303.jpg',
     priceHematPerPax: 1750000,
     priceAllInPerPax: 2550000,
     minPax: 12,
@@ -302,7 +302,7 @@ export const INITIAL_PACKAGES: TourPackage[] = [
     destinationLabel: 'Bali',
     durationDays: 4,
     durationNights: 3,
-    heroImage: '/src/assets/images/dest_bali_paradise_1793579235747.jpg',
+    heroImage: '/assets/images/dest_bali_paradise_1793579235747.jpg',
     priceHematPerPax: 2200000,
     priceAllInPerPax: 3250000,
     minPax: 10,
@@ -391,7 +391,7 @@ export const INITIAL_PACKAGES: TourPackage[] = [
     destinationLabel: 'Yogyakarta',
     durationDays: 3,
     durationNights: 2,
-    heroImage: '/src/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg',
+    heroImage: '/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg',
     priceHematPerPax: 1650000,
     priceAllInPerPax: 2450000,
     minPax: 20,
@@ -468,7 +468,7 @@ export const INITIAL_PACKAGES: TourPackage[] = [
     destinationLabel: 'Yogyakarta',
     durationDays: 3,
     durationNights: 2,
-    heroImage: '/src/assets/images/dest_jogja_heritage_1793579234240.jpg',
+    heroImage: '/assets/images/dest_jogja_heritage_1793579234240.jpg',
     priceHematPerPax: 1150000,
     priceAllInPerPax: 1650000,
     minPax: 30,
@@ -544,7 +544,7 @@ export const INITIAL_PACKAGES: TourPackage[] = [
     destinationLabel: 'Malang & Batu',
     durationDays: 3,
     durationNights: 2,
-    heroImage: '/src/assets/images/dest_malang_bromo_1793579235303.jpg',
+    heroImage: '/assets/images/dest_malang_bromo_1793579235303.jpg',
     priceHematPerPax: 1350000,
     priceAllInPerPax: 1850000,
     minPax: 30,
@@ -618,7 +618,7 @@ export const INITIAL_PACKAGES: TourPackage[] = [
     destinationLabel: 'Bali',
     durationDays: 4,
     durationNights: 3,
-    heroImage: '/src/assets/images/dest_bali_paradise_1793579235747.jpg',
+    heroImage: '/assets/images/dest_bali_paradise_1793579235747.jpg',
     priceHematPerPax: 1850000,
     priceAllInPerPax: 2650000,
     minPax: 30,
@@ -748,7 +748,7 @@ export const INITIAL_FLEET: FleetUnit[] = [
     nextServiceKm: 45000,
     currentKm: 41200,
     baseCity: 'Yogyakarta',
-    imageUrl: '/src/assets/images/hero_pergidiantar_travel_1793579233622.jpg'
+    imageUrl: '/assets/images/hero_pergidiantar_travel_1793579233622.jpg'
   },
   {
     id: 'flt-02',
@@ -765,7 +765,7 @@ export const INITIAL_FLEET: FleetUnit[] = [
     nextServiceKm: 35000,
     currentKm: 31800,
     baseCity: 'Yogyakarta',
-    imageUrl: '/src/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg'
+    imageUrl: '/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg'
   },
   {
     id: 'flt-03',
@@ -834,7 +834,7 @@ export const INITIAL_FLEET: FleetUnit[] = [
     nextServiceKm: 110000,
     currentKm: 104500,
     baseCity: 'Yogyakarta',
-    imageUrl: '/src/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg'
+    imageUrl: '/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg'
   },
   {
     id: 'flt-07',

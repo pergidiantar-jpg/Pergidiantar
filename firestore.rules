@@ -85,5 +85,12 @@ service cloud.firestore {
       allow list: if true;
       allow write: if isValidId(notifId);
     }
+
+    // Curated & Viral Trip Destinations
+    match /trip_destinations/{destId} {
+      allow get: if isValidId(destId);
+      allow list: if true;
+      allow write: if isValidId(destId);
+    }
   }
 }

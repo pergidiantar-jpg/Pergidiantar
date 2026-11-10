@@ -50,12 +50,21 @@ import {
 } from '../services/firebaseAuthService';
 import {
   cloudSyncDoc,
+  cloudSyncDocIfNotExists,
   cloudDeleteDoc,
   cloudPurgeCollection,
   cloudSubscribeCollection,
   db
 } from '../services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { normalizeImagePath } from '../utils/imageUtils';
+import { 
+  DestinationOption, 
+  INITIAL_DESTINATIONS, 
+  BONUS_DESTINATIONS,
+  getMaxDestinationsForDuration,
+  BonusDestinationInfo
+} from '../data/destinationsData';
 
 interface AppContextType {
   packages: TourPackage[];
@@ -63,6 +72,10 @@ interface AppContextType {
   fleet: FleetUnit[];
   drivers: DriverCrew[];
   hotels: HotelPartner[];
+  destinations: DestinationOption[];
+  bonusDestinations: Record<string, BonusDestinationInfo>;
+  getMaxDestinationsForDuration: (days: number) => number;
+  addCustomDestination: (dest: Omit<DestinationOption, 'id'>) => Promise<DestinationOption>;
   users: UserProfile[];
   currentUser: UserProfile;
   currentRole: UserRole;
@@ -176,6 +189,7 @@ const LOCAL_STORAGE_KEY_STAFF_AUTH = 'pergidiantar_staff_session_v1';
 const LOCAL_STORAGE_KEY_PACKAGES = 'pergidiantar_packages_v1';
 const LOCAL_STORAGE_KEY_HOTELS = 'pergidiantar_hotels_v1';
 const LOCAL_STORAGE_KEY_VENDOR_PAYMENTS = 'pergidiantar_vendor_payments_v1';
+const LOCAL_STORAGE_KEY_TRIP_DESTINATIONS = 'pergidiantar_trip_destinations_v2';
 
 // Purge permanence flags
 const LOCAL_STORAGE_KEY_PURGED_ORDERS = 'pergidiantar_purged_orders';
@@ -195,9 +209,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_PACKAGES) === 'true') return [];
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY_PACKAGES);
-      return saved !== null ? JSON.parse(saved) : INITIAL_PACKAGES;
+      const raw: TourPackage[] = saved !== null ? JSON.parse(saved) : INITIAL_PACKAGES;
+      return raw.map(p => ({
+        ...p,
+        heroImage: normalizeImagePath(p.heroImage, p.destinations?.[0] as any)
+      }));
     } catch {
-      return [];
+      return INITIAL_PACKAGES;
     }
   });
 
@@ -302,6 +320,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [emailOutbox, setEmailOutbox] = useState<EmailDispatchRecord[]>(() => {
     return getStoredEmails();
+  });
+
+  const [destinations, setDestinations] = useState<DestinationOption[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY_TRIP_DESTINATIONS);
+      return saved ? JSON.parse(saved) : INITIAL_DESTINATIONS;
+    } catch {
+      return INITIAL_DESTINATIONS;
+    }
   });
 
   // Authenticated Sessions
@@ -636,6 +663,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [vendorPayments]);
 
   useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY_TRIP_DESTINATIONS, JSON.stringify(destinations));
+  }, [destinations]);
+
+  useEffect(() => {
     saveAllRegisteredCustomers(registeredCustomers);
   }, [registeredCustomers]);
 
@@ -679,7 +710,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 6. Subscribe to Tour Packages
     const unsubPackages = cloudSubscribeCollection<TourPackage>('packages', (cloudPkgs) => {
       if (cloudPkgs && cloudPkgs.length > 0) {
-        setPackages(cloudPkgs);
+        setPackages(cloudPkgs.map(p => ({
+          ...p,
+          heroImage: normalizeImagePath(p.heroImage, p.destinations?.[0] as any)
+        })));
       }
     });
 
@@ -713,48 +747,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    // Seed initial users, customers, packages, hotels, fleet, drivers, orders, and payments to Cloud Firestore
+    // 11. Subscribe to Trip Destinations (Real-time Cloud Sync)
+    const unsubDestinations = cloudSubscribeCollection<DestinationOption>('trip_destinations', (cloudDests) => {
+      if (cloudDests && cloudDests.length > 0) {
+        setDestinations(cloudDests);
+      }
+    });
+
+    // Seed initial users, customers, packages, hotels, fleet, drivers, and destinations to Cloud Firestore
+    // CRITICAL: We use cloudSyncDocIfNotExists so any customized data, additions, or updates made by admin
+    // are PERMANENTLY PRESERVED and never wiped out or reset by system updates or reloads!
     INITIAL_USERS.forEach((u) => {
-      cloudSyncDoc('users', u.id, u).catch(() => {});
+      cloudSyncDocIfNotExists('users', u.id, u).catch(() => {});
     });
 
     if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_CUSTOMERS) !== 'true') {
       DEFAULT_REGISTERED_CUSTOMERS.forEach((c) => {
-        cloudSyncDoc('customers', c.uid, c).catch(() => {});
+        cloudSyncDocIfNotExists('customers', c.uid, c).catch(() => {});
       });
     }
 
     INITIAL_PACKAGES.forEach((p) => {
-      cloudSyncDoc('packages', p.id, p).catch(() => {});
+      cloudSyncDocIfNotExists('packages', p.id, p).catch(() => {});
     });
 
     if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_FLEET) !== 'true') {
       INITIAL_FLEET.forEach((f) => {
-        cloudSyncDoc('fleet', f.id, f).catch(() => {});
+        cloudSyncDocIfNotExists('fleet', f.id, f).catch(() => {});
       });
     }
 
     if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_DRIVERS) !== 'true') {
       INITIAL_DRIVERS.forEach((d) => {
-        cloudSyncDoc('drivers', d.id, d).catch(() => {});
+        cloudSyncDocIfNotExists('drivers', d.id, d).catch(() => {});
       });
     }
 
     if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_HOTELS) !== 'true') {
       INITIAL_HOTELS.forEach((h) => {
-        cloudSyncDoc('hotels', h.id, h).catch(() => {});
+        cloudSyncDocIfNotExists('hotels', h.id, h).catch(() => {});
       });
     }
 
+    // Seed 60 initial viral destinations (20 Jogja, 20 Malang, 20 Bali)
+    INITIAL_DESTINATIONS.forEach((d) => {
+      cloudSyncDocIfNotExists('trip_destinations', d.id, d).catch(() => {});
+    });
+
     if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_ORDERS) !== 'true') {
       INITIAL_ORDERS.forEach((o) => {
-        cloudSyncDoc('orders', o.id, o).catch(() => {});
+        cloudSyncDocIfNotExists('orders', o.id, o).catch(() => {});
       });
     }
 
     if (localStorage.getItem(LOCAL_STORAGE_KEY_PURGED_VENDOR_PAYMENTS) !== 'true') {
       INITIAL_VENDOR_PAYMENTS.forEach((v) => {
-        cloudSyncDoc('vendorPayments', v.id, v).catch(() => {});
+        cloudSyncDocIfNotExists('vendorPayments', v.id, v).catch(() => {});
       });
     }
 
@@ -769,6 +817,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubUsers();
       unsubChats();
       unsubNotifs();
+      unsubDestinations();
     };
   }, []);
 
@@ -1312,6 +1361,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerPush('Hotel Mitra Dihapus', `Data hotel ${target?.name || ''} telah dihapus dari sistem.`, 'system');
   };
 
+  const addCustomDestination = async (dest: Omit<DestinationOption, 'id'>): Promise<DestinationOption> => {
+    const newId = `${dest.city}-${Date.now()}`;
+    const created: DestinationOption = {
+      ...dest,
+      id: newId,
+      isCustomAdded: true
+    };
+    setDestinations((prev) => [created, ...prev]);
+    await cloudSyncDoc('trip_destinations', newId, created);
+    triggerPush('Destinasi Baru Ditambahkan', `Destinasi ${created.name} (${created.city.toUpperCase()}) berhasil disinkronkan ke cloud.`, 'system');
+    return created;
+  };
+
   const addVendorPayment = (paymentData: Omit<VendorPayment, 'id' | 'paymentNumber' | 'createdAt'>) => {
     const timestamp = Date.now();
     const prefix = paymentData.category === 'driver' ? 'PAY-DRV' :
@@ -1739,6 +1801,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addHotel,
         updateHotel,
         deleteHotel,
+        destinations,
+        bonusDestinations: BONUS_DESTINATIONS,
+        getMaxDestinationsForDuration,
+        addCustomDestination,
         addVendorPayment,
         updateVendorPayment,
         deleteVendorPayment,

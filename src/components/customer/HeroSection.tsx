@@ -5,10 +5,11 @@ import {
   Ticket, 
   CheckCircle2, 
   MapPin, 
-  ArrowRight,
-  ShieldCheck,
-  Sparkles
+  ArrowRight, 
+  ShieldCheck, 
+  Sparkles 
 } from 'lucide-react';
+import { handleImageFallback } from '../../utils/imageUtils';
 import { PackageCategory, DestinationRegion } from '../../types/travel';
 
 interface HeroSectionProps {
@@ -31,10 +32,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* Background Image with Measured Scrim */}
       <div className="absolute inset-0 z-0">
         <img
-          src="/src/assets/images/hero_pergidiantar_travel_1793579233622.jpg"
+          src="/assets/images/hero_pergidiantar_travel_1793579233622.jpg"
           alt="Wisatawan PERGIDIANTAR di Yogyakarta"
           className="w-full h-full object-cover opacity-35"
           referrerPolicy="no-referrer"
+          onError={(e) => handleImageFallback(e, 'jogja')}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/70 to-neutral-900/50" />
       </div>

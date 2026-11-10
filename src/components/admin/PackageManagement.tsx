@@ -55,7 +55,7 @@ export const PackageManagement: React.FC = () => {
   const [addMaxPax, setAddMaxPax] = useState<number>(14);
   const [addVehicle, setAddVehicle] = useState('Toyota HiAce Premio Luxury (14 Seats)');
   const [addBadge, setAddBadge] = useState('Paket Pilihan');
-  const [addHeroImage, setAddHeroImage] = useState('/src/assets/images/dest_jogja_heritage_1793579234240.jpg');
+  const [addHeroImage, setAddHeroImage] = useState('/assets/images/dest_jogja_heritage_1793579234240.jpg');
   const [addHighlightsStr, setAddHighlightsStr] = useState(
     'Rute santai & fleksibel untuk liburan keluarga\nUnit armada ber-AC dingin dengan driver profesional\nDestinasi populer terbaik dan spot foto instagramable'
   );
@@ -97,7 +97,7 @@ export const PackageManagement: React.FC = () => {
     setAddMaxPax(14);
     setAddVehicle('Toyota HiAce Premio Luxury (14 Seats)');
     setAddBadge('Paket Pilihan');
-    setAddHeroImage('/src/assets/images/dest_jogja_heritage_1793579234240.jpg');
+    setAddHeroImage('/assets/images/dest_jogja_heritage_1793579234240.jpg');
     setAddHighlightsStr(
       'Rute santai & fleksibel untuk liburan keluarga\nUnit armada ber-AC dingin dengan driver profesional\nDestinasi populer terbaik dan spot foto instagramable'
     );
@@ -165,7 +165,7 @@ export const PackageManagement: React.FC = () => {
         addDestination === 'malang' ? 'Malang & Bromo' : 'Bali',
       durationDays: Number(addDurationDays),
       durationNights: Number(addDurationNights),
-      heroImage: addHeroImage || '/src/assets/images/dest_jogja_heritage_1793579234240.jpg',
+      heroImage: addHeroImage || '/assets/images/dest_jogja_heritage_1793579234240.jpg',
       priceHematPerPax: Number(addPriceHemat),
       priceAllInPerPax: Number(addPriceAllIn),
       minPax: Number(addMinPax),
@@ -672,9 +672,9 @@ export const PackageManagement: React.FC = () => {
                     onChange={(e) => {
                       const val = e.target.value as DestinationRegion;
                       setAddDestination(val);
-                      if (val === 'jogja') setAddHeroImage('/src/assets/images/dest_jogja_heritage_1793579234240.jpg');
-                      else if (val === 'malang') setAddHeroImage('/src/assets/images/dest_malang_bromo_1793579235303.jpg');
-                      else setAddHeroImage('/src/assets/images/dest_bali_paradise_1793579235747.jpg');
+                      if (val === 'jogja') setAddHeroImage('/assets/images/dest_jogja_heritage_1793579234240.jpg');
+                      else if (val === 'malang') setAddHeroImage('/assets/images/dest_malang_bromo_1793579235303.jpg');
+                      else setAddHeroImage('/assets/images/dest_bali_paradise_1793579235747.jpg');
                     }}
                     className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-bold text-neutral-800 bg-neutral-50 focus:ring-2 focus:ring-orange-500"
                   >
@@ -840,11 +840,11 @@ export const PackageManagement: React.FC = () => {
                     onChange={(e) => setAddHeroImage(e.target.value)}
                     className="w-full py-2 px-3 border border-neutral-300 rounded-xl font-semibold bg-neutral-50 text-neutral-800"
                   >
-                    <option value="/src/assets/images/dest_jogja_heritage_1793579234240.jpg">Foto Destinasi Jogja (Heritage & Candi)</option>
-                    <option value="/src/assets/images/dest_malang_bromo_1793579235303.jpg">Foto Destinasi Malang & Bromo</option>
-                    <option value="/src/assets/images/dest_bali_paradise_1793579235747.jpg">Foto Destinasi Bali Paradise</option>
-                    <option value="/src/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg">Foto Armada HiAce & Bus Pariwisata</option>
-                    <option value="/src/assets/images/hero_pergidiantar_travel_1793579233622.jpg">Foto Suasana Tour Wisatawan</option>
+                    <option value="/assets/images/dest_jogja_heritage_1793579234240.jpg">Foto Destinasi Jogja (Heritage & Candi)</option>
+                    <option value="/assets/images/dest_malang_bromo_1793579235303.jpg">Foto Destinasi Malang & Bromo</option>
+                    <option value="/assets/images/dest_bali_paradise_1793579235747.jpg">Foto Destinasi Bali Paradise</option>
+                    <option value="/assets/images/fleet_hiace_bus_pergidiantar_1793579236036.jpg">Foto Armada HiAce & Bus Pariwisata</option>
+                    <option value="/assets/images/hero_pergidiantar_travel_1793579233622.jpg">Foto Suasana Tour Wisatawan</option>
                   </select>
                 </div>
               </div>
