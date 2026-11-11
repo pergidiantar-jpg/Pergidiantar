@@ -17,7 +17,9 @@ import {
   Car,
   Hotel,
   Ticket,
-  KeyRound
+  KeyRound,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export const PublicLandingPage: React.FC = () => {
@@ -34,16 +36,19 @@ export const PublicLandingPage: React.FC = () => {
   // Customer Login Form State
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPassword, setCustomerPassword] = useState('');
+  const [showCustomerPassword, setShowCustomerPassword] = useState(false);
 
   // Customer Register Form State
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   // Staff / Super Admin Login Form State (Strictly empty by default on all devices)
   const [staffUsername, setStaffUsername] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
 
   // Status & loading
   const [loading, setLoading] = useState(false);
@@ -335,17 +340,52 @@ export const PublicLandingPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-orange-500" /> Kata Sandi (Password) *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Masukkan kata sandi akun Anda"
-                    value={customerPassword}
-                    onChange={(e) => setCustomerPassword(e.target.value)}
-                    className="w-full py-2.5 px-3.5 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 text-xs font-mono"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-orange-500" /> Kata Sandi (Password) *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomerPassword(!showCustomerPassword)}
+                      className="text-[11px] text-neutral-500 hover:text-neutral-800 flex items-center gap-1 transition-colors select-none font-medium"
+                      tabIndex={-1}
+                    >
+                      {showCustomerPassword ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5 text-orange-600" />
+                          <span>Sembunyikan</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                          <span>Lihat Password</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showCustomerPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Masukkan kata sandi akun Anda"
+                      value={customerPassword}
+                      onChange={(e) => setCustomerPassword(e.target.value)}
+                      className="w-full py-2.5 pl-3.5 pr-10 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 text-xs font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomerPassword(!showCustomerPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none"
+                      title={showCustomerPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                      aria-label={showCustomerPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                    >
+                      {showCustomerPassword ? (
+                        <EyeOff className="w-4 h-4 text-orange-600" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-neutral-400 hover:text-neutral-600" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <button
@@ -430,17 +470,52 @@ export const PublicLandingPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-orange-500" /> Buat Kata Sandi Baru *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Minimal 6 karakter"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full py-2.5 px-3.5 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 text-xs font-mono"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-orange-500" /> Buat Kata Sandi Baru *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="text-[11px] text-neutral-500 hover:text-neutral-800 flex items-center gap-1 transition-colors select-none font-medium"
+                      tabIndex={-1}
+                    >
+                      {showRegPassword ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5 text-orange-600" />
+                          <span>Sembunyikan</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                          <span>Lihat Password</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Minimal 6 karakter"
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      className="w-full py-2.5 pl-3.5 pr-10 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 text-xs font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none"
+                      title={showRegPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                      aria-label={showRegPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                    >
+                      {showRegPassword ? (
+                        <EyeOff className="w-4 h-4 text-orange-600" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-neutral-400 hover:text-neutral-600" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <button
@@ -502,18 +577,53 @@ export const PublicLandingPage: React.FC = () => {
 
                 {/* Input 2: Password */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1 flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-blue-600" /> Kata Sandi (Password) *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    placeholder="Masukkan kata sandi akun"
-                    value={staffPassword}
-                    onChange={(e) => setStaffPassword(e.target.value)}
-                    className="w-full py-2.5 px-3.5 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-neutral-50 text-xs font-mono text-neutral-900 placeholder:text-neutral-400"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-blue-600" /> Kata Sandi (Password) *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowStaffPassword(!showStaffPassword)}
+                      className="text-[11px] text-neutral-500 hover:text-neutral-800 flex items-center gap-1 transition-colors select-none font-medium"
+                      tabIndex={-1}
+                    >
+                      {showStaffPassword ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Sembunyikan</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                          <span>Lihat Password</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showStaffPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="new-password"
+                      placeholder="Masukkan kata sandi akun"
+                      value={staffPassword}
+                      onChange={(e) => setStaffPassword(e.target.value)}
+                      className="w-full py-2.5 pl-3.5 pr-10 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-neutral-50 text-xs font-mono text-neutral-900 placeholder:text-neutral-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowStaffPassword(!showStaffPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none"
+                      title={showStaffPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                      aria-label={showStaffPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                    >
+                      {showStaffPassword ? (
+                        <EyeOff className="w-4 h-4 text-blue-600" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-neutral-400 hover:text-neutral-600" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <button

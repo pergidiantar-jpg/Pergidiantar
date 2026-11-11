@@ -11,7 +11,9 @@ import {
   CheckCircle2, 
   AlertCircle,
   KeyRound,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export const CustomerAuthModal: React.FC = () => {
@@ -44,6 +46,7 @@ export const CustomerAuthModal: React.FC = () => {
     setPhone('');
     setStaffUsername('');
     setStaffPassword('');
+    setShowPassword(false);
     setErrorMsg(null);
   }, [authModalMode, authModalOpen]);
 
@@ -55,6 +58,9 @@ export const CustomerAuthModal: React.FC = () => {
   // Staff login state (Strictly empty by default on all devices)
   const [staffUsername, setStaffUsername] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
+
+  // Password visibility toggle
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -286,22 +292,55 @@ export const CustomerAuthModal: React.FC = () => {
               <label className="text-neutral-700 font-bold flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-blue-600" /> Kata Sandi (Password) *
               </label>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-[11px] text-neutral-500 hover:text-neutral-800 flex items-center gap-1 transition-colors select-none font-medium"
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  <>
+                    <EyeOff className="w-3.5 h-3.5 text-orange-600" />
+                    <span>Sembunyikan</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                    <span>Lihat Password</span>
+                  </>
+                )}
+              </button>
             </div>
-            <input
-              type="password"
-              placeholder={activeTab === 'register' ? 'Minimal 6 karakter' : 'Masukkan kata sandi'}
-              value={activeTab === 'staff' ? staffPassword : password}
-              onChange={(e) => {
-                if (activeTab === 'staff') {
-                  setStaffPassword(e.target.value);
-                } else {
-                  setPassword(e.target.value);
-                }
-              }}
-              required
-              autoComplete={activeTab === 'staff' ? 'new-password' : 'current-password'}
-              className="w-full py-2 px-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 font-mono text-xs text-neutral-900 placeholder:text-neutral-400"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder={activeTab === 'register' ? 'Minimal 6 karakter' : 'Masukkan kata sandi'}
+                value={activeTab === 'staff' ? staffPassword : password}
+                onChange={(e) => {
+                  if (activeTab === 'staff') {
+                    setStaffPassword(e.target.value);
+                  } else {
+                    setPassword(e.target.value);
+                  }
+                }}
+                required
+                autoComplete={activeTab === 'staff' ? 'new-password' : 'current-password'}
+                className="w-full py-2 pl-3 pr-10 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 font-mono text-xs text-neutral-900 placeholder:text-neutral-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none"
+                title={showPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                aria-label={showPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4 text-orange-600" />
+                ) : (
+                  <Eye className="w-4 h-4 text-neutral-400 hover:text-neutral-600" />
+                )}
+              </button>
+            </div>
           </div>
 
           <button
