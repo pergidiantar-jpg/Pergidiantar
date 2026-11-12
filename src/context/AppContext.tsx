@@ -783,7 +783,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cloudOrders) {
         const clean = cloudOrders.filter(o => !isLegacyDemoId(o.id));
         setOrders(clean);
-        cloudOrders.filter(o => isLegacyDemoId(o.id)).forEach(o => cloudDeleteDoc('orders', o.id).catch(() => {}));
       }
     });
 
@@ -792,7 +791,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cloudPayments) {
         const clean = cloudPayments.filter(v => !isLegacyDemoId(v.id));
         setVendorPayments(clean);
-        cloudPayments.filter(v => isLegacyDemoId(v.id)).forEach(v => cloudDeleteDoc('vendorPayments', v.id).catch(() => {}));
       }
     });
 
@@ -801,7 +799,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cloudFleet) {
         const clean = cloudFleet.filter(f => !isLegacyDemoId(f.id));
         setFleet(clean);
-        cloudFleet.filter(f => isLegacyDemoId(f.id)).forEach(f => cloudDeleteDoc('fleet', f.id).catch(() => {}));
       }
     });
 
@@ -810,7 +807,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cloudDrivers) {
         const clean = cloudDrivers.filter(d => !isLegacyDemoId(d.id));
         setDrivers(clean);
-        cloudDrivers.filter(d => isLegacyDemoId(d.id)).forEach(d => cloudDeleteDoc('drivers', d.id).catch(() => {}));
       }
     });
 
@@ -819,7 +815,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cloudHotels) {
         const clean = cloudHotels.filter(h => !isLegacyDemoId(h.id));
         setHotels(clean);
-        cloudHotels.filter(h => isLegacyDemoId(h.id)).forEach(h => cloudDeleteDoc('hotels', h.id).catch(() => {}));
       }
     });
 
@@ -831,7 +826,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...p,
           heroImage: normalizeImagePath(p.heroImage, p.destinations?.[0] as any)
         })));
-        cloudPkgs.filter(p => isLegacyDemoId(p.id)).forEach(p => cloudDeleteDoc('packages', p.id).catch(() => {}));
       }
     });
 
@@ -888,15 +882,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    // Seed master official Super Admin user to Cloud Firestore
-    INITIAL_USERS.forEach((u) => {
-      cloudSyncDocIfNotExists('users', u.id, u).catch(() => {});
-    });
+    // Seed master official Super Admin user to Cloud Firestore (run once per client)
+    const SEED_USERS_KEY = 'pergidiantar_users_seeded_v1';
+    if (!localStorage.getItem(SEED_USERS_KEY)) {
+      INITIAL_USERS.forEach((u) => {
+        cloudSyncDocIfNotExists('users', u.id, u).catch(() => {});
+      });
+      localStorage.setItem(SEED_USERS_KEY, 'true');
+    }
 
-    // Seed 60 real tourism spots in Jogja, Malang, Bali
-    INITIAL_DESTINATIONS.forEach((d) => {
-      cloudSyncDocIfNotExists('trip_destinations', d.id, d).catch(() => {});
-    });
+    // Destinations are bundled locally in destinationsData.ts and synced on demand
+    const SEED_DESTS_KEY = 'pergidiantar_dests_seeded_v1';
+    if (!localStorage.getItem(SEED_DESTS_KEY)) {
+      localStorage.setItem(SEED_DESTS_KEY, 'true');
+    }
 
     // One-time automated purge of legacy demo records from Cloud Firestore
     const LEGACY_PURGE_VERSION_KEY = 'pergidiantar_clean_prod_launch_v2';

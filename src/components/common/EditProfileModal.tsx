@@ -10,7 +10,9 @@ import {
   Briefcase, 
   CheckCircle2, 
   AlertCircle,
-  Save
+  Save,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export const EditProfileModal: React.FC = () => {
@@ -31,6 +33,8 @@ export const EditProfileModal: React.FC = () => {
   const [department, setDepartment] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -231,29 +235,99 @@ export const EditProfileModal: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-neutral-700 font-medium mb-1 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-neutral-400" /> Kata Sandi Baru
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Kosongkan jika tetap"
-                  className="w-full py-2.5 px-3.5 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 font-mono text-xs"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-neutral-700 font-medium flex items-center gap-1.5 text-xs">
+                    <Lock className="w-3.5 h-3.5 text-neutral-400" /> Kata Sandi Baru
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="text-[11px] text-neutral-500 hover:text-neutral-800 flex items-center gap-1 transition-colors select-none font-medium"
+                    tabIndex={-1}
+                  >
+                    {showNewPassword ? (
+                      <>
+                        <EyeOff className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Sembunyikan</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Lihat</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Kosongkan jika tetap"
+                    className="w-full py-2.5 pl-3.5 pr-10 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 font-mono text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none"
+                    title={showNewPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                    aria-label={showNewPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="w-4 h-4 text-orange-600" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-neutral-400 hover:text-neutral-600" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div>
-                <label className="block text-neutral-700 font-medium mb-1 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-neutral-400" /> Konfirmasi Sandi
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Ketik ulang sandi"
-                  className="w-full py-2.5 px-3.5 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 font-mono text-xs"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-neutral-700 font-medium flex items-center gap-1.5 text-xs">
+                    <Lock className="w-3.5 h-3.5 text-neutral-400" /> Konfirmasi Sandi
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="text-[11px] text-neutral-500 hover:text-neutral-800 flex items-center gap-1 transition-colors select-none font-medium"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? (
+                      <>
+                        <EyeOff className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Sembunyikan</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Lihat</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Ketik ulang sandi"
+                    className="w-full py-2.5 pl-3.5 pr-10 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-neutral-50 font-mono text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none"
+                    title={showConfirmPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                    aria-label={showConfirmPassword ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4 text-orange-600" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-neutral-400 hover:text-neutral-600" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

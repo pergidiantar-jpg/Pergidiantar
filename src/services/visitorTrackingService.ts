@@ -4,8 +4,8 @@
  * with real-time Firebase Firestore synchronization.
  */
 
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db, cloudSyncDoc } from './firebase';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db, cloudSyncDoc, isQuotaExhausted } from './firebase';
 
 export interface VisitorLogEntry {
   id: string;
@@ -123,18 +123,53 @@ export async function trackSiteVisit(userRole: string = 'Pengunjung'): Promise<S
   const todayStr = new Date().toISOString().split('T')[0];
   const nowIso = new Date().toISOString();
 
-  // Check if session was already counted recently to avoid spamming on hot reload
+  // Check if session was already counted recently to avoid spamming on reload
   const sessionRecorded = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(SESSION_STORAGE_KEY_RECORDED) : null;
+
+  // Retrieve cached stats first
+  let cached: SiteVisitorStats = { ...DEFAULT_SITE_STATS };
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY_CACHED_STATS);
+    if (raw) {
+      cached = { ...DEFAULT_SITE_STATS, ...JSON.parse(raw) };
+    }
+  } catch {}
+
+  // If session already recorded in this tab, return cached stats directly without unnecessary writes
+  if (sessionRecorded) {
+    return cached;
+  }
+
+  // If Firestore quota is exhausted, update local analytics without calling Firestore
+  if (isQuotaExhausted()) {
+    const updatedStats: SiteVisitorStats = {
+      ...cached,
+      totalVisitors: cached.totalVisitors + 1,
+      todayVisitors: (cached.lastResetDate === todayStr ? cached.todayVisitors : 0) + 1,
+      uniqueVisitors: isNewUnique ? cached.uniqueVisitors + 1 : cached.uniqueVisitors,
+      lastVisitedAt: nowIso,
+      lastResetDate: todayStr,
+      recentVisitors: [
+        { id: visitorId, timestamp: 'Baru saja', device: deviceType, browser, role: userRole },
+        ...(cached.recentVisitors || []).slice(0, 14)
+      ]
+    };
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(SESSION_STORAGE_KEY_RECORDED, 'true');
+      }
+      localStorage.setItem(LOCAL_STORAGE_KEY_CACHED_STATS, JSON.stringify(updatedStats));
+    } catch {}
+    return updatedStats;
+  }
 
   try {
     const docRef = doc(db, 'site_stats', 'summary');
-    const snap = await getDoc(docRef);
+    const snap = await getDoc(docRef).catch(() => null);
 
-    let current: SiteVisitorStats;
-    if (snap.exists()) {
+    let current: SiteVisitorStats = cached;
+    if (snap && snap.exists()) {
       current = snap.data() as SiteVisitorStats;
-    } else {
-      current = { ...DEFAULT_SITE_STATS };
     }
 
     // Daily reset check for today's visitors
@@ -143,27 +178,18 @@ export async function trackSiteVisit(userRole: string = 'Pengunjung'): Promise<S
       todayVisitors = 0;
     }
 
-    let totalVisitors = current.totalVisitors || DEFAULT_SITE_STATS.totalVisitors;
-    let uniqueVisitors = current.uniqueVisitors || DEFAULT_SITE_STATS.uniqueVisitors;
+    let totalVisitors = (current.totalVisitors || DEFAULT_SITE_STATS.totalVisitors) + 1;
+    todayVisitors += 1;
+    let uniqueVisitors = isNewUnique ? (current.uniqueVisitors || DEFAULT_SITE_STATS.uniqueVisitors) + 1 : current.uniqueVisitors;
 
-    // Only increment total & today counter if new session
-    if (!sessionRecorded) {
-      totalVisitors += 1;
-      todayVisitors += 1;
-      if (isNewUnique) {
-        uniqueVisitors += 1;
-      }
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem(SESSION_STORAGE_KEY_RECORDED, 'true');
-      }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(SESSION_STORAGE_KEY_RECORDED, 'true');
     }
 
     const deviceBreakdown = current.deviceBreakdown || { ...DEFAULT_SITE_STATS.deviceBreakdown };
-    if (!sessionRecorded) {
-      deviceBreakdown[deviceType] = (deviceBreakdown[deviceType] || 0) + 1;
-    }
+    deviceBreakdown[deviceType] = (deviceBreakdown[deviceType] || 0) + 1;
 
-    // Keep activeNow realistic and jitter slightly based on activity
+    // Keep activeNow realistic
     const activeNow = Math.max(12, Math.min(65, (current.activeNow || 24) + (Math.random() > 0.5 ? 1 : -1)));
 
     const newLog: VisitorLogEntry = {
@@ -200,8 +226,7 @@ export async function trackSiteVisit(userRole: string = 'Pengunjung'): Promise<S
 
     return updatedStats;
   } catch (err) {
-    console.warn('Visitor tracking error (using fallback):', err);
-    return DEFAULT_SITE_STATS;
+    return cached;
   }
 }
 
@@ -211,28 +236,37 @@ export async function trackSiteVisit(userRole: string = 'Pengunjung'): Promise<S
 export function subscribeToLiveSiteStats(
   callback: (stats: SiteVisitorStats) => void
 ): () => void {
+  // Always serve local cache immediately
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY_CACHED_STATS);
+    if (raw) {
+      callback(JSON.parse(raw));
+    }
+  } catch {}
+
+  if (isQuotaExhausted()) {
+    return () => {};
+  }
+
   try {
     const docRef = doc(db, 'site_stats', 'summary');
     const unsub = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
+      if (docSnap && docSnap.exists()) {
         const data = docSnap.data() as SiteVisitorStats;
         callback(data);
         try {
           localStorage.setItem(LOCAL_STORAGE_KEY_CACHED_STATS, JSON.stringify(data));
         } catch {}
-      } else {
-        // If document doesn't exist yet, seed baseline
-        trackSiteVisit('Sistem').catch(() => {});
-        callback(DEFAULT_SITE_STATS);
       }
-    }, (error) => {
-      console.warn('Real-time site stats subscription error:', error);
-      callback(DEFAULT_SITE_STATS);
+    }, () => {
+      // Graceful fallback to cached stats without re-triggering error logs
+      try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY_CACHED_STATS);
+        if (raw) callback(JSON.parse(raw));
+      } catch {}
     });
     return unsub;
-  } catch (err) {
-    console.warn('Error initiating site stats subscription:', err);
-    callback(DEFAULT_SITE_STATS);
+  } catch {
     return () => {};
   }
 }
