@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   TourPackage,
   BookingOrder,
@@ -404,12 +404,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [securityAuditLogs, setSecurityAuditLogs] = useState<LoginAuditLog[]>([]);
 
-  const trackVisit = async (role?: string) => {
+  const trackVisit = useCallback(async (role?: string) => {
     try {
       const updated = await trackSiteVisit(role || currentRole || 'Pengunjung');
       setVisitorStats(updated);
     } catch {}
-  };
+  }, [currentRole]);
 
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<BookingOrder | null>(null);
   const [selectedPackageForBooking, setSelectedPackageForBooking] = useState<TourPackage | null>(null);

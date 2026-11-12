@@ -12,7 +12,8 @@ import {
   Ticket, 
   ChevronRight,
   ShieldCheck,
-  Calendar
+  Calendar,
+  ShoppingBag
 } from 'lucide-react';
 import { normalizeImagePath, handleImageFallback } from '../../utils/imageUtils';
 
@@ -248,15 +249,69 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                     </span>
                     <span className="text-xs font-semibold text-neutral-800">{it.title}</span>
                   </div>
-                  <p className="text-xs text-neutral-600 mb-3">{it.description}</p>
-                  <ul className="space-y-1.5">
-                    {it.activities.map((act, actIdx) => (
-                      <li key={actIdx} className="text-xs text-neutral-700 flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
-                        <span>{act}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {it.description && <p className="text-xs text-neutral-600 mb-3">{it.description}</p>}
+
+                  {it.timeline && it.timeline.length > 0 ? (
+                    <div className="space-y-2.5 pt-1">
+                      {it.timeline.map((item, idx) => {
+                        const isMeal = item.type === 'meal';
+                        const isHotel = item.type === 'hotel_checkin' || item.type === 'hotel_checkout';
+                        const isTransport = item.type === 'pickup' || item.type === 'dropoff';
+                        const isShop = item.type === 'shopping';
+
+                        const badgeColor = isMeal 
+                          ? 'bg-amber-100 text-amber-800 border-amber-200' 
+                          : isHotel 
+                          ? 'bg-purple-100 text-purple-800 border-purple-200' 
+                          : isTransport 
+                          ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                          : isShop 
+                          ? 'bg-pink-100 text-pink-800 border-pink-200' 
+                          : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+
+                        return (
+                          <div 
+                            key={idx} 
+                            className="p-2.5 rounded-xl bg-white border border-neutral-200 text-xs shadow-2xs hover:border-neutral-300 transition-colors"
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded text-[11px] flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-orange-600" />
+                                  {item.time}
+                                </span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${badgeColor}`}>
+                                  {(item.type || 'sightseeing').replace('_', ' ')}
+                                </span>
+                              </div>
+                              {item.notes && (
+                                <span className="text-[10px] text-neutral-500 italic">
+                                  {item.notes}
+                                </span>
+                              )}
+                            </div>
+                            <div className="font-bold text-neutral-900 text-xs">
+                              {item.title}
+                            </div>
+                            {item.description && (
+                              <div className="text-[11px] text-neutral-600 mt-0.5">
+                                {item.description}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {it.activities.map((act, actIdx) => (
+                        <li key={actIdx} className="text-xs text-neutral-700 flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                          <span>{act}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               ))}
             </div>

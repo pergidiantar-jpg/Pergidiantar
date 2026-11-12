@@ -1,6 +1,6 @@
 import React, { useState, useId } from 'react';
 import { useApp } from '../../context/AppContext';
-import { DestinationRegion, BookingOrder } from '../../types/travel';
+import { DestinationRegion, BookingOrder, ItineraryDay } from '../../types/travel';
 import { 
   Calculator, 
   MapPin, 
@@ -27,7 +27,12 @@ import {
   AlertTriangle,
   Hotel,
   Bed,
-  Moon
+  Moon,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  ShoppingBag,
+  Coffee
 } from 'lucide-react';
 import { handleImageFallback } from '../../utils/imageUtils';
 import {
@@ -37,6 +42,7 @@ import {
   getMaxDestinationsForDuration,
   BonusDestinationInfo
 } from '../../data/destinationsData';
+import { generateCustomTripItinerary } from '../../utils/itineraryGenerator';
 
 export type HotelLodgingTier = 'none' | 'bintang_3' | 'bintang_4' | 'bintang_5';
 
@@ -155,7 +161,11 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     packagePricePerPaxDiscounted: number;
     vehicleUnitCount: number;
     destinationsList: DestinationOption[];
+    itineraryTimeline: ItineraryDay[];
   } | null>(null);
+
+  const [previewSelectedDay, setPreviewSelectedDay] = useState<number>(1);
+  const [isItineraryExpanded, setIsItineraryExpanded] = useState<boolean>(true);
 
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -328,6 +338,21 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     const packagePriceTotalDiscounted = baseSubtotal - discountAmount;
     const packagePricePerPaxDiscounted = Math.round(packagePriceTotalDiscounted / paxCount);
 
+    // Generate automatic logical Itinerary Timeline based on destinations, meals, hotel, and pickup
+    const generatedTimeline = generateCustomTripItinerary({
+      destination,
+      destinationLabel: destination === 'jogja' ? 'Yogyakarta' : destination === 'malang' ? 'Malang & Bromo' : 'Bali',
+      durationDays,
+      selectedDestinations: selectedDestObjects,
+      hotelTier,
+      hotelTitle: selectedHotelOption.title,
+      pickupCity,
+      bonusItems: activeBonus?.items || [],
+      breakfastCount,
+      lunchCount,
+      dinnerCount
+    });
+
     setCalculationResult({
       calculated: true,
       transportCostTotal,
@@ -346,8 +371,10 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       packagePriceTotalDiscounted,
       packagePricePerPaxDiscounted,
       vehicleUnitCount,
-      destinationsList: selectedDestObjects
+      destinationsList: selectedDestObjects,
+      itineraryTimeline: generatedTimeline
     });
+    setPreviewSelectedDay(1);
   };
 
   // Proceed to booking and payment
@@ -400,6 +427,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       hotelAllotment: hotelTier === 'none' 
         ? 'Tanpa Hotel (Akomodasi Mandiri)' 
         : `${selectedHotelOption.title} (${hotelRoomCount} Kamar, ${nights} Malam)`,
+      itineraryTimeline: calculationResult.itineraryTimeline,
       customer: {
         fullName: customerUser?.displayName || 'Pelanggan PERGIDIANTAR',
         whatsapp: customerUser?.phoneNumber || '087716443331',
@@ -1324,6 +1352,147 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                 <span className="text-[10px] text-neutral-400">Termasuk oleh-oleh & ikon kota</span>
               </div>
             </div>
+
+            {/* RUNDOWN & JADWAL PERJALANAN OTOMATIS (ITINERARY TIMELINE) */}
+            {calculationResult.itineraryTimeline && calculationResult.itineraryTimeline.length > 0 && (
+              <div className="bg-neutral-800/80 rounded-2xl border border-neutral-700 overflow-hidden shadow-lg">
+                <div 
+                  onClick={() => setIsItineraryExpanded(!isItineraryExpanded)}
+                  className="p-4 bg-gradient-to-r from-neutral-800 to-neutral-800/50 flex items-center justify-between cursor-pointer hover:bg-neutral-750 transition-colors border-b border-neutral-700/80"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400 shrink-0">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-extrabold text-white">
+                          Rundown Jadwal Otomatis (Itinerary Timeline)
+                        </h4>
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded-full border border-orange-500/30">
+                          {calculationResult.itineraryTimeline.length} Hari Terjadwal
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        Sistem menyusun jam logis: penjemputan, destinasi, kuliner, dan check-in/out hotel.
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="p-1.5 rounded-lg bg-neutral-700 text-neutral-300 hover:text-white"
+                  >
+                    {isItineraryExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {isItineraryExpanded && (
+                  <div className="p-4 sm:p-5 space-y-4">
+                    {/* Day selector tabs */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                      {calculationResult.itineraryTimeline.map((dayItem) => {
+                        const isSelected = previewSelectedDay === dayItem.day;
+                        return (
+                          <button
+                            key={dayItem.day}
+                            type="button"
+                            onClick={() => setPreviewSelectedDay(dayItem.day)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap flex items-center gap-1.5 shrink-0 ${
+                              isSelected
+                                ? 'bg-orange-500 text-white border-orange-500 shadow-md'
+                                : 'bg-neutral-800 text-neutral-300 border-neutral-700 hover:border-neutral-600'
+                            }`}
+                          >
+                            <span>Hari {dayItem.day}</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-orange-600 text-white' : 'bg-neutral-700 text-neutral-400'}`}>
+                              {(dayItem.timeline || []).length} Agenda
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Active Day Details */}
+                    {(() => {
+                      const activeDay = calculationResult.itineraryTimeline.find(d => d.day === previewSelectedDay) || calculationResult.itineraryTimeline[0];
+                      if (!activeDay) return null;
+
+                      return (
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-xl bg-neutral-900/90 border border-neutral-700/80">
+                            <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider block">
+                              Hari Ke-{activeDay.day}
+                            </span>
+                            <h5 className="text-xs sm:text-sm font-bold text-white mt-0.5">
+                              {activeDay.title}
+                            </h5>
+                            <p className="text-[11px] text-neutral-400 mt-0.5">
+                              {activeDay.description}
+                            </p>
+                          </div>
+
+                          {/* Timeline Nodes */}
+                          <div className="relative pl-5 space-y-3 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-700">
+                            {(activeDay.timeline || []).map((item, idx) => {
+                              const isMeal = item.type === 'meal';
+                              const isHotel = item.type === 'hotel_checkin' || item.type === 'hotel_checkout';
+                              const isTransport = item.type === 'pickup' || item.type === 'dropoff';
+                              const isShop = item.type === 'shopping';
+
+                              const badgeColor = isMeal 
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                : isHotel
+                                ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                                : isTransport
+                                ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                : isShop
+                                ? 'bg-pink-500/20 text-pink-300 border-pink-500/30'
+                                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+
+                              return (
+                                <div 
+                                  key={idx}
+                                  className="relative bg-neutral-900/80 border border-neutral-700/70 rounded-xl p-3 hover:border-neutral-600 transition-all text-xs"
+                                >
+                                  {/* Dot */}
+                                  <div className="absolute -left-5 top-3.5 w-2.5 h-2.5 rounded-full bg-orange-500 border-2 border-neutral-900 ring-2 ring-orange-500/30" />
+
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-mono text-orange-400 font-extrabold text-[11px] bg-orange-950/60 border border-orange-500/30 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {item.time}
+                                      </span>
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${badgeColor}`}>
+                                        {(item.type || 'sightseeing').replace('_', ' ')}
+                                      </span>
+                                    </div>
+                                    {item.notes && (
+                                      <span className="text-[10px] text-neutral-400 font-medium italic">
+                                        {item.notes}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="font-bold text-white text-xs mt-1">
+                                    {item.title}
+                                  </div>
+                                  {item.description && (
+                                    <div className="text-[11px] text-neutral-400 mt-0.5">
+                                      {item.description}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* DUA PILIHAN PENAWARAN: HARGA SATUAN (PER PAX) VS HARGA PAKET (DISKON 10%) */}
             <div className="pt-2">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { TourPackage, DestinationRegion, PackageCategory } from '../../types/travel';
+import { TourPackage, DestinationRegion, PackageCategory, ItineraryDay } from '../../types/travel';
 import { 
   Compass, 
   Edit3, 
@@ -15,9 +15,12 @@ import {
   ShieldCheck,
   Calendar,
   Users,
-  Car
+  Car,
+  Clock
 } from 'lucide-react';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { ItineraryTimelineEditor } from './ItineraryTimelineEditor';
+import { createDefaultDayTimeline } from '../../utils/itineraryGenerator';
 
 export const PackageManagement: React.FC = () => {
   const { packages, addPackage, updatePackage, deletePackage, currentRole } = useApp();
@@ -42,6 +45,7 @@ export const PackageManagement: React.FC = () => {
   const [maxPax, setMaxPax] = useState<number>(12);
   const [recommendedVehicle, setRecommendedVehicle] = useState('');
   const [highlightPointsStr, setHighlightPointsStr] = useState('');
+  const [editDays, setEditDays] = useState<ItineraryDay[]>([]);
 
   // Form states for adding new tour package
   const [addTitle, setAddTitle] = useState('');
@@ -62,26 +66,29 @@ export const PackageManagement: React.FC = () => {
   const [addTicketsStr, setAddTicketsStr] = useState(
     'Tiket Masuk Destinasi Wisata Utama\nRetribusi Tol & Parkir Seluruh Rute'
   );
-  const [addDays, setAddDays] = useState<
-    { day: number; title: string; description: string; activitiesStr: string }[]
-  >([
+  
+  // Itinerary timeline for new package
+  const [addItineraryDays, setAddItineraryDays] = useState<ItineraryDay[]>(() => [
     {
       day: 1,
-      title: 'Penjemputan & Eksplorasi Budaya',
+      title: 'Hari 1: Penjemputan, Wisata Ikonik & Check-in Hotel',
       description: 'Penyambutan ramah di bandara/stasiun dengan armada AC dingin.',
-      activitiesStr: 'Penjemputan di titik kedatangan (Bandara/Stasiun)\nMakan siang kuliner khas lokal\nKunjungan destinasi ikonik utama\nCheck-in hotel mitra dan istirahat'
+      timeline: createDefaultDayTimeline(1, false, 'Yogyakarta'),
+      activities: ['08:00 - 09:30 - Penjemputan Peserta di Bandara / Stasiun', '10:00 - 12:00 - Kunjungan Destinasi Ikonik Pertama', '12:30 - 13:30 - Makan Siang Resto Lokal Autentik', '14:00 - 15:30 - Check-in Hotel Mitra & Istirahat', '16:00 - 18:00 - Hunting Sunset & Panorama Senja', '18:30 - 20:00 - Makan Malam Kuliner Malam', '20:30 - Kembali ke Hotel & Istirahat']
     },
     {
       day: 2,
-      title: 'Petualangan Alam & Panorama Indah',
+      title: 'Hari 2: Petualangan Alam & Panorama Memukau',
       description: 'Eksplorasi spot alam favorit dengan panorama memukau.',
-      activitiesStr: 'Sarapan pagi di hotel\nTur alam dan spot pemandangan terbaik\nMakan siang santap kuliner tradisional\nHunting foto sunset sore hari\nMakan malam bersama'
+      timeline: createDefaultDayTimeline(2, false, 'Yogyakarta'),
+      activities: ['07:00 - 08:30 - Sarapan Pagi Buffet di Hotel', '08:30 - 09:00 - Penjemputan di Lobby Hotel', '09:30 - 11:30 - Eksplorasi Destinasi Wisata Pagi', '12:00 - 13:00 - Makan Siang Kuliner Resto Lokal', '13:30 - 15:30 - Kunjungan Destinasi Siang / Edukasi', '16:00 - 18:00 - Hunting Sunset & Panorama Sore', '18:30 - 20:00 - Makan Malam Santap Kuliner Malam', '20:30 - Kembali ke Hotel & Istirahat']
     },
     {
       day: 3,
-      title: 'Belanja Cenderamata & Kepulangan',
-      description: 'Membeli buah tangan khas daerah sebelum kepulangan.',
-      activitiesStr: 'Sarapan dan check-out hotel\nKunjungan pusat oleh-oleh khas & kerajinan lokal\nMakan siang kuliner penutup\nPengantaran ke Stasiun / Bandara'
+      title: 'Hari 3: Belanja Cenderamata & Pengantaran Kepulangan',
+      description: 'Membeli buah tangan khas daerah sebelum kepulangan ke kota asal.',
+      timeline: createDefaultDayTimeline(3, true, 'Yogyakarta'),
+      activities: ['07:00 - 08:30 - Sarapan Pagi di Hotel & Packing', '09:00 - 10:00 - Check-out Hotel & Pemuatan Bagasi', '10:30 - 12:00 - Wisata Belanja Pusat Oleh-Oleh Khas', '12:30 - 13:30 - Makan Siang Perpisahan', '14:00 - 15:30 - Kunjungan Ikon Kota & Foto Bersama', '16:00 - 17:30 - Pengantaran ke Bandara / Stasiun (Drop-off)']
     }
   ]);
 
@@ -102,49 +109,29 @@ export const PackageManagement: React.FC = () => {
       'Rute santai & fleksibel untuk liburan keluarga\nUnit armada ber-AC dingin dengan driver profesional\nDestinasi populer terbaik dan spot foto instagramable'
     );
     setAddTicketsStr('Tiket Masuk Destinasi Wisata Utama\nRetribusi Tol & Parkir Seluruh Rute');
-    setAddDays([
+    setAddItineraryDays([
       {
         day: 1,
-        title: 'Penjemputan & Eksplorasi Budaya',
+        title: 'Hari 1: Penjemputan, Wisata Ikonik & Check-in Hotel',
         description: 'Penyambutan ramah di bandara/stasiun dengan armada AC dingin.',
-        activitiesStr: 'Penjemputan di titik kedatangan (Bandara/Stasiun)\nMakan siang kuliner khas lokal\nKunjungan destinasi ikonik utama\nCheck-in hotel mitra dan istirahat'
+        timeline: createDefaultDayTimeline(1, false, 'Yogyakarta'),
+        activities: ['08:00 - 09:30 - Penjemputan Peserta di Bandara / Stasiun', '10:00 - 12:00 - Kunjungan Destinasi Ikonik Pertama', '12:30 - 13:30 - Makan Siang Resto Lokal Autentik', '14:00 - 15:30 - Check-in Hotel Mitra & Istirahat', '16:00 - 18:00 - Hunting Sunset & Panorama Senja', '18:30 - 20:00 - Makan Malam Kuliner Malam', '20:30 - Kembali ke Hotel & Istirahat']
       },
       {
         day: 2,
-        title: 'Petualangan Alam & Panorama Indah',
+        title: 'Hari 2: Petualangan Alam & Panorama Memukau',
         description: 'Eksplorasi spot alam favorit dengan panorama memukau.',
-        activitiesStr: 'Sarapan pagi di hotel\nTur alam dan spot pemandangan terbaik\nMakan siang santap kuliner tradisional\nHunting foto sunset sore hari\nMakan malam bersama'
+        timeline: createDefaultDayTimeline(2, false, 'Yogyakarta'),
+        activities: ['07:00 - 08:30 - Sarapan Pagi Buffet di Hotel', '08:30 - 09:00 - Penjemputan di Lobby Hotel', '09:30 - 11:30 - Eksplorasi Destinasi Wisata Pagi', '12:00 - 13:00 - Makan Siang Kuliner Resto Lokal', '13:30 - 15:30 - Kunjungan Destinasi Siang / Edukasi', '16:00 - 18:00 - Hunting Sunset & Panorama Sore', '18:30 - 20:00 - Makan Malam Santap Kuliner Malam', '20:30 - Kembali ke Hotel & Istirahat']
       },
       {
         day: 3,
-        title: 'Belanja Cenderamata & Kepulangan',
-        description: 'Membeli buah tangan khas daerah sebelum kepulangan.',
-        activitiesStr: 'Sarapan dan check-out hotel\nKunjungan pusat oleh-oleh khas & kerajinan lokal\nMakan siang kuliner penutup\nPengantaran ke Stasiun / Bandara'
+        title: 'Hari 3: Belanja Cenderamata & Pengantaran Kepulangan',
+        description: 'Membeli buah tangan khas daerah sebelum kepulangan ke kota asal.',
+        timeline: createDefaultDayTimeline(3, true, 'Yogyakarta'),
+        activities: ['07:00 - 08:30 - Sarapan Pagi di Hotel & Packing', '09:00 - 10:00 - Check-out Hotel & Pemuatan Bagasi', '10:30 - 12:00 - Wisata Belanja Pusat Oleh-Oleh Khas', '12:30 - 13:30 - Makan Siang Perpisahan', '14:00 - 15:30 - Kunjungan Ikon Kota & Foto Bersama', '16:00 - 17:30 - Pengantaran ke Bandara / Stasiun (Drop-off)']
       }
     ]);
-  };
-
-  const handleAddDay = () => {
-    const nextDay = addDays.length + 1;
-    setAddDays([
-      ...addDays,
-      {
-        day: nextDay,
-        title: `Hari Ke-${nextDay}: Aktivitas Lanjutan`,
-        description: 'Rute perjalanan dan eksplorasi lanjutan.',
-        activitiesStr: 'Kunjungan destinasi wisata pilihan\nMakan siang kuliner lokal\nPengantaran kembali ke hotel'
-      }
-    ]);
-    setAddDurationDays(nextDay);
-    setAddDurationNights(Math.max(1, nextDay - 1));
-  };
-
-  const handleRemoveDay = () => {
-    if (addDays.length <= 1) return;
-    const newDays = addDays.slice(0, -1);
-    setAddDays(newDays);
-    setAddDurationDays(newDays.length);
-    setAddDurationNights(Math.max(0, newDays.length - 1));
   };
 
   const handleCreatePackage = (e: React.FormEvent) => {
@@ -176,15 +163,7 @@ export const PackageManagement: React.FC = () => {
         .split('\n')
         .map(s => s.trim())
         .filter(Boolean),
-      itinerary: addDays.map((d) => ({
-        day: d.day,
-        title: d.title.trim(),
-        description: d.description.trim(),
-        activities: d.activitiesStr
-          .split('\n')
-          .map(s => s.trim())
-          .filter(Boolean)
-      })),
+      itinerary: addItineraryDays,
       included: {
         transport: 'Kendaraan, driver, bbm, parkir (Termasuk Paket Hemat & All In)',
         accommodation: 'Hotel Bintang Mitra Pilihan (Termasuk Paket All In)',
@@ -216,6 +195,26 @@ export const PackageManagement: React.FC = () => {
     setMaxPax(pkg.maxPax);
     setRecommendedVehicle(pkg.recommendedVehicle);
     setHighlightPointsStr(pkg.highlightPoints.join('\n'));
+
+    const initialItinerary = pkg.itinerary && pkg.itinerary.length > 0
+      ? pkg.itinerary
+      : [
+          {
+            day: 1,
+            title: `Hari 1: Penjemputan, Wisata Ikonik & Check-in Hotel`,
+            description: `Penyambutan ramah di bandara/stasiun dengan armada AC dingin.`,
+            timeline: createDefaultDayTimeline(1, false, pkg.destinationLabel || 'Yogyakarta'),
+            activities: ['08:00 - 09:30 - Penjemputan Peserta di Bandara / Stasiun', '10:00 - 12:00 - Kunjungan Destinasi Ikonik Pertama', '12:30 - 13:30 - Makan Siang Resto Lokal Autentik', '14:00 - 15:30 - Check-in Hotel Mitra & Istirahat', '16:00 - 18:00 - Hunting Sunset & Panorama Senja', '18:30 - 20:00 - Makan Malam Kuliner Malam', '20:30 - Kembali ke Hotel & Istirahat']
+          },
+          {
+            day: 2,
+            title: `Hari 2: Belanja Cenderamata & Pengantaran Kepulangan`,
+            description: `Membeli buah tangan khas daerah sebelum kepulangan ke kota asal.`,
+            timeline: createDefaultDayTimeline(2, true, pkg.destinationLabel || 'Yogyakarta'),
+            activities: ['07:00 - 08:30 - Sarapan Pagi di Hotel & Packing', '09:00 - 10:00 - Check-out Hotel & Pemuatan Bagasi', '10:30 - 12:00 - Wisata Belanja Pusat Oleh-Oleh Khas', '12:30 - 13:30 - Makan Siang Perpisahan', '14:00 - 15:30 - Kunjungan Ikon Kota & Foto Bersama', '16:00 - 17:30 - Pengantaran ke Bandara / Stasiun (Drop-off)']
+          }
+        ];
+    setEditDays(initialItinerary);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -245,7 +244,8 @@ export const PackageManagement: React.FC = () => {
       highlightPoints: highlightPointsStr
         .split('\n')
         .map(s => s.trim())
-        .filter(s => s.length > 0)
+        .filter(s => s.length > 0),
+      itinerary: editDays
     };
 
     updatePackage(updated);
@@ -591,6 +591,19 @@ export const PackageManagement: React.FC = () => {
                 />
               </div>
 
+              {/* Itinerary Timeline Editor */}
+              <div className="pt-2">
+                <ItineraryTimelineEditor
+                  days={editDays}
+                  onChange={(updatedDays) => {
+                    setEditDays(updatedDays);
+                    setDurationDays(updatedDays.length);
+                    setDurationNights(Math.max(0, updatedDays.length - 1));
+                  }}
+                  cityLabel={destinationLabel}
+                />
+              </div>
+
               {/* Actions */}
               <div className="pt-3 border-t border-neutral-100 flex items-center justify-end gap-2.5">
                 <button
@@ -864,88 +877,17 @@ export const PackageManagement: React.FC = () => {
                 />
               </div>
 
-              {/* Day-by-Day Itinerary Builder */}
-              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-black text-neutral-900 uppercase tracking-wider block">
-                      Susunan Jadwal & Itinerary Harian
-                    </span>
-                    <span className="text-[11px] text-neutral-500">
-                      Tentukan rute aktivitas untuk setiap hari perjalanan ({addDays.length} Hari).
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {addDays.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={handleRemoveDay}
-                        className="py-1 px-2.5 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 text-[11px] font-bold"
-                      >
-                        - Hapus Hari
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleAddDay}
-                      className="py-1 px-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-bold flex items-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" /> Tambah Hari
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-3 pt-1">
-                  {addDays.map((dayItem, dIdx) => (
-                    <div key={dIdx} className="p-3 bg-white rounded-xl border border-neutral-200 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-md bg-orange-100 text-orange-700 font-black text-xs flex items-center justify-center shrink-0">
-                          {dayItem.day}
-                        </span>
-                        <input
-                          type="text"
-                          value={dayItem.title}
-                          onChange={(e) => {
-                            const updated = [...addDays];
-                            updated[dIdx].title = e.target.value;
-                            setAddDays(updated);
-                          }}
-                          placeholder={`Judul Hari Ke-${dayItem.day}`}
-                          required
-                          className="flex-1 py-1 px-2 border border-neutral-300 rounded-lg font-bold text-xs"
-                        />
-                      </div>
-                      <input
-                        type="text"
-                        value={dayItem.description}
-                        onChange={(e) => {
-                          const updated = [...addDays];
-                          updated[dIdx].description = e.target.value;
-                          setAddDays(updated);
-                        }}
-                        placeholder="Deskripsi singkat rute hari ini"
-                        className="w-full py-1 px-2 border border-neutral-200 rounded-lg text-[11px] text-neutral-600 bg-neutral-50"
-                      />
-                      <div>
-                        <label className="text-[10px] font-bold text-neutral-500 block mb-0.5">
-                          Daftar Aktivitas & Spot Kunjungan (Satu per baris):
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={dayItem.activitiesStr}
-                          onChange={(e) => {
-                            const updated = [...addDays];
-                            updated[dIdx].activitiesStr = e.target.value;
-                            setAddDays(updated);
-                          }}
-                          required
-                          placeholder="Aktivitas 1&#10;Aktivitas 2&#10;Aktivitas 3"
-                          className="w-full py-1 px-2 border border-neutral-300 rounded-lg text-[11px] text-neutral-800"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {/* Day-by-Day Itinerary Builder with Timeline Editor */}
+              <div>
+                <ItineraryTimelineEditor
+                  days={addItineraryDays}
+                  onChange={(newDays) => {
+                    setAddItineraryDays(newDays);
+                    setAddDurationDays(newDays.length);
+                    setAddDurationNights(Math.max(0, newDays.length - 1));
+                  }}
+                  cityLabel={addDestination === 'jogja' ? 'Yogyakarta' : addDestination === 'malang' ? 'Malang & Bromo' : 'Bali'}
+                />
               </div>
 
               {/* Tickets Inclusions */}

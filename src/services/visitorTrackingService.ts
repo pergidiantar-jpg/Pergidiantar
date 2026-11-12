@@ -236,20 +236,13 @@ export async function trackSiteVisit(userRole: string = 'Pengunjung'): Promise<S
 export function subscribeToLiveSiteStats(
   callback: (stats: SiteVisitorStats) => void
 ): () => void {
-  // Always serve local cache immediately
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY_CACHED_STATS);
-    if (raw) {
-      callback(JSON.parse(raw));
-    }
-  } catch {}
-
   if (isQuotaExhausted()) {
     return () => {};
   }
 
   try {
     const docRef = doc(db, 'site_stats', 'summary');
+    let unsubscribed = false;
     const unsub = onSnapshot(docRef, (docSnap) => {
       if (docSnap && docSnap.exists()) {
         const data = docSnap.data() as SiteVisitorStats;
@@ -259,13 +252,19 @@ export function subscribeToLiveSiteStats(
         } catch {}
       }
     }, () => {
-      // Graceful fallback to cached stats without re-triggering error logs
-      try {
-        const raw = localStorage.getItem(LOCAL_STORAGE_KEY_CACHED_STATS);
-        if (raw) callback(JSON.parse(raw));
-      } catch {}
+      if (!unsubscribed) {
+        unsubscribed = true;
+        try {
+          unsub();
+        } catch {}
+      }
     });
-    return unsub;
+    return () => {
+      unsubscribed = true;
+      try {
+        unsub();
+      } catch {}
+    };
   } catch {
     return () => {};
   }

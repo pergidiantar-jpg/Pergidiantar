@@ -299,8 +299,17 @@ export function cloudSubscribeCollection<T>(
   collectionName: string, 
   onData: (items: T[]) => void
 ): () => void {
+  // If quota is already exhausted, do not attach live network listeners to prevent retry storms
+  if (quotaExhausted) {
+    return () => {};
+  }
+
+  let hasEmittedCache = false;
+
   try {
     const colRef = collection(db, collectionName);
+    let unsubscribed = false;
+
     const unsubscribe = onSnapshot(
       colRef, 
       (snapshot) => {
@@ -324,23 +333,41 @@ export function cloudSubscribeCollection<T>(
 
         if (isQuotaErr) {
           markQuotaExhausted(error?.message);
-          // Serve from local mirror to keep app interactive
-          try {
-            const raw = localStorage.getItem(`pergidiantar_cloud_col_${collectionName}`);
-            if (raw) {
-              const cached = JSON.parse(raw);
-              if (Array.isArray(cached) && cached.length > 0) {
-                onData(cached as T[]);
+
+          // Stop this listener immediately so Firestore stops retrying in the background
+          if (!unsubscribed) {
+            unsubscribed = true;
+            try {
+              unsubscribe();
+            } catch {}
+          }
+
+          // Emit from cache at most once
+          if (!hasEmittedCache) {
+            hasEmittedCache = true;
+            try {
+              const raw = localStorage.getItem(`pergidiantar_cloud_col_${collectionName}`);
+              if (raw) {
+                const cached = JSON.parse(raw);
+                if (Array.isArray(cached) && cached.length > 0) {
+                  onData(cached as T[]);
+                }
               }
-            }
-          } catch {}
+            } catch {}
+          }
           return;
         }
 
         handleFirestoreError(error, OperationType.LIST, collectionName);
       }
     );
-    return unsubscribe;
+
+    return () => {
+      unsubscribed = true;
+      try {
+        unsubscribe();
+      } catch {}
+    };
   } catch (err) {
     console.warn(`Error setting up real-time listener for ${collectionName}:`, err);
     return () => {};

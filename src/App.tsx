@@ -45,14 +45,8 @@ const MainAppContent: React.FC = () => {
     openNotifications,
     closeNotifications,
     autoLogoutNotice,
-    clearAutoLogoutNotice,
-    trackVisit
+    clearAutoLogoutNotice
   } = useApp();
-
-  // Track visitor traffic automatically on application view
-  useEffect(() => {
-    trackVisit();
-  }, [trackVisit]);
 
   const [selectedCategory, setSelectedCategory] = useState<PackageCategory | 'all'>('all');
   const [selectedDestination, setSelectedDestination] = useState<DestinationRegion | 'all'>('all');

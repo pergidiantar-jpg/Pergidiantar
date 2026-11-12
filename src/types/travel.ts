@@ -9,6 +9,35 @@ export type DestinationRegion = 'jogja' | 'malang' | 'bali';
 
 export type PackageTier = 'all_in' | 'paket_hemat';
 
+export type ItineraryActivityType = 
+  | 'pickup'           // Penjemputan (Bandara / Stasiun / Titik Kumpul)
+  | 'transport'        // Perjalanan / Mobilisasi
+  | 'sightseeing'      // Kunjungan Destinasi Wisata
+  | 'meal'             // Makan Pagi / Siang / Malam / Kuliner
+  | 'hotel_checkin'    // Check-in Hotel
+  | 'hotel_checkout'   // Check-out Hotel
+  | 'shopping'         // Pusat Oleh-oleh / Belanja Khas
+  | 'free_time'        // Waktu Bebas / Istirahat
+  | 'dropoff';         // Pengantaran Kembali
+
+export interface ItineraryTimelineItem {
+  id: string;
+  time: string;           // Jam pelaksanaan (misal: "08:00 - 09:30")
+  title: string;          // Judul Kegiatan / Nama Objek Wisata
+  description?: string;   // Keterangan / Catatan Singkat
+  location?: string;      // Nama Lokasi / Titik
+  type?: ItineraryActivityType; // Kategori Kegiatan
+  notes?: string;         // Catatan Tambahan / Inklusi
+}
+
+export interface ItineraryDay {
+  day: number;
+  title: string;
+  description?: string;
+  activities: string[];
+  timeline?: ItineraryTimelineItem[];
+}
+
 export interface TourPackage {
   id: string;
   title: string;
@@ -24,12 +53,7 @@ export interface TourPackage {
   minPax: number;
   maxPax: number;
   highlightPoints: string[];
-  itinerary: {
-    day: number;
-    title: string;
-    description: string;
-    activities: string[];
-  }[];
+  itinerary: ItineraryDay[];
   included: {
     transport: string;
     accommodation: string;
@@ -95,6 +119,7 @@ export interface BookingOrder {
   assignedDriverName?: string;
   assignedDriverPhone?: string;
   hotelAllotment?: string;
+  itineraryTimeline?: ItineraryDay[];
   createdAt: string;
   notes?: string;
 }

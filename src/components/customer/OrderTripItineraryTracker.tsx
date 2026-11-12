@@ -20,7 +20,8 @@ import {
   Compass,
   Phone,
   Info,
-  Check
+  Check,
+  ShoppingBag
 } from 'lucide-react';
 
 interface OrderTripItineraryTrackerProps {
@@ -29,51 +30,75 @@ interface OrderTripItineraryTrackerProps {
 }
 
 export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps> = ({ order, pkg }) => {
-  // If package is not passed, create a fallback itinerary from order details
-  const itinerary = pkg?.itinerary && pkg.itinerary.length > 0 
-    ? pkg.itinerary 
-    : [
-        {
-          day: 1,
-          title: `Hari Ke-1: Penjemputan & Eksplorasi ${order.destinationLabel}`,
-          description: `Penyambutan tamu di titik jemput ${order.customer.pickupAddress} dengan armada nyaman.`,
-          activities: [
-            `Penjemputan di ${order.customer.pickupAddress} oleh supir ramah berlisensi`,
-            `Perjalanan menuju destinasi wisata utama ${order.destinationLabel}`,
-            order.tier === 'all_in' ? 'Makan siang kuliner khas lokal pilihan mitra' : 'Istirahat makan siang (mandiri/rekomendasi supir)',
-            'Kunjungan destinasi ikonik & spot foto instagramable',
-            order.tier === 'all_in' ? `Check-in hotel mitra: ${order.hotelAllotment || 'Hotel Bintang Pilihan'}` : 'Pengantaran ke penginapan tamu'
-          ]
-        },
-        {
-          day: 2,
-          title: `Hari Ke-2: Wisata Alam & Kuliner ${order.destinationLabel}`,
-          description: 'Aktivitas eksplorasi wisata penuh sepanjang hari dengan pemandangan menakjubkan.',
-          activities: [
-            order.tier === 'all_in' ? 'Sarapan pagi buffet lezat di hotel' : 'Persiapan perjalanan pagi',
-            'Eksplorasi destinasi alam & budaya unggulan',
-            order.tier === 'all_in' ? 'Makan siang & santap kuliner khas tradisional' : 'Makan siang kuliner lokal',
-            'Hunting sunset & panorama senja terbaik',
-            order.tier === 'all_in' ? 'Makan malam bersama keluarga / rombongan' : 'Makan malam santai mandiri'
-          ]
-        },
-        {
-          day: 3,
-          title: `Hari Ke-3: Belanja Oleh-Oleh & Kepulangan`,
-          description: 'Berburu cenderamata khas daerah dan pengantaran kepulangan tepat waktu.',
-          activities: [
-            'Proses check-out hotel & pemuatan bagasi ke armada',
-            'Kunjungan pusat oleh-oleh khas & kerajinan lokal',
-            'Makan siang perpisahan',
-            'Pengantaran kembali ke Bandara / Stasiun / Titik Drop-off'
-          ]
-        }
-      ];
+  // If order has an attached custom itinerary timeline, prioritize it!
+  const itinerary = (order.itineraryTimeline && order.itineraryTimeline.length > 0)
+    ? order.itineraryTimeline
+    : (pkg?.itinerary && pkg.itinerary.length > 0 
+        ? pkg.itinerary 
+        : [
+            {
+              day: 1,
+              title: `Hari Ke-1: Penjemputan & Eksplorasi ${order.destinationLabel}`,
+              description: `Penyambutan tamu di titik jemput ${order.customer.pickupAddress} dengan armada nyaman.`,
+              activities: [
+                `Penjemputan di ${order.customer.pickupAddress} oleh supir ramah berlisensi`,
+                `Perjalanan menuju destinasi wisata utama ${order.destinationLabel}`,
+                order.tier === 'all_in' ? 'Makan siang kuliner khas lokal pilihan mitra' : 'Istirahat makan siang (mandiri/rekomendasi supir)',
+                'Kunjungan destinasi ikonik & spot foto instagramable',
+                order.tier === 'all_in' ? `Check-in hotel mitra: ${order.hotelAllotment || 'Hotel Bintang Pilihan'}` : 'Pengantaran ke penginapan tamu'
+              ]
+            },
+            {
+              day: 2,
+              title: `Hari Ke-2: Wisata Alam & Kuliner ${order.destinationLabel}`,
+              description: 'Aktivitas eksplorasi wisata penuh sepanjang hari dengan pemandangan menakjubkan.',
+              activities: [
+                order.tier === 'all_in' ? 'Sarapan pagi buffet lezat di hotel' : 'Persiapan perjalanan pagi',
+                'Eksplorasi destinasi alam & budaya unggulan',
+                order.tier === 'all_in' ? 'Makan siang & santap kuliner khas tradisional' : 'Makan siang kuliner lokal',
+                'Hunting sunset & panorama senja terbaik',
+                order.tier === 'all_in' ? 'Makan malam bersama keluarga / rombongan' : 'Makan malam santai mandiri'
+              ]
+            },
+            {
+              day: 3,
+              title: `Hari Ke-3: Belanja Oleh-Oleh & Kepulangan`,
+              description: 'Berburu cenderamata khas daerah dan pengantaran kepulangan tepat waktu.',
+              activities: [
+                'Proses check-out hotel & pemuatan bagasi ke armada',
+                'Kunjungan pusat oleh-oleh khas & kerajinan lokal',
+                'Makan siang perpisahan',
+                'Pengantaran kembali ke Bandara / Stasiun / Titik Drop-off'
+              ]
+            }
+          ]);
 
   const totalDays = itinerary.length;
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
   const [completedStops, setCompletedStops] = useState<Record<string, boolean>>({});
+
+  const getTimelineTypeMeta = (type: string) => {
+    switch (type) {
+      case 'pickup':
+        return { label: 'Penjemputan', icon: Car, color: 'bg-blue-100 text-blue-800 border-blue-200' };
+      case 'dropoff':
+        return { label: 'Drop-off / Kepulangan', icon: Car, color: 'bg-indigo-100 text-indigo-800 border-indigo-200' };
+      case 'meal':
+        return { label: 'Makan & Kuliner', icon: Utensils, color: 'bg-amber-100 text-amber-800 border-amber-200' };
+      case 'hotel_checkin':
+        return { label: 'Check-In Hotel', icon: Hotel, color: 'bg-purple-100 text-purple-800 border-purple-200' };
+      case 'hotel_checkout':
+        return { label: 'Check-Out Hotel', icon: Hotel, color: 'bg-rose-100 text-rose-800 border-rose-200' };
+      case 'shopping':
+        return { label: 'Sentra Oleh-Oleh', icon: ShoppingBag, color: 'bg-pink-100 text-pink-800 border-pink-200' };
+      case 'free_time':
+        return { label: 'Waktu Bebas & Istirahat', icon: Clock, color: 'bg-neutral-100 text-neutral-800 border-neutral-200' };
+      case 'sightseeing':
+      default:
+        return { label: 'Kunjungan Wisata', icon: Ticket, color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
+    }
+  };
 
   // Helper to compute date for a given day offset
   const getDayDateLabel = (dayNumber: number): string => {
@@ -300,110 +325,217 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
 
               {/* Step-by-Step Interactive Timeline Nodes */}
               <div className="relative pl-6 sm:pl-8 space-y-4 before:content-[''] before:absolute before:left-3 sm:before:left-4 before:top-3 before:bottom-3 before:w-0.5 before:bg-neutral-200">
-                {dayIt.activities.map((act, idx) => {
-                  const stopKey = `day-${dayIt.day}-stop-${idx}`;
-                  const isChecked = !!completedStops[stopKey];
-                  const phase = getActivityPhase(idx, dayIt.activities.length);
-                  const type = getActivityType(act);
-                  const TypeIcon = type.icon;
-                  const PhaseIcon = phase.icon;
+                {dayIt.timeline && dayIt.timeline.length > 0 ? (
+                  dayIt.timeline.map((item, idx) => {
+                    const stopKey = `day-${dayIt.day}-tl-${idx}`;
+                    const isChecked = !!completedStops[stopKey];
+                    const meta = getTimelineTypeMeta(item.type || 'sightseeing');
+                    const MetaIcon = meta.icon;
 
-                  return (
-                    <div
-                      key={idx}
-                      className={`relative group rounded-xl p-3.5 border transition-all ${
-                        isChecked 
-                          ? 'bg-emerald-50/50 border-emerald-300' 
-                          : 'bg-white border-neutral-200 hover:border-neutral-300 shadow-2xs'
-                      }`}
-                    >
-                      {/* Timeline Node Dot */}
-                      <button
-                        type="button"
-                        onClick={() => toggleStopCompleted(stopKey)}
-                        className={`absolute -left-6 sm:-left-8 top-3.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isChecked
-                            ? 'bg-emerald-600 border-emerald-600 text-white scale-110 shadow-xs'
-                            : 'bg-white border-orange-500 text-orange-500 hover:bg-orange-50'
+                    return (
+                      <div
+                        key={idx}
+                        className={`relative group rounded-xl p-3.5 border transition-all ${
+                          isChecked 
+                            ? 'bg-emerald-50/50 border-emerald-300' 
+                            : 'bg-white border-neutral-200 hover:border-neutral-300 shadow-2xs'
                         }`}
-                        title={isChecked ? 'Tandai belum selesai' : 'Tandai sudah dikunjungi'}
                       >
-                        {isChecked ? (
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        ) : (
-                          <span className="text-[10px] font-black">{idx + 1}</span>
-                        )}
-                      </button>
-
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {/* Phase Badge */}
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${phase.color}`}>
-                            <PhaseIcon className="w-3 h-3" />
-                            {phase.label}
-                          </span>
-
-                          {/* Activity Type Badge */}
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${type.color}`}>
-                            <TypeIcon className="w-3 h-3" />
-                            {type.label}
-                          </span>
-
-                          {isChecked && (
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Selesai Dikunjungi
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Interactive toggle button */}
+                        {/* Timeline Node Dot */}
                         <button
                           type="button"
                           onClick={() => toggleStopCompleted(stopKey)}
-                          className={`text-[11px] font-semibold flex items-center gap-1 self-start sm:self-auto transition-colors ${
-                            isChecked ? 'text-emerald-700 hover:text-emerald-800' : 'text-neutral-500 hover:text-orange-600'
+                          className={`absolute -left-6 sm:-left-8 top-3.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                            isChecked
+                              ? 'bg-emerald-600 border-emerald-600 text-white scale-110 shadow-xs'
+                              : 'bg-white border-orange-500 text-orange-500 hover:bg-orange-50'
                           }`}
+                          title={isChecked ? 'Tandai belum selesai' : 'Tandai sudah dikunjungi'}
                         >
-                          {isChecked ? 'Sudah Dilakukan' : 'Tandai Selesai'}
+                          {isChecked ? (
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          ) : (
+                            <span className="text-[10px] font-black">{idx + 1}</span>
+                          )}
                         </button>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Time Badge */}
+                            <span className="text-xs font-mono font-black text-orange-700 bg-orange-100 border border-orange-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-orange-600" />
+                              {item.time}
+                            </span>
+
+                            {/* Activity Category Badge */}
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${meta.color}`}>
+                              <MetaIcon className="w-3 h-3" />
+                              {meta.label}
+                            </span>
+
+                            {isChecked && (
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Selesai Dikunjungi
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Interactive toggle button */}
+                          <button
+                            type="button"
+                            onClick={() => toggleStopCompleted(stopKey)}
+                            className={`text-[11px] font-semibold flex items-center gap-1 self-start sm:self-auto transition-colors ${
+                              isChecked ? 'text-emerald-700 hover:text-emerald-800' : 'text-neutral-500 hover:text-orange-600'
+                            }`}
+                          >
+                            {isChecked ? 'Sudah Dilakukan' : 'Tandai Selesai'}
+                          </button>
+                        </div>
+
+                        {/* Activity Title */}
+                        <h4 className={`text-xs sm:text-sm font-bold leading-relaxed ${
+                          isChecked ? 'line-through text-neutral-500' : 'text-neutral-900'
+                        }`}>
+                          {item.title}
+                        </h4>
+
+                        {/* Activity Description */}
+                        {item.description && (
+                          <p className={`text-xs mt-1 leading-relaxed ${
+                            isChecked ? 'line-through text-neutral-400' : 'text-neutral-600'
+                          }`}>
+                            {item.description}
+                          </p>
+                        )}
+
+                        {/* Notes / Inclusion note */}
+                        <div className="mt-2 pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-500">
+                          <span className="flex items-center gap-1">
+                            <Info className="w-3.5 h-3.5 text-neutral-400" />
+                            {item.notes || (
+                              item.type === 'pickup' ? 'Armada pariwisata ber-AC & driver standby.' :
+                              item.type === 'meal' ? (isAllIn ? 'Makan terjadwal & reservasi tempat.' : 'Makan mandiri.') :
+                              item.type === 'hotel_checkin' ? `Check-in hotel: ${order.hotelAllotment || 'Hotel Terdaftar'}.` :
+                              item.type === 'hotel_checkout' ? 'Check-out hotel & pemuatan bagasi.' :
+                              item.type === 'shopping' ? 'Pusat oleh-oleh khas & kerajinan tangan.' :
+                              item.type === 'dropoff' ? 'Pengantaran ke titik drop-off / bandara / stasiun.' :
+                              'Kunjungan destinasi pariwisata.'
+                            )}
+                          </span>
+
+                          <span className="font-mono text-[10px] text-neutral-400 font-bold">
+                            Stop #{idx + 1}
+                          </span>
+                        </div>
                       </div>
+                    );
+                  })
+                ) : (
+                  dayIt.activities.map((act, idx) => {
+                    const stopKey = `day-${dayIt.day}-stop-${idx}`;
+                    const isChecked = !!completedStops[stopKey];
+                    const phase = getActivityPhase(idx, dayIt.activities.length);
+                    const type = getActivityType(act);
+                    const TypeIcon = type.icon;
+                    const PhaseIcon = phase.icon;
 
-                      {/* Activity Description */}
-                      <p className={`text-xs sm:text-sm font-semibold leading-relaxed ${
-                        isChecked ? 'line-through text-neutral-500' : 'text-neutral-800'
-                      }`}>
-                        {act}
-                      </p>
+                    return (
+                      <div
+                        key={idx}
+                        className={`relative group rounded-xl p-3.5 border transition-all ${
+                          isChecked 
+                            ? 'bg-emerald-50/50 border-emerald-300' 
+                            : 'bg-white border-neutral-200 hover:border-neutral-300 shadow-2xs'
+                        }`}
+                      >
+                        {/* Timeline Node Dot */}
+                        <button
+                          type="button"
+                          onClick={() => toggleStopCompleted(stopKey)}
+                          className={`absolute -left-6 sm:-left-8 top-3.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                            isChecked
+                              ? 'bg-emerald-600 border-emerald-600 text-white scale-110 shadow-xs'
+                              : 'bg-white border-orange-500 text-orange-500 hover:bg-orange-50'
+                          }`}
+                          title={isChecked ? 'Tandai belum selesai' : 'Tandai sudah dikunjungi'}
+                        >
+                          {isChecked ? (
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          ) : (
+                            <span className="text-[10px] font-black">{idx + 1}</span>
+                          )}
+                        </button>
 
-                      {/* Inclusion note depending on tier */}
-                      <div className="mt-2 pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-500">
-                        <span className="flex items-center gap-1">
-                          <Info className="w-3.5 h-3.5 text-neutral-400" />
-                          {type.type === 'transport' && 'Armada pariwisata ber-AC & driver standby.'}
-                          {type.type === 'meal' && (
-                            isAllIn 
-                              ? 'Konsumsi include (Makan 1x di hotel & 2x/ hari di luar hotel).' 
-                              : 'Konsumsi mandiri sesuai selera kuliner Anda.'
-                          )}
-                          {type.type === 'hotel' && (
-                            isAllIn 
-                              ? `Akomodasi hotel mitra: ${order.hotelAllotment || 'Hotel Terverifikasi'}.` 
-                              : 'Penginapan mandiri sesuai preferensi Anda.'
-                          )}
-                          {type.type === 'sightseeing' && (
-                            isAllIn 
-                              ? 'Tiket masuk tercover penuh (All In).' 
-                              : 'Tiket masuk bayar mandiri di loket (Paket Hemat).'
-                          )}
-                        </span>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Phase Badge */}
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${phase.color}`}>
+                              <PhaseIcon className="w-3 h-3" />
+                              {phase.label}
+                            </span>
 
-                        <span className="font-mono text-[10px] text-neutral-400 font-bold">
-                          Stop #{idx + 1}
-                        </span>
+                            {/* Activity Type Badge */}
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${type.color}`}>
+                              <TypeIcon className="w-3 h-3" />
+                              {type.label}
+                            </span>
+
+                            {isChecked && (
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Selesai Dikunjungi
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Interactive toggle button */}
+                          <button
+                            type="button"
+                            onClick={() => toggleStopCompleted(stopKey)}
+                            className={`text-[11px] font-semibold flex items-center gap-1 self-start sm:self-auto transition-colors ${
+                              isChecked ? 'text-emerald-700 hover:text-emerald-800' : 'text-neutral-500 hover:text-orange-600'
+                            }`}
+                          >
+                            {isChecked ? 'Sudah Dilakukan' : 'Tandai Selesai'}
+                          </button>
+                        </div>
+
+                        {/* Activity Description */}
+                        <p className={`text-xs sm:text-sm font-semibold leading-relaxed ${
+                          isChecked ? 'line-through text-neutral-500' : 'text-neutral-800'
+                        }`}>
+                          {act}
+                        </p>
+
+                        {/* Inclusion note depending on tier */}
+                        <div className="mt-2 pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-500">
+                          <span className="flex items-center gap-1">
+                            <Info className="w-3.5 h-3.5 text-neutral-400" />
+                            {type.type === 'transport' && 'Armada pariwisata ber-AC & driver standby.'}
+                            {type.type === 'meal' && (
+                              isAllIn 
+                                ? 'Konsumsi include (Makan 1x di hotel & 2x/ hari di luar hotel).' 
+                                : 'Konsumsi mandiri sesuai selera kuliner Anda.'
+                            )}
+                            {type.type === 'hotel' && (
+                              isAllIn 
+                                ? `Akomodasi hotel mitra: ${order.hotelAllotment || 'Hotel Terverifikasi'}.` 
+                                : 'Penginapan mandiri sesuai preferensi Anda.'
+                            )}
+                            {type.type === 'sightseeing' && (
+                              isAllIn 
+                                ? 'Tiket masuk tercover penuh (All In).' 
+                                : 'Tiket masuk bayar mandiri di loket (Paket Hemat).'
+                            )}
+                          </span>
+
+                          <span className="font-mono text-[10px] text-neutral-400 font-bold">
+                            Stop #{idx + 1}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
           );
