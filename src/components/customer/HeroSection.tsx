@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { handleImageFallback } from '../../utils/imageUtils';
 import { PackageCategory, DestinationRegion } from '../../types/travel';
+import { PromotionalBanner } from './PromotionalBanner';
 
 interface HeroSectionProps {
   selectedCategory: PackageCategory | 'all';
@@ -56,6 +57,21 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <p className="mt-4 text-base sm:text-lg text-neutral-300 leading-relaxed">
             Pilihan <strong>Paket Hemat</strong> (kendaraan, driver, bbm, parkir) dan <strong>Paket All In</strong> (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel) untuk destinasi unggulan <strong>Jogja, Malang, dan Bali</strong>.
           </p>
+        </div>
+
+        {/* Seasonal Promotional Banner: Limited-Time Offers & Countdown Urgency */}
+        <div className="mt-8 max-w-4xl">
+          <PromotionalBanner
+            onClaimPromo={(promo) => {
+              if (promo.targetCategory && promo.targetCategory !== 'all') {
+                onSelectCategory(promo.targetCategory);
+              }
+              if (promo.targetDestination && promo.targetDestination !== 'all') {
+                onSelectDestination(promo.targetDestination);
+              }
+              onScrollToCatalog();
+            }}
+          />
         </div>
 
         {/* 3 Core Inclusions Banner - strictly as requested */}

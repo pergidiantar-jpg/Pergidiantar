@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DestinationSlideshow } from './DestinationSlideshow';
+import { PromotionalBanner } from './PromotionalBanner';
 import { DestinationRegion, UserRole } from '../../types/travel';
 import { 
   Lock, 
@@ -219,6 +220,17 @@ export const PublicLandingPage: React.FC = () => {
             scrollToAuthForm();
           }}
           onExplorePackages={scrollToAuthForm}
+        />
+      </section>
+
+      {/* Promotional Banner: Seasonal Travel Deals & Flash Sale */}
+      <section className="px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto mb-6">
+        <PromotionalBanner
+          onClaimPromo={(promo) => {
+            setActiveAuthTab('register');
+            setSuccessMsg(`Kode voucher ${promo.code} berhasil disalin! Silakan daftar atau masuk untuk klaim potongan harga ini.`);
+            scrollToAuthForm();
+          }}
         />
       </section>
 

@@ -16,7 +16,8 @@ import {
   User,
   AlertCircle,
   Car,
-  Sparkles
+  Sparkles,
+  Tag
 } from 'lucide-react';
 
 interface BookingModalProps {
@@ -121,6 +122,53 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const basePackageSubtotal = pricePerPax * paxCount;
   const subtotal = basePackageSubtotal + vehicleUpgradeTotal;
 
+  // Promo code / voucher state (synced with localStorage & PromotionalBanner)
+  const [promoCodeInput, setPromoCodeInput] = useState<string>(() => {
+    try {
+      return localStorage.getItem('pergidiantar_promo_code') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem('pergidiantar_promo_code');
+      return saved ? saved.trim().toUpperCase() : null;
+    } catch {
+      return null;
+    }
+  });
+  const [promoMessage, setPromoMessage] = useState<{ text: string; isError: boolean } | null>(null);
+
+  const handleApplyPromo = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    setPromoMessage(null);
+    const code = promoCodeInput.trim().toUpperCase();
+    if (!code) {
+      setPromoMessage({ text: 'Masukkan kode voucher promo terlebih dahulu.', isError: true });
+      return;
+    }
+    if (['LIBURANALLIN', 'ROMBONGANSERU', 'EARLYBIRDTRIP'].includes(code)) {
+      setAppliedPromo(code);
+      try {
+        localStorage.setItem('pergidiantar_promo_code', code);
+      } catch {}
+      setPromoMessage({ text: `Kupon ${code} berhasil diterapkan!`, isError: false });
+    } else {
+      setPromoMessage({ text: 'Kode promo tidak valid atau telah kedaluwarsa.', isError: true });
+    }
+  };
+
+  const handleRemovePromo = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    setAppliedPromo(null);
+    setPromoCodeInput('');
+    setPromoMessage(null);
+    try {
+      localStorage.removeItem('pergidiantar_promo_code');
+    } catch {}
+  };
+
   // Add-ons dictionary
   const availableAddOns = [
     { id: 'drone', label: 'Dokumentasi Drone & Video Teaser 4K', price: 600000, isPerPax: false },
@@ -141,7 +189,22 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return total + (item.isPerPax ? item.price * paxCount : item.price);
   }, 0);
 
-  const grandTotal = subtotal + addOnsTotal;
+  // Calculate Seasonal Promo Discount
+  let discountAmount = 0;
+  let appliedPromoLabel = '';
+  if (appliedPromo === 'LIBURANALLIN') {
+    discountAmount = Math.min(750000, Math.round(subtotal * 0.10));
+    appliedPromoLabel = 'Diskon 10% Musim Liburan (Maks. Rp 750.000)';
+  } else if (appliedPromo === 'ROMBONGANSERU') {
+    discountAmount = paxCount >= 10 ? 1500000 : 500000;
+    appliedPromoLabel = paxCount >= 10 ? 'Potongan Rombongan Spesial Rp 1.500.000' : 'Potongan Rombongan Rp 500.000';
+  } else if (appliedPromo === 'EARLYBIRDTRIP') {
+    discountAmount = 500000;
+    appliedPromoLabel = 'Cashback Early Bird Trip Rp 500.000';
+  }
+
+  discountAmount = Math.min(discountAmount, subtotal + addOnsTotal);
+  const grandTotal = Math.max(0, subtotal + addOnsTotal - discountAmount);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,7 +254,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       paymentMethod: 'qris' as const,
       paymentStatus: 'pending' as const,
       orderStatus: 'baru' as const,
-      notes: `Pemesanan online melalui website PERGIDIANTAR. Pilihan paket: ${tier === 'all_in' ? 'Paket All In (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)' : 'Paket Hemat (kendaraan, driver, bbm, parkir)'}. Armada pilihan: ${selectedFleet.name} (${selectedFleet.model}) [Biaya: ${vehicleUpgradePerPax === 0 ? 'Termasuk Standar' : `+Rp ${vehicleUpgradePerPax.toLocaleString('id-ID')}/pax`}].`
+      notes: `Pemesanan online melalui website PERGIDIANTAR. Pilihan paket: ${tier === 'all_in' ? 'Paket All In (kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)' : 'Paket Hemat (kendaraan, driver, bbm, parkir)'}. Armada pilihan: ${selectedFleet.name} (${selectedFleet.model}) [Biaya: ${vehicleUpgradePerPax === 0 ? 'Termasuk Standar' : `+Rp ${vehicleUpgradePerPax.toLocaleString('id-ID')}/pax`}].${appliedPromo ? ` [VOUCHER: ${appliedPromo} (${appliedPromoLabel}) - Potongan Rp ${discountAmount.toLocaleString('id-ID')}]` : ''}`
     };
 
     const createdOrder = createBooking(newOrderData);
@@ -586,6 +649,58 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <span className="font-mono font-medium" data-tabular>+Rp {addOnsTotal.toLocaleString('id-ID')}</span>
               </div>
             )}
+
+            {/* Voucher / Promo Code Box */}
+            <div className="pt-2 border-t border-orange-200/80">
+              <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-orange-600" /> Punya Kupon Diskon Musim Liburan?
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoCodeInput}
+                  onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                  placeholder="Contoh: LIBURANALLIN / ROMBONGANSERU"
+                  className="flex-1 text-xs font-mono font-semibold uppercase py-1.5 px-3 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                />
+                {appliedPromo ? (
+                  <button
+                    type="button"
+                    onClick={handleRemovePromo}
+                    className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-300 rounded-lg transition-colors shrink-0"
+                  >
+                    Hapus
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    className="px-3.5 py-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors shadow-2xs shrink-0"
+                  >
+                    Terapkan
+                  </button>
+                )}
+              </div>
+              {promoMessage && (
+                <p className={`text-[11px] mt-1 font-medium ${promoMessage.isError ? 'text-rose-600' : 'text-emerald-700'}`}>
+                  {promoMessage.text}
+                </p>
+              )}
+            </div>
+
+            {/* Discount line if applied */}
+            {appliedPromo && discountAmount > 0 && (
+              <div className="flex justify-between items-center bg-emerald-50 text-emerald-800 p-2 rounded-lg border border-emerald-200 font-semibold">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="truncate">Kupon {appliedPromo} ({appliedPromoLabel}):</span>
+                </div>
+                <span className="font-mono text-emerald-700 font-bold shrink-0 ml-2" data-tabular>
+                  -Rp {discountAmount.toLocaleString('id-ID')}
+                </span>
+              </div>
+            )}
+
             <div className="pt-2 border-t border-orange-200 flex justify-between items-center text-neutral-900 font-bold">
               <span className="text-sm">Total Biaya Reservasi:</span>
               <span className="text-lg font-black text-orange-600 font-mono" data-tabular>
