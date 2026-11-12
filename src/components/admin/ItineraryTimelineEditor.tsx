@@ -47,6 +47,7 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
   cityLabel = 'Yogyakarta'
 }) => {
   const [activeDayIndex, setActiveDayIndex] = useState<number>(0);
+  const [templateOrigin, setTemplateOrigin] = useState<string>('');
 
   const activeDay = days[activeDayIndex] || days[0];
 
@@ -116,14 +117,14 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
 
   const handleApplyDefaultTemplate = () => {
     const isLast = activeDayIndex === days.length - 1;
-    const defaultTimeline = createDefaultDayTimeline(activeDay.day, isLast, cityLabel);
+    const defaultTimeline = createDefaultDayTimeline(activeDay.day, isLast, cityLabel, templateOrigin || undefined);
     handleTimelineChange(defaultTimeline);
   };
 
   const handleAddDay = () => {
     const nextDayNum = days.length + 1;
     const isLast = true;
-    const defaultTimeline = createDefaultDayTimeline(nextDayNum, isLast, cityLabel);
+    const defaultTimeline = createDefaultDayTimeline(nextDayNum, isLast, cityLabel, templateOrigin || undefined);
     const newDay: ItineraryDay = {
       day: nextDayNum,
       title: `Hari Ke-${nextDayNum}: Eksplorasi Lanjutan`,
@@ -272,7 +273,20 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={templateOrigin}
+              onChange={(e) => setTemplateOrigin(e.target.value)}
+              className="text-[11px] py-1 px-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-700 font-semibold"
+              title="Pilih kota asal penjemputan untuk template perjalanan antar kota"
+            >
+              <option value="">Rute Lokal ({cityLabel})</option>
+              <option value="Yogyakarta">Dari Yogyakarta</option>
+              <option value="Jakarta">Dari Jakarta / Jawa Barat</option>
+              <option value="Surabaya">Dari Surabaya / Sidoarjo</option>
+              <option value="Solo">Dari Solo / Surakarta</option>
+              <option value="Semarang">Dari Semarang</option>
+            </select>
             <button
               type="button"
               onClick={handleApplyDefaultTemplate}

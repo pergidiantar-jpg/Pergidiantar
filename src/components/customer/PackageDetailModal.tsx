@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+import { TourPackage, PackageTier } from '../../types/travel';
 import { 
   X, 
   Clock, 
@@ -12,10 +14,11 @@ import {
   ShieldCheck,
   Calendar,
   ShoppingBag,
-  Sparkles
+  Sparkles,
+  Compass
 } from 'lucide-react';
 import { normalizeImagePath, handleImageFallback } from '../../utils/imageUtils';
-import { ensurePackageTimeline } from '../../utils/itineraryGenerator';
+import { createDefaultDayTimeline } from '../../utils/itineraryGenerator';
 
 interface PackageDetailModalProps {
   packageData: TourPackage | null;
@@ -31,7 +34,8 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
   onSelectBooking
 }) => {
   const [selectedTier, setSelectedTier] = useState<PackageTier>('all_in');
-  const [activeDayTab, setActiveDayTab] = useState<number | 'all'>('all');
+  const [selectedDayTab, setSelectedDayTab] = useState<number>(1);
+  const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
 
   if (!isOpen || !packageData) return null;
 
@@ -235,26 +239,130 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Day by Day Itinerary */}
-          <div>
-            <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-emerald-600" />
-              Susunan Jadwal & Itinerary Perjalanan
-            </h3>
-            <div className="space-y-4">
-              {packageData.itinerary.map((it) => (
-                <div key={it.day} className="p-4 rounded-2xl border border-neutral-200 bg-neutral-50/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-black text-orange-700 bg-orange-100 px-2.5 py-0.5 rounded-md">
-                      HARI KE-{it.day}
-                    </span>
-                    <span className="text-xs font-semibold text-neutral-800">{it.title}</span>
-                  </div>
-                  {it.description && <p className="text-xs text-neutral-600 mb-3">{it.description}</p>}
+          {/* Day by Day Itinerary (Detail & Rute) */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-orange-50 via-amber-50/60 to-white border border-orange-200/80">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                    <Sparkles className="w-3 h-3" /> DETAIL & RUTE ITINERARY
+                  </span>
+                  <span className="text-xs font-bold text-orange-950">
+                    {packageData.destinationLabel} &bull; {packageData.durationDays} Hari {packageData.durationNights} Malam
+                  </span>
+                </div>
+                <h3 className="text-sm font-extrabold text-neutral-900 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-emerald-600" />
+                  Susunan Jadwal & Rundown Wisata Terstruktur
+                </h3>
+                <p className="text-xs text-neutral-600 mt-0.5">
+                  Jadwal perjalanan wisata terpadu dengan pencantuman jam logis, rute objek wisata, hotel, dan waktu kuliner.
+                </p>
+              </div>
 
-                  {it.timeline && it.timeline.length > 0 ? (
-                    <div className="space-y-2.5 pt-1">
-                      {it.timeline.map((item, idx) => {
+              {/* View Mode Switcher */}
+              <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-orange-200/90 shrink-0 self-start sm:self-center shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('single')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    viewMode === 'single'
+                      ? 'bg-orange-500 text-white shadow-xs'
+                      : 'text-neutral-600 hover:text-neutral-900'
+                  }`}
+                >
+                  Fokus Per Hari
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('all')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    viewMode === 'all'
+                      ? 'bg-orange-500 text-white shadow-xs'
+                      : 'text-neutral-600 hover:text-neutral-900'
+                  }`}
+                >
+                  Semua Hari ({packageData.durationDays})
+                </button>
+              </div>
+            </div>
+
+            {/* Interactive Day Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              {packageData.itinerary.map((it) => {
+                const isSelected = selectedDayTab === it.day;
+                const effectiveTimeline = (it.timeline && it.timeline.length > 0)
+                  ? it.timeline
+                  : createDefaultDayTimeline(it.day, it.day === packageData.durationDays, packageData.destinationLabel);
+
+                return (
+                  <button
+                    key={it.day}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDayTab(it.day);
+                      if (viewMode === 'all') setViewMode('single');
+                    }}
+                    className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                      isSelected && viewMode === 'single'
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-xs'
+                        : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100 hover:border-neutral-400'
+                    }`}
+                  >
+                    <span className={`w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center ${
+                      isSelected && viewMode === 'single'
+                        ? 'bg-white text-orange-600'
+                        : 'bg-neutral-200 text-neutral-700'
+                    }`}>
+                      {it.day}
+                    </span>
+                    <div className="text-left leading-tight">
+                      <span className="block text-xs">Hari Ke-{it.day}</span>
+                      <span className={`text-[10px] font-normal ${
+                        isSelected && viewMode === 'single' ? 'text-orange-100' : 'text-neutral-500'
+                      }`}>
+                        {effectiveTimeline.length} Agenda Terjadwal
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Render Days */}
+            <div className="space-y-5">
+              {(viewMode === 'all' 
+                ? packageData.itinerary 
+                : [packageData.itinerary.find(d => d.day === selectedDayTab) || packageData.itinerary[0]]
+              ).filter(Boolean).map((it) => {
+                const effectiveTimeline = (it.timeline && it.timeline.length > 0)
+                  ? it.timeline
+                  : createDefaultDayTimeline(it.day, it.day === packageData.durationDays, packageData.destinationLabel);
+
+                return (
+                  <div key={it.day} className="p-4 sm:p-5 rounded-2xl border border-neutral-200 bg-neutral-50/60 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-orange-100/60 border border-orange-200/80">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-lg bg-orange-600 text-white font-black text-sm flex items-center justify-center shrink-0">
+                          D{it.day}
+                        </span>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-neutral-900">
+                            {it.title}
+                          </h4>
+                          <p className="text-xs text-neutral-600 mt-0.5">
+                            {it.description || `Rundown pariwisata terstruktur di ${packageData.destinationLabel}.`}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-bold text-orange-800 bg-white border border-orange-200 px-2.5 py-1 rounded-lg self-start sm:self-auto shrink-0">
+                        {effectiveTimeline.length} Titik Agenda
+                      </span>
+                    </div>
+
+                    {/* Timeline Nodes */}
+                    <div className="relative pl-6 sm:pl-8 space-y-3 before:content-[''] before:absolute before:left-3 sm:before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-300">
+                      {effectiveTimeline.map((item, idx) => {
                         const isMeal = item.type === 'meal';
                         const isHotel = item.type === 'hotel_checkin' || item.type === 'hotel_checkout';
                         const isTransport = item.type === 'pickup' || item.type === 'dropoff';
@@ -273,48 +381,45 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                         return (
                           <div 
                             key={idx} 
-                            className="p-2.5 rounded-xl bg-white border border-neutral-200 text-xs shadow-2xs hover:border-neutral-300 transition-colors"
+                            className="relative bg-white rounded-xl p-3.5 border border-neutral-200 text-xs shadow-2xs hover:border-neutral-300 transition-colors"
                           >
-                            <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                            {/* Timeline Node Dot */}
+                            <div className="absolute -left-6 sm:-left-8 top-3.5 w-6 h-6 rounded-full border-2 border-orange-500 bg-white text-orange-600 flex items-center justify-center font-black text-[10px] shadow-2xs">
+                              {idx + 1}
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
                               <div className="flex items-center gap-2">
-                                <span className="font-mono font-bold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded text-[11px] flex items-center gap-1">
+                                <span className="font-mono font-extrabold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md text-[11px] flex items-center gap-1">
                                   <Clock className="w-3 h-3 text-orange-600" />
                                   {item.time}
                                 </span>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${badgeColor}`}>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${badgeColor}`}>
                                   {(item.type || 'sightseeing').replace('_', ' ')}
                                 </span>
                               </div>
                               {item.notes && (
-                                <span className="text-[10px] text-neutral-500 italic">
+                                <span className="text-[10px] text-neutral-500 italic bg-neutral-50 px-2 py-0.5 rounded border border-neutral-200/60">
                                   {item.notes}
                                 </span>
                               )}
                             </div>
-                            <div className="font-bold text-neutral-900 text-xs">
+
+                            <div className="font-extrabold text-neutral-900 text-xs sm:text-sm">
                               {item.title}
                             </div>
                             {item.description && (
-                              <div className="text-[11px] text-neutral-600 mt-0.5">
+                              <p className="text-[11px] text-neutral-600 mt-1 leading-relaxed">
                                 {item.description}
-                              </div>
+                              </p>
                             )}
                           </div>
                         );
                       })}
                     </div>
-                  ) : (
-                    <ul className="space-y-1.5">
-                      {it.activities.map((act, actIdx) => (
-                        <li key={actIdx} className="text-xs text-neutral-700 flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
-                          <span>{act}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

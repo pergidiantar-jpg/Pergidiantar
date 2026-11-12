@@ -42,7 +42,11 @@ import {
   getMaxDestinationsForDuration,
   BonusDestinationInfo
 } from '../../data/destinationsData';
-import { generateCustomTripItinerary } from '../../utils/itineraryGenerator';
+import { 
+  generateCustomTripItinerary, 
+  getIntercityTravelInfo, 
+  IntercityTravelInfo 
+} from '../../utils/itineraryGenerator';
 
 export type HotelLodgingTier = 'none' | 'bintang_3' | 'bintang_4' | 'bintang_5';
 
@@ -162,6 +166,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     vehicleUnitCount: number;
     destinationsList: DestinationOption[];
     itineraryTimeline: ItineraryDay[];
+    intercityInfo?: IntercityTravelInfo;
   } | null>(null);
 
   const [previewSelectedDay, setPreviewSelectedDay] = useState<number>(1);
@@ -338,6 +343,9 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     const packagePriceTotalDiscounted = baseSubtotal - discountAmount;
     const packagePricePerPaxDiscounted = Math.round(packagePriceTotalDiscounted / paxCount);
 
+    // Calculate intercity routing information & transit estimation
+    const intercityInfo = getIntercityTravelInfo(pickupCity, destination);
+
     // Generate automatic logical Itinerary Timeline based on destinations, meals, hotel, and pickup
     const generatedTimeline = generateCustomTripItinerary({
       destination,
@@ -372,7 +380,8 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       packagePricePerPaxDiscounted,
       vehicleUnitCount,
       destinationsList: selectedDestObjects,
-      itineraryTimeline: generatedTimeline
+      itineraryTimeline: generatedTimeline,
+      intercityInfo
     });
     setPreviewSelectedDay(1);
   };
@@ -1388,6 +1397,32 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
 
                 {isItineraryExpanded && (
                   <div className="p-4 sm:p-5 space-y-4">
+                    {/* Intercity Journey Notice Card */}
+                    {calculationResult.intercityInfo?.isIntercity && (
+                      <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-950/60 to-neutral-900 border border-blue-500/40 text-xs text-neutral-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-blue-500 text-white px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs">
+                              <Car className="w-3 h-3" /> ESTIMASI RUTE ANTAR KOTA
+                            </span>
+                            <span className="text-blue-300 font-extrabold text-xs">
+                              {calculationResult.intercityInfo.pickupCityClean} &rarr; {calculationResult.intercityInfo.destinationCityClean}
+                            </span>
+                          </div>
+                          <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded">
+                            Jarak ±{calculationResult.intercityInfo.distanceKm} km · Est. {calculationResult.intercityInfo.estimatedTravelHours} Jam
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-300 leading-relaxed">
+                          <strong>Jalur & Rute Perjalanan:</strong> {calculationResult.intercityInfo.routeHighlights}.
+                        </p>
+                        <p className="text-[11px] text-blue-200 mt-1.5 leading-relaxed bg-blue-950/70 p-2.5 rounded-lg border border-blue-500/30 flex items-start gap-1.5">
+                          <Info className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                          <span>{calculationResult.intercityInfo.departureNotice}</span>
+                        </p>
+                      </div>
+                    )}
+
                     {/* Day selector tabs */}
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
                       {calculationResult.itineraryTimeline.map((dayItem) => {

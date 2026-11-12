@@ -23,6 +23,7 @@ import {
   Check,
   ShoppingBag
 } from 'lucide-react';
+import { getIntercityTravelInfo } from '../../utils/itineraryGenerator';
 
 interface OrderTripItineraryTrackerProps {
   order: BookingOrder;
@@ -248,6 +249,36 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
             </div>
           </div>
         </div>
+
+        {/* Intercity Transit Highlights if applicable */}
+        {(() => {
+          const intercity = getIntercityTravelInfo(order.customer.city || order.customer.pickupAddress || '', order.destination);
+          if (!intercity.isIntercity) return null;
+
+          return (
+            <div className="mt-3.5 p-3.5 bg-blue-950/60 rounded-xl border border-blue-500/40 text-xs text-neutral-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-blue-500 text-white px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs">
+                    <Car className="w-3 h-3" /> RUTE PERJALANAN LINTAS KOTA
+                  </span>
+                  <span className="font-bold text-blue-300">
+                    {intercity.pickupCityClean} &rarr; {order.destinationLabel}
+                  </span>
+                </div>
+                <span className="font-mono text-xs font-bold text-amber-400 bg-amber-950/50 border border-amber-500/30 px-2 py-0.5 rounded">
+                  Jarak ±{intercity.distanceKm} km · Est. {intercity.estimatedTravelHours} Jam
+                </span>
+              </div>
+              <p className="text-[11px] text-neutral-300 leading-snug">
+                <strong>Jalur:</strong> {intercity.routeHighlights}.
+              </p>
+              <p className="text-[11px] text-blue-200 mt-1 leading-relaxed bg-blue-900/30 p-2 rounded-lg border border-blue-500/20">
+                {intercity.departureNotice}
+              </p>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Interactive Day Selection Tabs */}

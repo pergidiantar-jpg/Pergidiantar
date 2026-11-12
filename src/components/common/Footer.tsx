@@ -103,7 +103,33 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t border-neutral-900 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral-500 gap-4">
+        {/* Application Version & System Update Bar */}
+        <div className="mt-8 pt-6 border-t border-neutral-900/80 flex flex-col md:flex-row items-center justify-between text-xs text-neutral-400 gap-3 bg-neutral-900/40 p-4 rounded-2xl border border-neutral-800">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[11px]">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Sistem Aktif & Terverifikasi
+            </span>
+            <span className="text-white font-bold text-xs">
+              Versi Aplikasi: <span className="font-mono text-orange-400">v2.4.2</span>
+            </span>
+            <span className="text-neutral-500 hidden sm:inline">&bull;</span>
+            <span className="text-neutral-300 text-[11px]">
+              Update Terakhir: <strong>12 November 2026</strong> (Rundown Itinerary Antar Kota, Estimasi Tol/Feri & Sinkronisasi Cloud)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5 text-[11px] text-neutral-400 font-mono">
+            <span className="px-2.5 py-0.5 rounded-lg bg-neutral-800/80 border border-neutral-700/80 text-neutral-300">
+              Build: 2026.11-PROD
+            </span>
+            <span className="px-2.5 py-0.5 rounded-lg bg-neutral-800/80 border border-neutral-700/80 text-emerald-400">
+              Multi-Device Cloud Sync
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral-500 gap-4">
           <p>© 2026 PERGIDIANTAR. Seluruh hak cipta dilindungi undang-undang.</p>
           <div className="flex items-center gap-4 text-[11px]">
             <span>Syarat & Ketentuan Reservasi</span>
