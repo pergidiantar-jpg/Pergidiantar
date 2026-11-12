@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-import { TourPackage, PackageTier } from '../../types/travel';
 import { 
   X, 
   Clock, 
@@ -13,9 +11,11 @@ import {
   ChevronRight,
   ShieldCheck,
   Calendar,
-  ShoppingBag
+  ShoppingBag,
+  Sparkles
 } from 'lucide-react';
 import { normalizeImagePath, handleImageFallback } from '../../utils/imageUtils';
+import { ensurePackageTimeline } from '../../utils/itineraryGenerator';
 
 interface PackageDetailModalProps {
   packageData: TourPackage | null;
@@ -31,6 +31,7 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
   onSelectBooking
 }) => {
   const [selectedTier, setSelectedTier] = useState<PackageTier>('all_in');
+  const [activeDayTab, setActiveDayTab] = useState<number | 'all'>('all');
 
   if (!isOpen || !packageData) return null;
 
