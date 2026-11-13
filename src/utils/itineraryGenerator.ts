@@ -666,6 +666,566 @@ export function getIntercityTravelInfo(pickupCity: string, destination: Destinat
   };
 }
 
+import {
+  INITIAL_DESTINATIONS,
+  KNOWN_LANDMARK_COORDS
+} from '../data/destinationsData';
+
+export interface StopTravelEstimate {
+  distanceKm: number;
+  travelMinutes: number;
+  fromLabel: string;
+  toLabel: string;
+}
+
+const REGION_CENTER_COORDS: Record<DestinationRegion, { lat: number; lng: number; label: string }> = {
+  jogja: { lat: -7.7926, lng: 110.3658, label: 'Kota Yogyakarta' },
+  malang: { lat: -7.9772, lng: 112.6338, label: 'Kota Malang' },
+  bali: { lat: -8.6705, lng: 115.2126, label: 'Denpasar / Bali' }
+};
+
+function haversineDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // km
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function normalizeStopName(text: string): string {
+  return (text || '')
+    .toLowerCase()
+    .replace(/^(kunjungan perdana:|kunjungan destinasi ikonik terakhir:|kunjungan:|eksplorasi|hunting sunset & panorama senja di|hunting panorama sore & sunset di|hunting sunset di|keseruan wisata di|wisata sore & hunting sunset di|eksplorasi suasana malam di|belanja oleh-oleh khas:|penjemputan di|penjemputan peserta di|check-in hotel|proses check-out hotel|check-out hotel)/i, '')
+    .replace(/[()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Resolve approximate lat/lng coordinates for any destination, landmark, hotel, or typed stop title.
+ */
+export function resolveStopCoordinates(
+  stopText: string,
+  region: DestinationRegion,
+  extraDestinations: DestinationOption[] = []
+): { lat: number; lng: number; label: string; isExactMatch: boolean } {
+  const raw = (stopText || '').trim();
+  const clean = normalizeStopName(raw);
+  const rawLower = raw.toLowerCase();
+
+  // 1. Check same-hotel or meal indicators early
+  if (
+    rawLower.includes('hotel') ||
+    rawLower.includes('lobby') ||
+    rawLower.includes('packing') ||
+    rawLower.includes('check-in') ||
+    rawLower.includes('check-out') ||
+    rawLower.includes('check out') ||
+    rawLower.includes('check in') ||
+    rawLower.includes('istirahat malam')
+  ) {
+    const hotelHub = KNOWN_LANDMARK_COORDS.find(
+      (k) => k.region === region && k.keywords.includes('hotel')
+    );
+    if (hotelHub) {
+      return { lat: hotelHub.lat, lng: hotelHub.lng, label: hotelHub.label, isExactMatch: true };
+    }
+  }
+
+  // 2. Check all known DestinationOption entries (custom + initial 60 curated)
+  const pool = [...extraDestinations, ...INITIAL_DESTINATIONS];
+  for (const dest of pool) {
+    if (typeof dest.lat !== 'number' || typeof dest.lng !== 'number') continue;
+    const destLower = dest.name.toLowerCase();
+    // Direct inclusion either way or significant first tokens
+    if (clean.includes(destLower) || rawLower.includes(destLower) || destLower.includes(clean && clean.length >= 4 ? clean : '___')) {
+      return { lat: dest.lat, lng: dest.lng, label: dest.name, isExactMatch: true };
+    }
+    // Token matching (match >=2 meaningful words or unique signature keyword like "borobudur", "prambanan", "timang")
+    const destTokens = destLower
+      .replace(/[()&/]/g, ' ')
+      .split(/\s+/)
+      .filter((t) => t.length >= 4 && !['wisata', 'pantai', 'candi', 'taman', 'agro', 'tour', 'bali', 'jogja', 'malang', 'batu'].includes(t));
+    if (destTokens.some((tok) => rawLower.includes(tok))) {
+      return { lat: dest.lat, lng: dest.lng, label: dest.name, isExactMatch: true };
+    }
+  }
+
+  // 3. Check KNOWN_LANDMARK_COORDS (airports, stations, districts, outbound zones, oleh-oleh)
+  const regionLandmarks = KNOWN_LANDMARK_COORDS.filter((k) => k.region === region);
+  for (const lm of regionLandmarks) {
+    if (lm.keywords.some((kw) => rawLower.includes(kw))) {
+      return { lat: lm.lat, lng: lm.lng, label: lm.label, isExactMatch: true };
+    }
+  }
+  for (const lm of KNOWN_LANDMARK_COORDS) {
+    if (lm.keywords.some((kw) => rawLower.includes(kw))) {
+      return { lat: lm.lat, lng: lm.lng, label: lm.label, isExactMatch: true };
+    }
+  }
+
+  // 4. Meal restaurants usually located between/near tourist corridors
+  if (rawLower.includes('makan') || rawLower.includes('resto') || rawLower.includes('kuliner') || rawLower.includes('sarapan')) {
+    const center = REGION_CENTER_COORDS[region];
+    return { lat: center.lat + 0.015, lng: center.lng + 0.015, label: `Resto Lokal ${center.label}`, isExactMatch: false };
+  }
+
+  // 5. Fallback for custom typed stop names -> derive consistent offset within region
+  const center = REGION_CENTER_COORDS[region];
+  let hash = 0;
+  for (let i = 0; i < clean.length; i++) {
+    hash = (hash * 31 + clean.charCodeAt(i)) % 1000;
+  }
+  const latOffset = ((hash % 40) - 20) * 0.004;
+  const lngOffset = (((Math.floor(hash / 40)) % 40) - 20) * 0.004;
+  return {
+    lat: center.lat + latOffset,
+    lng: center.lng + lngOffset,
+    label: raw || center.label,
+    isExactMatch: false
+  };
+}
+
+/**
+ * Estimate driving distance (km) and travel duration (minutes) between two stops.
+ */
+export function estimateTravelBetweenStops(
+  fromText: string,
+  toText: string,
+  region: DestinationRegion,
+  extraDestinations: DestinationOption[] = []
+): StopTravelEstimate {
+  const fromClean = (fromText || '').trim();
+  const toClean = (toText || '').trim();
+
+  if (!fromClean || !toClean) {
+    return { distanceKm: 0, travelMinutes: 0, fromLabel: fromClean, toLabel: toClean };
+  }
+
+  const fLow = fromClean.toLowerCase();
+  const tLow = toClean.toLowerCase();
+
+  // Same place checks (e.g. breakfast at hotel -> lobby pickup at hotel, or breakfast -> check-out at hotel)
+  const bothHotel =
+    (fLow.includes('hotel') || fLow.includes('sarapan') || fLow.includes('penginapan')) &&
+    (tLow.includes('hotel') || tLow.includes('lobby') || tLow.includes('check-out') || tLow.includes('check out') || tLow.includes('istirahat'));
+  if (bothHotel || normalizeStopName(fromClean) === normalizeStopName(toClean)) {
+    return { distanceKm: 0, travelMinutes: 0, fromLabel: fromClean, toLabel: toClean };
+  }
+
+  const coordFrom = resolveStopCoordinates(fromClean, region, extraDestinations);
+  const coordTo = resolveStopCoordinates(toClean, region, extraDestinations);
+
+  const straightKm = haversineDistanceKm(coordFrom.lat, coordFrom.lng, coordTo.lat, coordTo.lng);
+
+  if (straightKm < 0.8) {
+    return { distanceKm: 1, travelMinutes: 5, fromLabel: coordFrom.label, toLabel: coordTo.label };
+  }
+
+  // Sea crossing special case for Nusa Penida
+  const involvesNusaPenida =
+    fLow.includes('penida') || tLow.includes('penida') || fLow.includes('kelingking') || tLow.includes('kelingking');
+  const roadMultiplier = involvesNusaPenida ? 1.4 : straightKm > 80 ? 1.25 : 1.35;
+  const roadKm = Math.max(2, Math.round(straightKm * roadMultiplier));
+
+  // Speed calculation (accounting for Bali/mountain/city traffic vs intercity highways)
+  let avgSpeedKmh = 36;
+  if (involvesNusaPenida) {
+    avgSpeedKmh = 28; // harbour boarding + fastboat + island road
+  } else if (roadKm > 150) {
+    avgSpeedKmh = 65; // Tol Trans-Jawa / highway
+  } else if (roadKm > 45) {
+    avgSpeedKmh = 42; // regional scenic road
+  } else if (region === 'bali') {
+    avgSpeedKmh = 28; // dense Bali tourist corridors
+  } else if (region === 'malang' && (tLow.includes('bromo') || fLow.includes('bromo'))) {
+    avgSpeedKmh = 30; // mountain winding roads
+  }
+
+  const rawMinutes = Math.round((roadKm / avgSpeedKmh) * 60);
+  const travelMinutes = Math.max(10, Math.round(rawMinutes / 5) * 5);
+
+  return {
+    distanceKm: roadKm,
+    travelMinutes,
+    fromLabel: coordFrom.label,
+    toLabel: coordTo.label
+  };
+}
+
+function parseTimeRange(timeStr: string): {
+  startMin: number;
+  endMin: number | null;
+  durationMin: number;
+  suffix: string;
+} | null {
+  if (!timeStr) return null;
+  const lower = timeStr.toLowerCase();
+  if (lower.includes('est.') || lower.includes('besok') || lower.includes('h-1')) {
+    return null;
+  }
+
+  const tzMatch = timeStr.match(/\b(WIB|WITA|WIT)\b/i);
+  const suffix = tzMatch ? ` ${tzMatch[1].toUpperCase()}` : '';
+
+  const matches = timeStr.match(/(\d{1,2})[:.](\d{2})/g);
+  if (!matches || matches.length === 0) return null;
+
+  const toMin = (hhmm: string) => {
+    const [h, m] = hhmm.replace('.', ':').split(':').map(Number);
+    if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return null;
+    return h * 60 + m;
+  };
+
+  const startMin = toMin(matches[0]);
+  if (startMin === null) return null;
+
+  if (matches.length >= 2) {
+    const endMin = toMin(matches[1]);
+    if (endMin !== null) {
+      // Handle crossing midnight
+      const duration = endMin >= startMin ? endMin - startMin : 24 * 60 - startMin + endMin;
+      return { startMin, endMin, durationMin: Math.max(15, duration), suffix };
+    }
+  }
+
+  return { startMin, endMin: null, durationMin: 60, suffix };
+}
+
+function formatMinHHMM(totalMinutes: number): string {
+  const normalized = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(normalized / 60);
+  const m = normalized % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function roundUpTo5Min(minutes: number): number {
+  return Math.ceil(minutes / 5) * 5;
+}
+
+function getDefaultDurationForType(type?: ItineraryActivityType): number {
+  switch (type) {
+    case 'pickup':
+      return 45;
+    case 'transport':
+      return 60;
+    case 'outbound':
+      return 150;
+    case 'sightseeing':
+      return 120;
+    case 'meal':
+      return 60;
+    case 'hotel_checkin':
+      return 60;
+    case 'hotel_checkout':
+      return 45;
+    case 'shopping':
+      return 90;
+    case 'dropoff':
+      return 60;
+    case 'free_time':
+    default:
+      return 45;
+  }
+}
+
+/**
+ * Recalculates inter-destination distance (km), transit duration (minutes),
+ * and optionally shifts activity timestamps logically in chronological order.
+ */
+export function recalculateTimelineWithDistances(
+  timeline: ItineraryTimelineItem[],
+  region: DestinationRegion,
+  options?: {
+    extraDestinations?: DestinationOption[];
+    retimeSchedule?: boolean;
+  }
+): ItineraryTimelineItem[] {
+  if (!timeline || timeline.length === 0) return [];
+  const extraDests = options?.extraDestinations || [];
+  const shouldRetime = options?.retimeSchedule !== false;
+
+  const result: ItineraryTimelineItem[] = [];
+  let cursorEndMin: number | null = null;
+
+  for (let i = 0; i < timeline.length; i++) {
+    const item = timeline[i];
+    const prev = i > 0 ? result[i - 1] : null;
+    const isFixedTransitStep =
+      item.id.includes('-transit-') ||
+      item.id.includes('-return-') ||
+      item.type === 'transport';
+
+    const currStopStr = (item.location || item.title || '').trim();
+    const prevStopStr = prev ? (prev.location || prev.title || '').trim() : '';
+
+    let distanceKm = item.distanceKm;
+    let travelMinutes = item.travelMinutes;
+    let routeFrom = item.routeFrom;
+
+    if (prev && !isFixedTransitStep) {
+      const est = estimateTravelBetweenStops(prevStopStr, currStopStr, region, extraDests);
+      distanceKm = est.distanceKm;
+      travelMinutes = est.travelMinutes;
+      routeFrom = prevStopStr;
+    } else if (i === 0) {
+      distanceKm = 0;
+      travelMinutes = 0;
+      routeFrom = undefined;
+    }
+
+    let nextTime = item.time;
+    const parsed = parseTimeRange(item.time);
+
+    if (shouldRetime && parsed) {
+      const activityDuration =
+        parsed.endMin !== null ? parsed.durationMin : getDefaultDurationForType(item.type);
+
+      if (i === 0 || isFixedTransitStep || cursorEndMin === null) {
+        cursorEndMin = parsed.endMin !== null ? parsed.endMin : parsed.startMin;
+      } else {
+        // Compute logical start based on previous end + travel time
+        const transit = typeof travelMinutes === 'number' ? travelMinutes : 15;
+        let nextStart = roundUpTo5Min(cursorEndMin + transit);
+
+        // Reasonable floor for lunch (don't put lunch before 11:30 unless already earlier) and dinner (not before 17:45)
+        const lowTitle = (item.title || '').toLowerCase();
+        if (item.type === 'meal' && lowTitle.includes('siang') && nextStart < 11 * 60 + 30) {
+          nextStart = Math.max(nextStart, 11 * 60 + 45);
+        }
+        if (item.type === 'meal' && (lowTitle.includes('malam') || lowTitle.includes('dinner')) && nextStart < 17 * 60 + 45) {
+          nextStart = Math.max(nextStart, 18 * 60);
+        }
+
+        // Preserve single timestamp for final return/rest or keep range
+        const isFinalRest = item.type === 'free_time' && parsed.endMin === null && i === timeline.length - 1;
+        if (isFinalRest) {
+          nextTime = `${formatMinHHMM(nextStart)}${parsed.suffix}`;
+          cursorEndMin = nextStart;
+        } else {
+          const nextEnd = nextStart + activityDuration;
+          nextTime = `${formatMinHHMM(nextStart)} - ${formatMinHHMM(nextEnd)}${parsed.suffix}`;
+          cursorEndMin = nextEnd;
+        }
+      }
+    } else if (parsed) {
+      cursorEndMin = parsed.endMin !== null ? parsed.endMin : parsed.startMin;
+    }
+
+    result.push({
+      ...item,
+      time: nextTime,
+      distanceKm,
+      travelMinutes,
+      routeFrom
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Checks whether a package or trip qualifies as a Gathering package.
+ */
+export function hasGatheringKeyword(
+  title?: string,
+  category?: string,
+  notes?: string
+): boolean {
+  if (category === 'family_gathering' || category === 'company_gathering') {
+    return true;
+  }
+  const combined = `${title || ''} ${notes || ''}`.toLowerCase();
+  return combined.includes('gathering');
+}
+
+/**
+ * Converts legacy activities array (without timeline items) to structured ItineraryTimelineItem[]
+ */
+export function convertActivitiesToTimeline(
+  activities: string[],
+  dayNum: number
+): ItineraryTimelineItem[] {
+  return (activities || []).map((act, i) => {
+    const timeMatch = act.match(/^(\d{1,2}[:.]\d{2}\s*-\s*\d{1,2}[:.]\d{2}|\d{1,2}[:.]\d{2})/);
+    const time = timeMatch
+      ? timeMatch[0]
+      : i === 0
+      ? '08:00 - 09:30'
+      : i === 1
+      ? '10:00 - 12:00'
+      : i === 2
+      ? '12:30 - 13:30'
+      : i === 3
+      ? '14:00 - 16:00'
+      : '16:30 - 18:30';
+    const cleanTitle = timeMatch
+      ? act.replace(timeMatch[0], '').replace(/^(\s*-\s*|\s*:\s*)/, '').trim()
+      : act;
+    let type: ItineraryActivityType = 'sightseeing';
+    const low = act.toLowerCase();
+    if (low.includes('outbound') || low.includes('outbond') || low.includes('team building')) type = 'outbound';
+    else if (low.includes('jemput') || low.includes('stasiun') || low.includes('bandara')) type = 'pickup';
+    else if (low.includes('drop-off') || low.includes('pengantaran')) type = 'dropoff';
+    else if (low.includes('makan') || low.includes('sarapan') || low.includes('kuliner')) type = 'meal';
+    else if (low.includes('check-in') || low.includes('check in')) type = 'hotel_checkin';
+    else if (low.includes('check-out') || low.includes('check out')) type = 'hotel_checkout';
+    else if (low.includes('oleh-oleh') || low.includes('belanja')) type = 'shopping';
+    else if (low.includes('istirahat') || low.includes('bebas')) type = 'free_time';
+
+    return {
+      id: `tl-conv-d${dayNum}-${i}`,
+      time,
+      title: cleanTitle,
+      location: cleanTitle,
+      description: 'Aktivitas terencana rombongan.',
+      type
+    };
+  });
+}
+
+/**
+ * Automatically injects or removes Day 2 Outbound + Fasilitator activity
+ * (for "gathering" packages or "outbond + fasilitator" add-on)
+ * AND runs real-time distance & logical schedule recalculation across all days.
+ */
+export function applyOutboundAndDistanceToItinerary(
+  days: ItineraryDay[],
+  region: DestinationRegion,
+  shouldIncludeOutbound: boolean,
+  extraDestinations: DestinationOption[] = [],
+  retimeSchedule = true
+): ItineraryDay[] {
+  if (!days || days.length === 0) return [];
+
+  const destLabel =
+    region === 'bali' ? 'Bali' : region === 'malang' ? 'Malang & Bromo' : 'Yogyakarta';
+
+  const outboundArea =
+    region === 'bali'
+      ? 'Area Outbound Alam Ubud / Bedugul Bali'
+      : region === 'malang'
+      ? 'Area Outbound Pines & Agro Kota Batu Malang'
+      : 'Area Outbound Kaliurang / Ledok Sambi Jogja';
+
+  return days.map((dayObj) => {
+    const baseTimeline: ItineraryTimelineItem[] =
+      dayObj.timeline && dayObj.timeline.length > 0
+        ? dayObj.timeline.map((t) => ({ ...t }))
+        : dayObj.activities && dayObj.activities.length > 0
+        ? convertActivitiesToTimeline(dayObj.activities, dayObj.day)
+        : createDefaultDayTimeline(dayObj.day, dayObj.day === days.length, destLabel);
+
+    let updatedTimeline = baseTimeline;
+    let updatedTitle = dayObj.title;
+    let updatedDescription = dayObj.description;
+
+    if (dayObj.day === 2) {
+      const hasOutboundAlready = updatedTimeline.some(
+        (item) =>
+          item.type === 'outbound' ||
+          item.title.toLowerCase().includes('outbound') ||
+          item.title.toLowerCase().includes('outbond')
+      );
+
+      if (shouldIncludeOutbound && !hasOutboundAlready) {
+        const outboundItem: ItineraryTimelineItem = {
+          id: 'tl-auto-outbound-d2',
+          time: '09:00 - 11:30',
+          title: 'Outbound & Team Building + Fasilitator (Fun Games & Ice Breaking)',
+          description:
+            'Kegiatan outbound interaktif dipandu Game Master & fasilitator profesional: ice breaking, team synergy games, sound system portable, dan peralatan lengkap.',
+          location: outboundArea,
+          type: 'outbound',
+          notes: 'Termasuk Outbound + Fasilitator, Game Master & peralatan games'
+        };
+
+        // Insert right after Sarapan / Lobby pickup / Check-out (before lunch or morning sightseeing)
+        let insertIdx = updatedTimeline.findIndex(
+          (it) =>
+            it.type !== 'meal' &&
+            it.type !== 'pickup' &&
+            it.type !== 'hotel_checkout'
+        );
+        if (insertIdx === -1) {
+          insertIdx = Math.min(2, updatedTimeline.length);
+        }
+
+        updatedTimeline = [
+          ...updatedTimeline.slice(0, insertIdx),
+          outboundItem,
+          ...updatedTimeline.slice(insertIdx)
+        ];
+
+        if (updatedTitle && !updatedTitle.toLowerCase().includes('outbound') && !updatedTitle.toLowerCase().includes('outbond')) {
+          updatedTitle = `${updatedTitle} & Outbound Seru`;
+        }
+        if (updatedDescription && !updatedDescription.toLowerCase().includes('outbound')) {
+          updatedDescription = `${updatedDescription} Termasuk sesi Outbound & Team Building bersama Fasilitator.`;
+        }
+      } else if (!shouldIncludeOutbound) {
+        // Remove auto-injected outbound item if user toggled off
+        updatedTimeline = updatedTimeline.filter((it) => it.id !== 'tl-auto-outbound-d2');
+        if (updatedTitle) {
+          updatedTitle = updatedTitle.replace(/\s*&\s*Outbound Seru/i, '');
+        }
+      }
+    }
+
+    const calculatedTimeline = recalculateTimelineWithDistances(updatedTimeline, region, {
+      extraDestinations,
+      retimeSchedule
+    });
+
+    return {
+      ...dayObj,
+      title: updatedTitle,
+      description: updatedDescription,
+      timeline: calculatedTimeline,
+      activities: calculatedTimeline.map((t) => `${t.time} - ${t.title}`)
+    };
+  });
+}
+
+export function summarizeItineraryMetrics(days: ItineraryDay[]): {
+  totalDistanceKm: number;
+  totalTransitMinutes: number;
+  hasDay2Outbound: boolean;
+} {
+  let totalDistanceKm = 0;
+  let totalTransitMinutes = 0;
+  let hasDay2Outbound = false;
+
+  for (const d of days) {
+    if (d.day === 2 && d.timeline) {
+      if (
+        d.timeline.some(
+          (it) =>
+            it.type === 'outbound' ||
+            it.title.toLowerCase().includes('outbound') ||
+            it.title.toLowerCase().includes('outbond')
+        )
+      ) {
+        hasDay2Outbound = true;
+      }
+    }
+    for (const item of d.timeline || []) {
+      if (typeof item.distanceKm === 'number' && item.distanceKm > 0) {
+        totalDistanceKm += item.distanceKm;
+      }
+      if (typeof item.travelMinutes === 'number' && item.travelMinutes > 0) {
+        totalTransitMinutes += item.travelMinutes;
+      }
+    }
+  }
+
+  return { totalDistanceKm, totalTransitMinutes, hasDay2Outbound };
+}
+
 export interface GenerateCustomItineraryParams {
   destination: DestinationRegion;
   destinationLabel: string;
@@ -678,11 +1238,15 @@ export interface GenerateCustomItineraryParams {
   breakfastCount: number;
   lunchCount: number;
   dinnerCount: number;
+  hasOutbound?: boolean;
+  isGathering?: boolean;
+  allDestinations?: DestinationOption[];
 }
 
 /**
- * Generate logical, chronological Day-by-Day timeline for Custom Trip Calculator orders
- * Now fully considers intercity travel times & realistic arrival/departure hours!
+ * Generate logical, chronological Day-by-Day timeline for Custom Trip Calculator orders.
+ * Calculates intercity travel times, inter-destination distance/time, and auto-injects
+ * Day 2 Outbound + Fasilitator when selected or when package contains "gathering".
  */
 export function generateCustomTripItinerary(params: GenerateCustomItineraryParams): ItineraryDay[] {
   const {
@@ -696,24 +1260,26 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
     bonusItems = [],
     breakfastCount,
     lunchCount,
-    dinnerCount
+    dinnerCount,
+    hasOutbound = false,
+    isGathering = false,
+    allDestinations = []
   } = params;
 
   const totalDays = Math.max(2, Math.min(7, durationDays));
   const destPool = [...selectedDestinations];
-  
+
   // Calculate intercity routing information
   const intercity = getIntercityTravelInfo(pickupCity, destination);
 
   // Distribute tourist spots across days evenly
   const perDayDestCount = Math.max(1, Math.ceil(destPool.length / totalDays));
   const daysDestinations: DestinationOption[][] = [];
-  
+
   for (let d = 0; d < totalDays; d++) {
     const chunk = destPool.splice(0, perDayDestCount);
     daysDestinations.push(chunk);
   }
-  // If there are leftovers, append to earlier days
   let dayIdx = 0;
   while (destPool.length > 0) {
     const extra = destPool.shift();
@@ -734,12 +1300,8 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
     const currentDests = daysDestinations[day - 1] || [];
     const timeline: ItineraryTimelineItem[] = [];
 
-    // =========================================================================
-    // --- DAY 1: PENJEMPUTAN, PERJALANAN LINTAS KOTA (JIKA ADA), WISATA & HOTEL
-    // =========================================================================
     if (isFirstDay) {
       if (intercity.isIntercity) {
-        // PUSH REALISTIC INTERCITY TRANSIT STEPS
         intercity.day1TransitSteps.forEach((step, sIdx) => {
           timeline.push({
             id: `tl-d1-transit-${sIdx + 1}`,
@@ -752,10 +1314,7 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           });
         });
 
-        // AFTER ARRIVAL: SIGHTSEEING IN DESTINATION CITY
-        // Check arrival time: if morning (~07:30 - 08:30)
         if (intercity.isOvernightJourney || intercity.estimatedTravelHours <= 3) {
-          // Destinasi 1
           if (currentDests.length > 0) {
             const d1 = currentDests[0];
             timeline.push({
@@ -769,12 +1328,11 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             });
           }
 
-          // Lunch
           timeline.push({
             id: `tl-d1-lunch`,
             time: '12:00 - 13:00',
             title: `Makan Siang Resto Lokal Autentik ${destinationLabel}`,
-            description: lunchCount > 0 
+            description: lunchCount > 0
               ? `Menikmati hidangan makan siang kuliner khas ${destinationLabel} di restoran mitra terverifikasi.`
               : `Istirahat santap makan siang di kawasan kuliner populer rekomendasi driver.`,
             location: `Resto Khas ${destinationLabel}`,
@@ -782,7 +1340,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             notes: lunchCount > 0 ? 'Termasuk kuota makan siang' : 'Makan mandiri'
           });
 
-          // Destinasi 2
           if (currentDests.length > 1) {
             const d2 = currentDests[1];
             timeline.push({
@@ -795,7 +1352,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             });
           }
 
-          // Hotel Check-in
           if (hasHotel) {
             timeline.push({
               id: `tl-d1-checkin`,
@@ -808,7 +1364,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             });
           }
 
-          // Sunset / Destinasi 3
           if (currentDests.length > 2) {
             const d3 = currentDests[2];
             timeline.push({
@@ -821,7 +1376,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             });
           }
 
-          // Dinner
           timeline.push({
             id: `tl-d1-dinner`,
             time: '19:30 - 20:30',
@@ -834,7 +1388,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             notes: dinnerCount > 0 ? 'Termasuk kuota makan malam' : 'Makan mandiri'
           });
 
-          // Rest
           timeline.push({
             id: `tl-d1-rest`,
             time: '21:00',
@@ -843,10 +1396,7 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             location: effectiveHotelName,
             type: 'free_time'
           });
-        } 
-        // Daytime arrival (~12:30) e.g. Jakarta to Jogja 8 hours
-        else {
-          // Destinasi 1 (Afternoon)
+        } else {
           if (currentDests.length > 0) {
             const d1 = currentDests[0];
             timeline.push({
@@ -859,7 +1409,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             });
           }
 
-          // Dinner
           timeline.push({
             id: `tl-d1-dinner`,
             time: '18:30 - 20:00',
@@ -869,7 +1418,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             type: 'meal'
           });
 
-          // Destinasi 2 (Evening / Malioboro / Alun-alun)
           if (currentDests.length > 1) {
             const d2 = currentDests[1];
             timeline.push({
@@ -882,7 +1430,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             });
           }
 
-          // Rest
           timeline.push({
             id: `tl-d1-rest`,
             time: '22:00',
@@ -892,10 +1439,7 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
             type: 'free_time'
           });
         }
-      } 
-      // LOCAL TRIP (Penjemputan di kota yang sama dengan destinasi)
-      else {
-        // 1. Pickup
+      } else {
         timeline.push({
           id: `tl-d1-1`,
           time: '08:00 - 09:00',
@@ -906,7 +1450,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           notes: 'Driver & armada standby 15 menit sebelumnya'
         });
 
-        // 2. Morning Sightseeing
         if (currentDests.length > 0) {
           const d1 = currentDests[0];
           timeline.push({
@@ -920,12 +1463,11 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           });
         }
 
-        // 3. Lunch
         timeline.push({
           id: `tl-d1-3`,
           time: '12:00 - 13:00',
           title: `Makan Siang Resto Lokal Autentik`,
-          description: lunchCount > 0 
+          description: lunchCount > 0
             ? `Menikmati hidangan makan siang kuliner khas ${destinationLabel} di restoran mitra higienis & lezat.`
             : `Istirahat santap makan siang di kawasan kuliner populer rekomendasi driver.`,
           location: `Restoran Kuliner Khas ${destinationLabel}`,
@@ -933,7 +1475,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           notes: lunchCount > 0 ? 'Termasuk kuota makan siang' : 'Makan mandiri'
         });
 
-        // 4. Afternoon Sightseeing
         if (currentDests.length > 1) {
           const d2 = currentDests[1];
           timeline.push({
@@ -946,7 +1487,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           });
         }
 
-        // 5. Hotel Check-in
         if (hasHotel) {
           timeline.push({
             id: `tl-d1-5`,
@@ -959,7 +1499,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           });
         }
 
-        // 6. Sunset
         if (currentDests.length > 2) {
           const d3 = currentDests[2];
           timeline.push({
@@ -972,7 +1511,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           });
         }
 
-        // 7. Dinner
         timeline.push({
           id: `tl-d1-7`,
           time: '19:30 - 20:30',
@@ -985,7 +1523,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           notes: dinnerCount > 0 ? 'Termasuk kuota makan malam' : 'Makan mandiri'
         });
 
-        // 8. Return
         timeline.push({
           id: `tl-d1-8`,
           time: '21:00',
@@ -995,18 +1532,12 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           type: 'free_time'
         });
       }
-    }
-
-    // =========================================================================
-    // --- INTERMEDIATE DAYS: FULL DAY TOUR EXPLORATION
-    // =========================================================================
-    else if (!isLastDay) {
-      // 1. Breakfast
+    } else if (!isLastDay) {
       timeline.push({
         id: `tl-d${day}-1`,
         time: '07:00 - 08:30',
         title: hasHotel ? `Sarapan Pagi Buffet di Hotel` : `Sarapan Pagi & Persiapan Tour`,
-        description: breakfastCount >= day 
+        description: breakfastCount >= day
           ? `Menikmati sajian sarapan pagi lezat untuk bekal energi tur harian.`
           : `Sarapan pagi santai dan persiapan perjalanan.`,
         location: effectiveHotelName,
@@ -1014,7 +1545,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         notes: breakfastCount >= day ? 'Termasuk kuota sarapan' : 'Makan mandiri'
       });
 
-      // 2. Morning Departure
       timeline.push({
         id: `tl-d${day}-2`,
         time: '08:30 - 09:00',
@@ -1024,7 +1554,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         type: 'pickup'
       });
 
-      // 3. Destinasi 1
       if (currentDests.length > 0) {
         const d1 = currentDests[0];
         timeline.push({
@@ -1038,12 +1567,11 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         });
       }
 
-      // 4. Lunch
       timeline.push({
         id: `tl-d${day}-4`,
         time: '12:00 - 13:00',
         title: `Makan Siang Resto Lokal Favorit`,
-        description: lunchCount >= day 
+        description: lunchCount >= day
           ? `Makan siang bersama keluarga/rombongan di restoran lokal dengan view asri.`
           : `Istirahat makan siang santai di restoran sekitar objek wisata.`,
         location: `Resto Lokal ${destinationLabel}`,
@@ -1051,7 +1579,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         notes: lunchCount >= day ? 'Termasuk kuota makan siang' : 'Makan mandiri'
       });
 
-      // 5. Destinasi 2
       if (currentDests.length > 1) {
         const d2 = currentDests[1];
         timeline.push({
@@ -1064,7 +1591,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         });
       }
 
-      // 6. Destinasi 3 or Sunset
       if (currentDests.length > 2) {
         const d3 = currentDests[2];
         timeline.push({
@@ -1077,7 +1603,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         });
       }
 
-      // 7. Dinner
       timeline.push({
         id: `tl-d${day}-7`,
         time: '18:30 - 20:00',
@@ -1085,12 +1610,11 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         description: dinnerCount >= day
           ? `Menikmati hidangan makan malam lezat bersama seluruh anggota tour.`
           : `Makan malam mandiri di sentra kuliner kota.`,
-        location: `Restoran Kuliner Malam`,
+        location: `Restoran Kuliner Malam ${destinationLabel}`,
         type: 'meal',
         notes: dinnerCount >= day ? 'Termasuk kuota makan malam' : 'Makan mandiri'
       });
 
-      // 8. Return
       timeline.push({
         id: `tl-d${day}-8`,
         time: '20:30',
@@ -1099,13 +1623,7 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         location: effectiveHotelName,
         type: 'free_time'
       });
-    }
-
-    // =========================================================================
-    // --- FINAL DAY: CHECK-OUT, OLEH-OLEH, MAKAN SIANG & PERJALANAN PULANG
-    // =========================================================================
-    else {
-      // 1. Breakfast
+    } else {
       timeline.push({
         id: `tl-d${day}-1`,
         time: '07:00 - 08:30',
@@ -1115,7 +1633,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         type: 'meal'
       });
 
-      // 2. Check-out
       if (hasHotel) {
         timeline.push({
           id: `tl-d${day}-2`,
@@ -1128,7 +1645,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         });
       }
 
-      // 3. Bonus Oleh-Oleh & Sentra Kerajinan
       const bonusText = bonusItems.length > 0 ? bonusItems.join(' & ') : 'Pusat Oleh-Oleh Khas & Cenderamata';
       timeline.push({
         id: `tl-d${day}-3`,
@@ -1140,7 +1656,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         notes: 'Termasuk bonus kunjungan oleh-oleh'
       });
 
-      // 4. Final Destination or Sightseeing before lunch
       if (currentDests.length > 0) {
         const d1 = currentDests[0];
         timeline.push({
@@ -1153,7 +1668,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         });
       }
 
-      // 5. Lunch
       timeline.push({
         id: `tl-d${day}-5`,
         time: '12:30 - 13:30',
@@ -1163,7 +1677,6 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
         type: 'meal'
       });
 
-      // 6. Kepulangan (Intercity Return Journey vs Local Drop-off)
       if (intercity.isIntercity) {
         intercity.returnTransitSteps.forEach((rStep, rIdx) => {
           timeline.push({
@@ -1182,14 +1695,13 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
           time: '15:30 - 17:00',
           title: `Pengantaran Kembali (Drop-off) ke Bandara / Stasiun`,
           description: `Pengantaran aman tepat waktu menuju Bandara / Stasiun / Titik Kepulangan di ${destinationLabel}. Tour selesai dengan kenangan berkesan bersama PERGIDIANTAR!`,
-          location: `Bandara / Stasiun / Titik Drop-off`,
+          location: `Bandara / Stasiun / Titik Drop-off ${destinationLabel}`,
           type: 'dropoff',
           notes: 'Driver memastikan seluruh barang bawaan turun lengkap'
         });
       }
     }
 
-    // Dynamic Title per day
     let dayTitle = `Hari ${day}: Aktivitas Wisata & Eksplorasi ${destinationLabel}`;
     let dayDesc = `Eksplorasi destinasi favorit, santap kuliner lezat, dan panorama senja.`;
 
@@ -1224,39 +1736,50 @@ export function generateCustomTripItinerary(params: GenerateCustomItineraryParam
       day,
       title: dayTitle,
       description: dayDesc,
-      activities: timeline.map(t => `${t.time} - ${t.title}`),
+      activities: timeline.map((t) => `${t.time} - ${t.title}`),
       timeline
     });
   }
 
-  return itineraryDays;
+  return applyOutboundAndDistanceToItinerary(
+    itineraryDays,
+    destination,
+    Boolean(hasOutbound || isGathering),
+    allDestinations.length > 0 ? allDestinations : selectedDestinations,
+    true
+  );
 }
 
 /**
  * Generate default editable timeline items for Admin Package Management
- * Supports optional origin city to simulate intercity template (e.g. Tour Bali start dari Jogja)
+ * Supports optional origin city and optional gathering/outbound injection.
  */
 export function createDefaultDayTimeline(
-  dayNumber: number, 
-  isLastDay: boolean, 
-  cityLabel: string, 
-  originCity?: string
+  dayNumber: number,
+  isLastDay: boolean,
+  cityLabel: string,
+  originCity?: string,
+  shouldIncludeOutbound = false
 ): ItineraryTimelineItem[] {
-  const destRegion: DestinationRegion = 
-    cityLabel.toLowerCase().includes('bali') ? 'bali' :
-    cityLabel.toLowerCase().includes('malang') ? 'malang' : 'jogja';
+  const destRegion: DestinationRegion =
+    cityLabel.toLowerCase().includes('bali')
+      ? 'bali'
+      : cityLabel.toLowerCase().includes('malang')
+      ? 'malang'
+      : 'jogja';
 
   const intercity = originCity ? getIntercityTravelInfo(originCity, destRegion) : null;
+  let items: ItineraryTimelineItem[] = [];
 
   if (dayNumber === 1) {
     if (intercity && intercity.isIntercity) {
-      const items: ItineraryTimelineItem[] = [];
       intercity.day1TransitSteps.forEach((s, idx) => {
         items.push({
           id: `tl-edit-${Date.now()}-transit-${idx + 1}`,
           time: s.time,
           title: s.title,
           description: s.description,
+          location: s.location,
           type: s.type,
           notes: s.notes
         });
@@ -1267,6 +1790,7 @@ export function createDefaultDayTimeline(
           time: '09:30 - 11:30',
           title: `Kunjungan Destinasi Ikonik Perdana ${cityLabel}`,
           description: `Eksplorasi cagar budaya dan spot foto instagramable di ${cityLabel}.`,
+          location: destRegion === 'bali' ? 'Tanah Lot Bali' : destRegion === 'malang' ? 'Museum Angkut Batu' : 'Candi Prambanan',
           type: 'sightseeing'
         },
         {
@@ -1274,6 +1798,7 @@ export function createDefaultDayTimeline(
           time: '12:00 - 13:00',
           title: `Makan Siang Resto Lokal Autentik`,
           description: `Santap siang kuliner khas daerah di restoran mitra.`,
+          location: `Resto Lokal ${cityLabel}`,
           type: 'meal'
         },
         {
@@ -1281,6 +1806,7 @@ export function createDefaultDayTimeline(
           time: '14:30 - 16:00',
           title: `Check-in Hotel Mitra & Istirahat`,
           description: `Pembagian kunci kamar hotel mitra, istirahat sejenak setelah perjalanan lintas kota.`,
+          location: `Hotel Mitra ${cityLabel}`,
           type: 'hotel_checkin'
         },
         {
@@ -1288,6 +1814,7 @@ export function createDefaultDayTimeline(
           time: '17:00 - 18:30',
           title: `Hunting Sunset & Panorama Senja`,
           description: `Menikmati golden hour senja yang memukau.`,
+          location: destRegion === 'bali' ? 'Pantai Kuta Bali' : destRegion === 'malang' ? 'Alun-Alun Batu' : 'HeHa Sky View Patuk',
           type: 'sightseeing'
         },
         {
@@ -1295,6 +1822,7 @@ export function createDefaultDayTimeline(
           time: '19:00 - 20:30',
           title: `Makan Malam Kuliner Malam`,
           description: `Santap malam bersama rombongan di sentra kuliner khas malam hari.`,
+          location: `Restoran Kuliner ${cityLabel}`,
           type: 'meal'
         },
         {
@@ -1302,77 +1830,83 @@ export function createDefaultDayTimeline(
           time: '21:00',
           title: `Kembali ke Hotel & Istirahat`,
           description: `Pengantaran kembali ke hotel untuk istirahat malam.`,
+          location: `Hotel Mitra ${cityLabel}`,
           type: 'free_time'
         }
       );
-      return items;
+    } else {
+      items = [
+        {
+          id: `tl-edit-${Date.now()}-1`,
+          time: '08:00 - 09:30',
+          title: `Penjemputan Peserta di Bandara / Stasiun`,
+          description: `Penyambutan tamu dengan sign board nama rombongan, armada AC dingin, dan pemuatan koper.`,
+          location: destRegion === 'bali' ? 'Bandara Ngurah Rai Bali' : destRegion === 'malang' ? 'Stasiun Malang' : 'Stasiun Tugu Yogyakarta',
+          type: 'pickup',
+          notes: 'Armada & driver standby'
+        },
+        {
+          id: `tl-edit-${Date.now()}-2`,
+          time: '10:00 - 12:00',
+          title: `Kunjungan Destinasi Ikonik Pertama`,
+          description: `Eksplorasi cagar budaya dan spot foto instagramable di ${cityLabel}.`,
+          location: destRegion === 'bali' ? 'Pantai Melasti Bali' : destRegion === 'malang' ? 'Jatim Park 2 Batu' : 'Candi Prambanan',
+          type: 'sightseeing',
+          notes: 'Tiket masuk tercover'
+        },
+        {
+          id: `tl-edit-${Date.now()}-3`,
+          time: '12:30 - 13:30',
+          title: `Makan Siang Resto Lokal Autentik`,
+          description: `Menikmati hidangan lezat masakan tradisional khas ${cityLabel}.`,
+          location: `Resto Khas ${cityLabel}`,
+          type: 'meal',
+          notes: 'Resto lokal higienis'
+        },
+        {
+          id: `tl-edit-${Date.now()}-4`,
+          time: '14:00 - 15:30',
+          title: `Check-in Hotel Mitra & Istirahat`,
+          description: `Pembagian kunci kamar hotel mitra, istirahat sejenak setelah perjalanan.`,
+          location: `Hotel Mitra ${cityLabel}`,
+          type: 'hotel_checkin',
+          notes: 'Hotel bintang pilihan'
+        },
+        {
+          id: `tl-edit-${Date.now()}-5`,
+          time: '16:00 - 18:00',
+          title: `Hunting Sunset & Panorama Senja`,
+          description: `Menikmati momen golden hour dan pemandangan sore yang memukau.`,
+          location: destRegion === 'bali' ? 'Pura Luhur Uluwatu' : destRegion === 'malang' ? 'Alun-Alun Kota Batu' : 'Obelix Hills',
+          type: 'sightseeing'
+        },
+        {
+          id: `tl-edit-${Date.now()}-6`,
+          time: '18:30 - 20:00',
+          title: `Makan Malam Kuliner Malam`,
+          description: `Santap malam bersama rombongan di sentra kuliner khas malam hari.`,
+          location: `Sentra Kuliner ${cityLabel}`,
+          type: 'meal'
+        },
+        {
+          id: `tl-edit-${Date.now()}-7`,
+          time: '20:30',
+          title: `Kembali ke Hotel & Istirahat`,
+          description: `Pengantaran kembali ke hotel untuk istirahat malam.`,
+          location: `Hotel Mitra ${cityLabel}`,
+          type: 'free_time'
+        }
+      ];
     }
-
-    return [
-      {
-        id: `tl-edit-${Date.now()}-1`,
-        time: '08:00 - 09:30',
-        title: `Penjemputan Peserta di Bandara / Stasiun`,
-        description: `Penyambutan tamu dengan sign board nama rombongan, armada AC dingin, dan pemuatan koper.`,
-        type: 'pickup',
-        notes: 'Armada & driver standby'
-      },
-      {
-        id: `tl-edit-${Date.now()}-2`,
-        time: '10:00 - 12:00',
-        title: `Kunjungan Destinasi Ikonik Pertama`,
-        description: `Eksplorasi cagar budaya dan spot foto instagramable di ${cityLabel}.`,
-        type: 'sightseeing',
-        notes: 'Tiket masuk tercover'
-      },
-      {
-        id: `tl-edit-${Date.now()}-3`,
-        time: '12:30 - 13:30',
-        title: `Makan Siang Resto Lokal Autentik`,
-        description: `Menikmati hidangan lezat masakan tradisional khas ${cityLabel}.`,
-        type: 'meal',
-        notes: 'Resto lokal higienis'
-      },
-      {
-        id: `tl-edit-${Date.now()}-4`,
-        time: '14:00 - 15:30',
-        title: `Check-in Hotel Mitra & Istirahat`,
-        description: `Pembagian kunci kamar hotel mitra, istirahat sejenak setelah perjalanan.`,
-        type: 'hotel_checkin',
-        notes: 'Hotel bintang pilihan'
-      },
-      {
-        id: `tl-edit-${Date.now()}-5`,
-        time: '16:00 - 18:00',
-        title: `Hunting Sunset & Panorama Senja`,
-        description: `Menikmati momen golden hour dan pemandangan sore yang memukau.`,
-        type: 'sightseeing'
-      },
-      {
-        id: `tl-edit-${Date.now()}-6`,
-        time: '18:30 - 20:00',
-        title: `Makan Malam Kuliner Malam`,
-        description: `Santap malam bersama rombongan di sentra kuliner khas malam hari.`,
-        type: 'meal'
-      },
-      {
-        id: `tl-edit-${Date.now()}-7`,
-        time: '20:30',
-        title: `Kembali ke Hotel & Istirahat`,
-        description: `Pengantaran kembali ke hotel untuk istirahat malam.`,
-        type: 'free_time'
-      }
-    ];
-  }
-
-  if (isLastDay) {
+  } else if (isLastDay) {
     if (intercity && intercity.isIntercity) {
-      const items: ItineraryTimelineItem[] = [
+      items = [
         {
           id: `tl-edit-${Date.now()}-1`,
           time: '07:00 - 08:30',
           title: `Sarapan Pagi di Hotel & Packing`,
           description: `Sarapan pagi buffet hotel dan pengemasan koper.`,
+          location: `Hotel Mitra ${cityLabel}`,
           type: 'meal'
         },
         {
@@ -1380,6 +1914,7 @@ export function createDefaultDayTimeline(
           time: '08:30 - 09:30',
           title: `Check-out Hotel & Pemuatan Bagasi`,
           description: `Penyelesaian administrasi hotel dan pemuatan bagasi ke dalam armada.`,
+          location: `Hotel Mitra ${cityLabel}`,
           type: 'hotel_checkout'
         },
         {
@@ -1387,6 +1922,7 @@ export function createDefaultDayTimeline(
           time: '10:00 - 11:30',
           title: `Wisata Belanja Pusat Oleh-Oleh Khas`,
           description: `Membeli cenderamata, kerajinan tangan, dan makanan khas daerah.`,
+          location: `Sentra Oleh-Oleh ${cityLabel}`,
           type: 'shopping'
         },
         {
@@ -1394,6 +1930,7 @@ export function createDefaultDayTimeline(
           time: '12:00 - 13:00',
           title: `Makan Siang Perpisahan`,
           description: `Santap siang kuliner khas penutup sebelum perjalanan pulang.`,
+          location: `Resto Lokal ${cityLabel}`,
           type: 'meal'
         }
       ];
@@ -1403,120 +1940,161 @@ export function createDefaultDayTimeline(
           time: s.time,
           title: s.title,
           description: s.description,
+          location: s.location,
           type: s.type,
           notes: s.notes
         });
       });
-      return items;
+    } else {
+      items = [
+        {
+          id: `tl-edit-${Date.now()}-1`,
+          time: '07:00 - 08:30',
+          title: `Sarapan Pagi di Hotel & Packing`,
+          description: `Menikmati sarapan pagi buffet hotel dan pengemasan barang bawaan.`,
+          location: `Hotel Mitra ${cityLabel}`,
+          type: 'meal'
+        },
+        {
+          id: `tl-edit-${Date.now()}-2`,
+          time: '09:00 - 10:00',
+          title: `Check-out Hotel & Pemuatan Bagasi`,
+          description: `Penyelesaian check-out kamar dan pemuatan koper ke dalam armada.`,
+          location: `Hotel Mitra ${cityLabel}`,
+          type: 'hotel_checkout',
+          notes: 'Pemeriksaan barang bawaan'
+        },
+        {
+          id: `tl-edit-${Date.now()}-3`,
+          time: '10:30 - 12:00',
+          title: `Wisata Belanja Pusat Oleh-Oleh Khas`,
+          description: `Membeli buah tangan, kerajinan lokal, bakpia, dodol, kaos, dan cenderamata khas daerah.`,
+          location: `Sentra Oleh-Oleh ${cityLabel}`,
+          type: 'shopping',
+          notes: 'Bonus kunjungan oleh-oleh'
+        },
+        {
+          id: `tl-edit-${Date.now()}-4`,
+          time: '12:30 - 13:30',
+          title: `Makan Siang Perpisahan`,
+          description: `Makan siang penutup dengan santap kuliner legendaris ${cityLabel}.`,
+          location: `Resto Khas ${cityLabel}`,
+          type: 'meal'
+        },
+        {
+          id: `tl-edit-${Date.now()}-5`,
+          time: '14:00 - 15:30',
+          title: `Kunjungan Ikon Kota & Foto Bersama`,
+          description: `Sesi dokumentasi foto rombongan di landmark kebanggaan kota.`,
+          location: destRegion === 'bali' ? 'Pantai Kuta' : destRegion === 'malang' ? 'Alun-Alun Batu' : 'Malioboro Yogyakarta',
+          type: 'sightseeing'
+        },
+        {
+          id: `tl-edit-${Date.now()}-6`,
+          time: '16:00 - 17:30',
+          title: `Pengantaran ke Bandara / Stasiun (Drop-off)`,
+          description: `Pengantaran tepat waktu menuju Bandara / Stasiun. Perjalanan wisata selesai bersama PERGIDIANTAR.`,
+          location: destRegion === 'bali' ? 'Bandara Ngurah Rai' : destRegion === 'malang' ? 'Stasiun Malang' : 'Stasiun Tugu Yogyakarta',
+          type: 'dropoff',
+          notes: 'Drop-off selesai dengan aman'
+        }
+      ];
     }
-
-    return [
+  } else {
+    items = [
       {
         id: `tl-edit-${Date.now()}-1`,
         time: '07:00 - 08:30',
-        title: `Sarapan Pagi di Hotel & Packing`,
-        description: `Menikmati sarapan pagi buffet hotel dan pengemasan barang bawaan.`,
+        title: `Sarapan Pagi Buffet di Hotel`,
+        description: `Sarapan pagi lezat di restoran hotel.`,
+        location: `Hotel Mitra ${cityLabel}`,
         type: 'meal'
       },
       {
         id: `tl-edit-${Date.now()}-2`,
-        time: '09:00 - 10:00',
-        title: `Check-out Hotel & Pemuatan Bagasi`,
-        description: `Penyelesaian check-out kamar dan pemuatan koper ke dalam armada.`,
-        type: 'hotel_checkout',
-        notes: 'Pemeriksaan barang bawaan'
+        time: '08:30 - 09:00',
+        title: `Penjemputan di Lobby Hotel`,
+        description: `Driver bersiap di lobby hotel untuk penjemputan tur harian.`,
+        location: `Hotel Mitra ${cityLabel}`,
+        type: 'pickup'
       },
-      {
-        id: `tl-edit-${Date.now()}-3`,
-        time: '10:30 - 12:00',
-        title: `Wisata Belanja Pusat Oleh-Oleh Khas`,
-        description: `Membeli buah tangan, kerajinan lokal, bakpia, dodol, kaos, dan cenderamata khas daerah.`,
-        type: 'shopping',
-        notes: 'Bonus kunjungan oleh-oleh'
-      },
+      ...(dayNumber === 2 && shouldIncludeOutbound
+        ? [
+            {
+              id: 'tl-auto-outbound-d2',
+              time: '09:00 - 11:30',
+              title: 'Outbound & Team Building + Fasilitator (Fun Games & Ice Breaking)',
+              description:
+                'Sesi outbound seru bersama Game Master & fasilitator profesional: ice breaking, team synergy games, sound system portable, dan perlengkapan lengkap.',
+              location:
+                destRegion === 'bali'
+                  ? 'Area Outbound Ubud Bali'
+                  : destRegion === 'malang'
+                  ? 'Area Outbound Kota Batu Malang'
+                  : 'Area Outbound Kaliurang / Ledok Sambi Jogja',
+              type: 'outbound' as ItineraryActivityType,
+              notes: 'Termasuk Outbound + Fasilitator'
+            }
+          ]
+        : [
+            {
+              id: `tl-edit-${Date.now()}-3`,
+              time: '09:30 - 11:30',
+              title: `Eksplorasi Destinasi Wisata Pagi`,
+              description: `Menikmati keindahan alam & wahana rekreasi populer.`,
+              location:
+                destRegion === 'bali'
+                  ? 'Tegalalang Rice Terrace'
+                  : destRegion === 'malang'
+                  ? 'Coban Rondo Waterfall'
+                  : 'Lava Tour Merapi',
+              type: 'sightseeing' as ItineraryActivityType,
+              notes: 'Tiket masuk tercover'
+            }
+          ]),
       {
         id: `tl-edit-${Date.now()}-4`,
-        time: '12:30 - 13:30',
-        title: `Makan Siang Perpisahan`,
-        description: `Makan siang penutup dengan santap kuliner legendaris ${cityLabel}.`,
+        time: '12:00 - 13:00',
+        title: `Makan Siang Kuliner Resto Lokal`,
+        description: `Makan siang bersama menu khas autentik daerah.`,
+        location: `Resto Lokal ${cityLabel}`,
         type: 'meal'
       },
       {
         id: `tl-edit-${Date.now()}-5`,
-        time: '14:00 - 15:30',
-        title: `Kunjungan Ikon Kota & Foto Bersama`,
-        description: `Sesi dokumentasi foto rombongan di landmark kebanggaan kota.`,
+        time: '13:30 - 15:30',
+        title: `Kunjungan Destinasi Siang / Edukasi`,
+        description: `Aktivitas seru dan hunting foto keluarga / rombongan.`,
+        location: destRegion === 'bali' ? 'Desa Wisata Penglipuran' : destRegion === 'malang' ? 'Flora Wisata San Terra' : 'Candi Borobudur',
         type: 'sightseeing'
       },
       {
         id: `tl-edit-${Date.now()}-6`,
-        time: '16:00 - 17:30',
-        title: `Pengantaran ke Bandara / Stasiun (Drop-off)`,
-        description: `Pengantaran tepat waktu menuju Bandara / Stasiun. Perjalanan wisata selesai bersama PERGIDIANTAR.`,
-        type: 'dropoff',
-        notes: 'Drop-off selesai dengan aman'
+        time: '16:00 - 18:00',
+        title: `Hunting Sunset & Panorama Sore`,
+        description: `Menyaksikan keindahan matahari terbenam dengan pemandangan menawan.`,
+        location: destRegion === 'bali' ? 'Pantai Jimbaran' : destRegion === 'malang' ? 'Batu Night Spectacular' : 'Tebing Breksi',
+        type: 'sightseeing'
+      },
+      {
+        id: `tl-edit-${Date.now()}-7`,
+        time: '18:30 - 20:00',
+        title: `Makan Malam Santap Kuliner Malam`,
+        description: `Makan malam hangat bersama di restoran pilihan.`,
+        location: `Sentra Kuliner ${cityLabel}`,
+        type: 'meal'
+      },
+      {
+        id: `tl-edit-${Date.now()}-8`,
+        time: '20:30',
+        title: `Kembali ke Hotel & Istirahat`,
+        description: `Pengantaran kembali ke hotel untuk memulihkan tenaga.`,
+        location: `Hotel Mitra ${cityLabel}`,
+        type: 'free_time'
       }
     ];
   }
 
-  // Middle day
-  return [
-    {
-      id: `tl-edit-${Date.now()}-1`,
-      time: '07:00 - 08:30',
-      title: `Sarapan Pagi Buffet di Hotel`,
-      description: `Sarapan pagi lezat di restoran hotel.`,
-      type: 'meal'
-    },
-    {
-      id: `tl-edit-${Date.now()}-2`,
-      time: '08:30 - 09:00',
-      title: `Penjemputan di Lobby Hotel`,
-      description: `Driver bersiap di lobby hotel untuk penjemputan tur harian.`,
-      type: 'pickup'
-    },
-    {
-      id: `tl-edit-${Date.now()}-3`,
-      time: '09:30 - 11:30',
-      title: `Eksplorasi Destinasi Wisata Pagi`,
-      description: `Menikmati keindahan alam & wahana rekreasi populer.`,
-      type: 'sightseeing',
-      notes: 'Tiket masuk tercover'
-    },
-    {
-      id: `tl-edit-${Date.now()}-4`,
-      time: '12:00 - 13:00',
-      title: `Makan Siang Kuliner Resto Lokal`,
-      description: `Makan siang bersama menu khas autentik daerah.`,
-      type: 'meal'
-    },
-    {
-      id: `tl-edit-${Date.now()}-5`,
-      time: '13:30 - 15:30',
-      title: `Kunjungan Destinasi Siang / Edukasi`,
-      description: `Aktivitas seru dan hunting foto keluarga / rombongan.`,
-      type: 'sightseeing'
-    },
-    {
-      id: `tl-edit-${Date.now()}-6`,
-      time: '16:00 - 18:00',
-      title: `Hunting Sunset & Panorama Sore`,
-      description: `Menyaksikan keindahan matahari terbenam dengan pemandangan menawan.`,
-      type: 'sightseeing'
-    },
-    {
-      id: `tl-edit-${Date.now()}-7`,
-      time: '18:30 - 20:00',
-      title: `Makan Malam Santap Kuliner Malam`,
-      description: `Makan malam hangat bersama di restoran pilihan.`,
-      type: 'meal'
-    },
-    {
-      id: `tl-edit-${Date.now()}-8`,
-      time: '20:30',
-      title: `Kembali ke Hotel & Istirahat`,
-      description: `Pengantaran kembali ke hotel untuk memulihkan tenaga.`,
-      type: 'free_time'
-    }
-  ];
+  return recalculateTimelineWithDistances(items, destRegion, { retimeSchedule: true });
 }
+

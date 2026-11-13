@@ -165,7 +165,7 @@ export const PublicLandingPage: React.FC = () => {
             <div className="space-y-4 max-w-2xl text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-bold tracking-wide uppercase">
                 <Compass className="w-4 h-4 text-orange-400" />
-                <span>Biro Wisata Resmi PERGIDIANTAR Jogja, Malang & Bali</span>
+                <span>PERGIDIANTAR Biro Perjalanan Wisata Nusantara</span>
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TourPackage, DestinationRegion, PackageCategory, ItineraryDay } from '../../types/travel';
 import { 
@@ -20,7 +20,11 @@ import {
 } from 'lucide-react';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { ItineraryTimelineEditor } from './ItineraryTimelineEditor';
-import { createDefaultDayTimeline } from '../../utils/itineraryGenerator';
+import {
+  createDefaultDayTimeline,
+  applyOutboundAndDistanceToItinerary,
+  hasGatheringKeyword
+} from '../../utils/itineraryGenerator';
 
 export const PackageManagement: React.FC = () => {
   const { packages, addPackage, updatePackage, deletePackage, currentRole } = useApp();
@@ -134,9 +138,34 @@ export const PackageManagement: React.FC = () => {
     ]);
   };
 
+  // Real-time auto-sync Outbound Day-2 ("gathering") & inter-destination distances in Add & Edit modals
+  useEffect(() => {
+    if (!editingPackage) return;
+    const isGath = hasGatheringKeyword(title, category);
+    setEditDays((prev) =>
+      applyOutboundAndDistanceToItinerary(prev, destinationRegion, isGath, [], true)
+    );
+  }, [editingPackage, title, category, destinationRegion]);
+
+  useEffect(() => {
+    if (!isAddModalOpen) return;
+    const isGath = hasGatheringKeyword(addTitle, addCategory);
+    setAddItineraryDays((prev) =>
+      applyOutboundAndDistanceToItinerary(prev, addDestination, isGath, [], true)
+    );
+  }, [isAddModalOpen, addTitle, addCategory, addDestination]);
+
   const handleCreatePackage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!addTitle.trim()) return;
+
+    const syncedItinerary = applyOutboundAndDistanceToItinerary(
+      addItineraryDays,
+      addDestination,
+      hasGatheringKeyword(addTitle, addCategory),
+      [],
+      true
+    );
 
     const newPkgData: Omit<TourPackage, 'id'> = {
       title: addTitle.trim(),
@@ -163,7 +192,7 @@ export const PackageManagement: React.FC = () => {
         .split('\n')
         .map(s => s.trim())
         .filter(Boolean),
-      itinerary: addItineraryDays,
+      itinerary: syncedItinerary,
       included: {
         transport: 'Kendaraan, driver, bbm, parkir (Termasuk Paket Hemat & All In)',
         accommodation: 'Hotel Bintang Mitra Pilihan (Termasuk Paket All In)',
@@ -181,11 +210,12 @@ export const PackageManagement: React.FC = () => {
   };
 
   const openEditModal = (pkg: TourPackage) => {
+    const pkgDest = pkg.destinations[0] || 'jogja';
     setEditingPackage(pkg);
     setTitle(pkg.title);
     setCategory(pkg.category);
     setCategoryLabel(pkg.categoryLabel);
-    setDestinationRegion(pkg.destinations[0] || 'jogja');
+    setDestinationRegion(pkgDest);
     setDestinationLabel(pkg.destinationLabel);
     setPriceHemat(pkg.priceHematPerPax);
     setPriceAllIn(pkg.priceAllInPerPax);
@@ -214,12 +244,28 @@ export const PackageManagement: React.FC = () => {
             activities: ['07:00 - 08:30 - Sarapan Pagi di Hotel & Packing', '09:00 - 10:00 - Check-out Hotel & Pemuatan Bagasi', '10:30 - 12:00 - Wisata Belanja Pusat Oleh-Oleh Khas', '12:30 - 13:30 - Makan Siang Perpisahan', '14:00 - 15:30 - Kunjungan Ikon Kota & Foto Bersama', '16:00 - 17:30 - Pengantaran ke Bandara / Stasiun (Drop-off)']
           }
         ];
-    setEditDays(initialItinerary);
+    setEditDays(
+      applyOutboundAndDistanceToItinerary(
+        initialItinerary,
+        pkgDest,
+        hasGatheringKeyword(pkg.title, pkg.category),
+        [],
+        true
+      )
+    );
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPackage) return;
+
+    const syncedItinerary = applyOutboundAndDistanceToItinerary(
+      editDays,
+      destinationRegion,
+      hasGatheringKeyword(title, category),
+      [],
+      true
+    );
 
     const updated: TourPackage = {
       ...editingPackage,
@@ -245,7 +291,7 @@ export const PackageManagement: React.FC = () => {
         .split('\n')
         .map(s => s.trim())
         .filter(s => s.length > 0),
-      itinerary: editDays
+      itinerary: syncedItinerary
     };
 
     updatePackage(updated);
@@ -361,6 +407,7 @@ export const PackageManagement: React.FC = () => {
             {isSuperAdmin ? (
               <div className="pt-3 border-t border-neutral-100 flex items-center justify-end gap-2">
                 <button
+                  type="button"
                   onClick={() => openEditModal(pkg)}
                   className="py-1.5 px-3 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
                 >
@@ -368,6 +415,7 @@ export const PackageManagement: React.FC = () => {
                   <span>Edit Harga & Tujuan</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setDeletingPackage(pkg)}
                   className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
                   title="Hapus Paket Wisata"
@@ -409,6 +457,7 @@ export const PackageManagement: React.FC = () => {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setEditingPackage(null)}
                 className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-100"
               >
@@ -601,6 +650,9 @@ export const PackageManagement: React.FC = () => {
                     setDurationNights(Math.max(0, updatedDays.length - 1));
                   }}
                   cityLabel={destinationLabel}
+                  destinationRegion={destinationRegion}
+                  packageTitle={title}
+                  packageCategory={category}
                 />
               </div>
 
@@ -887,6 +939,9 @@ export const PackageManagement: React.FC = () => {
                     setAddDurationNights(Math.max(0, newDays.length - 1));
                   }}
                   cityLabel={addDestination === 'jogja' ? 'Yogyakarta' : addDestination === 'malang' ? 'Malang & Bromo' : 'Bali'}
+                  destinationRegion={addDestination}
+                  packageTitle={addTitle}
+                  packageCategory={addCategory}
                 />
               </div>
 

@@ -1,37 +1,50 @@
 import React, { useState } from 'react';
-import { 
-  ItineraryDay, 
-  ItineraryTimelineItem, 
-  ItineraryActivityType 
+import {
+  ItineraryDay,
+  ItineraryTimelineItem,
+  ItineraryActivityType,
+  DestinationRegion
 } from '../../types/travel';
-import { createDefaultDayTimeline } from '../../utils/itineraryGenerator';
-import { 
-  Plus, 
-  Trash2, 
-  Clock, 
-  Calendar, 
-  Sparkles, 
-  ChevronUp, 
-  ChevronDown, 
-  Car, 
-  Hotel, 
-  Utensils, 
-  Ticket, 
-  ShoppingBag, 
-  Moon, 
+import {
+  createDefaultDayTimeline,
+  recalculateTimelineWithDistances,
+  hasGatheringKeyword,
+  summarizeItineraryMetrics,
+  convertActivitiesToTimeline
+} from '../../utils/itineraryGenerator';
+import {
+  Plus,
+  Trash2,
+  Clock,
+  Sparkles,
+  ChevronUp,
+  ChevronDown,
+  Car,
+  Hotel,
+  Utensils,
+  Ticket,
+  ShoppingBag,
+  Moon,
   Compass,
-  AlertCircle
+  Target,
+  Route,
+  MapPin,
+  RefreshCw
 } from 'lucide-react';
 
 interface ItineraryTimelineEditorProps {
   days: ItineraryDay[];
   onChange: (days: ItineraryDay[]) => void;
   cityLabel?: string;
+  destinationRegion?: DestinationRegion;
+  packageTitle?: string;
+  packageCategory?: string;
 }
 
-const ACTIVITY_TYPE_CONFIG: Record<ItineraryActivityType, { label: string; icon: any; color: string }> = {
+const ACTIVITY_TYPE_CONFIG: Record<ItineraryActivityType, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
   pickup: { label: 'Penjemputan / Kedatangan', icon: Car, color: 'text-blue-600 bg-blue-50 border-blue-200' },
   transport: { label: 'Perjalanan / Mobilisasi', icon: Compass, color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
+  outbound: { label: 'Outbound + Fasilitator', icon: Target, color: 'text-teal-700 bg-teal-50 border-teal-200' },
   sightseeing: { label: 'Kunjungan Destinasi Wisata', icon: Ticket, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
   meal: { label: 'Makan (Pagi/Siang/Malam)', icon: Utensils, color: 'text-amber-600 bg-amber-50 border-amber-200' },
   hotel_checkin: { label: 'Check-in Hotel', icon: Hotel, color: 'text-purple-600 bg-purple-50 border-purple-200' },
@@ -44,10 +57,24 @@ const ACTIVITY_TYPE_CONFIG: Record<ItineraryActivityType, { label: string; icon:
 export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = ({
   days,
   onChange,
-  cityLabel = 'Yogyakarta'
+  cityLabel = 'Yogyakarta',
+  destinationRegion,
+  packageTitle,
+  packageCategory
 }) => {
   const [activeDayIndex, setActiveDayIndex] = useState<number>(0);
   const [templateOrigin, setTemplateOrigin] = useState<string>('');
+
+  const resolvedRegion: DestinationRegion =
+    destinationRegion ||
+    (cityLabel.toLowerCase().includes('bali')
+      ? 'bali'
+      : cityLabel.toLowerCase().includes('malang')
+      ? 'malang'
+      : 'jogja');
+
+  const isGatheringPkg = hasGatheringKeyword(packageTitle, packageCategory);
+  const metrics = summarizeItineraryMetrics(days);
 
   const activeDay = days[activeDayIndex] || days[0];
 
@@ -69,13 +96,15 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
     onChange(updated);
   };
 
-  const handleTimelineChange = (newTimeline: ItineraryTimelineItem[]) => {
+  const handleTimelineChange = (newTimeline: ItineraryTimelineItem[], retimeSchedule = true) => {
+    const recalculated = recalculateTimelineWithDistances(newTimeline, resolvedRegion, {
+      retimeSchedule
+    });
     const updated = [...days];
-    // Sync activities string list as well for backward compatibility
-    const activitiesStr = newTimeline.map(t => `${t.time} - ${t.title}`);
+    const activitiesStr = recalculated.map((t) => `${t.time} - ${t.title}`);
     updated[activeDayIndex] = {
       ...updated[activeDayIndex],
-      timeline: newTimeline,
+      timeline: recalculated,
       activities: activitiesStr
     };
     onChange(updated);
@@ -87,23 +116,30 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
       id: `tl-item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       time: '14:00 - 15:30',
       title: 'Kunjungan Destinasi Wisata Pilihan',
+      location: cityLabel,
       description: 'Aktivitas eksplorasi, foto bersama, dan menikmati wahana wisata.',
       type: 'sightseeing'
     };
-    handleTimelineChange([...currentTimeline, newItem]);
+    handleTimelineChange([...currentTimeline, newItem], true);
   };
 
-  const handleUpdateItem = (itemId: string, updates: Partial<ItineraryTimelineItem>) => {
+  const handleUpdateItem = (
+    itemId: string,
+    updates: Partial<ItineraryTimelineItem>,
+    shouldRetime: boolean
+  ) => {
     const currentTimeline = activeDay.timeline || [];
-    const updated = currentTimeline.map(item => item.id === itemId ? { ...item, ...updates } : item);
-    handleTimelineChange(updated);
+    const updated = currentTimeline.map((item) =>
+      item.id === itemId ? { ...item, ...updates } : item
+    );
+    handleTimelineChange(updated, shouldRetime);
   };
 
   const handleDeleteItem = (itemId: string) => {
     const currentTimeline = activeDay.timeline || [];
     if (currentTimeline.length <= 1) return;
-    const updated = currentTimeline.filter(item => item.id !== itemId);
-    handleTimelineChange(updated);
+    const updated = currentTimeline.filter((item) => item.id !== itemId);
+    handleTimelineChange(updated, true);
   };
 
   const handleMoveItem = (index: number, direction: 'up' | 'down') => {
@@ -112,25 +148,45 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
     if (targetIndex < 0 || targetIndex >= currentTimeline.length) return;
     const [moved] = currentTimeline.splice(index, 1);
     currentTimeline.splice(targetIndex, 0, moved);
-    handleTimelineChange(currentTimeline);
+    handleTimelineChange(currentTimeline, true);
   };
 
   const handleApplyDefaultTemplate = () => {
     const isLast = activeDayIndex === days.length - 1;
-    const defaultTimeline = createDefaultDayTimeline(activeDay.day, isLast, cityLabel, templateOrigin || undefined);
-    handleTimelineChange(defaultTimeline);
+    const defaultTimeline = createDefaultDayTimeline(
+      activeDay.day,
+      isLast,
+      cityLabel,
+      templateOrigin || undefined,
+      isGatheringPkg && activeDay.day === 2
+    );
+    handleTimelineChange(defaultTimeline, true);
+  };
+
+  const handleRecalculateAllDistancesAndTimes = () => {
+    const currentTimeline =
+      activeDay.timeline && activeDay.timeline.length > 0
+        ? activeDay.timeline
+        : convertActivitiesToTimeline(activeDay.activities || [], activeDay.day);
+    handleTimelineChange(currentTimeline, true);
   };
 
   const handleAddDay = () => {
     const nextDayNum = days.length + 1;
     const isLast = true;
-    const defaultTimeline = createDefaultDayTimeline(nextDayNum, isLast, cityLabel, templateOrigin || undefined);
+    const defaultTimeline = createDefaultDayTimeline(
+      nextDayNum,
+      isLast,
+      cityLabel,
+      templateOrigin || undefined,
+      isGatheringPkg && nextDayNum === 2
+    );
     const newDay: ItineraryDay = {
       day: nextDayNum,
       title: `Hari Ke-${nextDayNum}: Eksplorasi Lanjutan`,
       description: `Rangkaian kegiatan wisata terstruktur di ${cityLabel}.`,
       timeline: defaultTimeline,
-      activities: defaultTimeline.map(t => `${t.time} - ${t.title}`)
+      activities: defaultTimeline.map((t) => `${t.time} - ${t.title}`)
     };
     const updated = [...days, newDay];
     onChange(updated);
@@ -146,41 +202,35 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
     }
   };
 
-  const currentTimeline = activeDay.timeline && activeDay.timeline.length > 0
-    ? activeDay.timeline
-    : (activeDay.activities && activeDay.activities.length > 0)
-    ? activeDay.activities.map((act, i) => {
-        const timeMatch = act.match(/^(\d{2}:\d{2}\s*-\s*\d{2}:\d{2}|\d{2}:\d{2})/);
-        const time = timeMatch ? timeMatch[0] : (i === 0 ? '08:00 - 10:00' : i === 1 ? '10:30 - 12:30' : i === 2 ? '13:00 - 14:00' : '15:00 - 17:00');
-        const cleanTitle = timeMatch ? act.replace(timeMatch[0], '').replace(/^(\s*-\s*|\s*:\s*)/, '').trim() : act;
-        let type: ItineraryActivityType = 'sightseeing';
-        const low = act.toLowerCase();
-        if (low.includes('jemput') || low.includes('antar') || low.includes('stasiun') || low.includes('bandara')) type = 'pickup';
-        else if (low.includes('makan') || low.includes('sarapan') || low.includes('kuliner')) type = 'meal';
-        else if (low.includes('check-in') || low.includes('check in')) type = 'hotel_checkin';
-        else if (low.includes('check-out') || low.includes('check out')) type = 'hotel_checkout';
-        else if (low.includes('oleh-oleh') || low.includes('belanja')) type = 'shopping';
-
-        return {
-          id: `tl-converted-${i}-${Date.now()}`,
-          time,
-          title: cleanTitle,
-          description: 'Aktivitas terencana rombongan.',
-          type
-        };
-      })
-    : createDefaultDayTimeline(activeDay.day, activeDayIndex === days.length - 1, cityLabel);
+  const currentTimeline =
+    activeDay.timeline && activeDay.timeline.length > 0
+      ? activeDay.timeline
+      : activeDay.activities && activeDay.activities.length > 0
+      ? convertActivitiesToTimeline(activeDay.activities, activeDay.day)
+      : createDefaultDayTimeline(
+          activeDay.day,
+          activeDayIndex === days.length - 1,
+          cityLabel,
+          undefined,
+          isGatheringPkg && activeDay.day === 2
+        );
 
   return (
     <div className="space-y-4 bg-neutral-50/80 p-4 sm:p-5 rounded-2xl border border-neutral-200">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 pb-3">
         <div>
-          <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 uppercase tracking-wider flex-wrap">
             <Clock className="w-4 h-4 text-orange-500" />
             <span>Penyusunan Jadwal & Itinerary Timeline Wisatawan</span>
+            {metrics.totalDistanceKm > 0 && (
+              <span className="text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full normal-case flex items-center gap-1">
+                <Route className="w-3 h-3" />
+                Total Rute ±{metrics.totalDistanceKm} km ({metrics.totalTransitMinutes} mnt transit)
+              </span>
+            )}
           </div>
           <p className="text-[11px] text-neutral-500 mt-0.5">
-            Susun jadwal harian lengkap dengan pencantuman jam, tipe kegiatan, dan catatan rute agar tampil rapi di portal customer & pelacak pesanan.
+            Ubah destinasi atau lokasi untuk menghitung jarak tempuh & menyesuaikan jam secara otomatis dan real-time.
           </p>
         </div>
 
@@ -206,6 +256,21 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
         </div>
       </div>
 
+      {/* Gathering Day-2 Outbound Auto-Sync Banner */}
+      {isGatheringPkg && (
+        <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl flex items-start gap-2.5 text-xs text-teal-900">
+          <Target className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-extrabold block">
+              Paket Gathering Terdeteksi — Outbound + Fasilitator Hari Ke-2 Aktif Otomatis
+            </span>
+            <span className="text-[11px] text-teal-800">
+              Sistem menyisipkan sesi Outbound & Team Building pada Hari Ke-2 dan menyesuaikan seluruh estimasi jam serta jarak antar lokasi secara logis.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Day Selector Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
         {days.map((d, idx) => {
@@ -222,9 +287,11 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
               }`}
             >
               <span>Hari {d.day}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                isActive ? 'bg-orange-600 text-white' : 'bg-neutral-100 text-neutral-600'
-              }`}>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  isActive ? 'bg-orange-600 text-white' : 'bg-neutral-100 text-neutral-600'
+                }`}
+              >
                 {(d.timeline || d.activities || []).length} Agenda
               </span>
             </button>
@@ -294,7 +361,16 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
               title="Isi otomatis dengan urutan jam standar pariwisata"
             >
               <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-              <span>Terapkan Jam Template Logis</span>
+              <span>Template Jam Logis</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleRecalculateAllDistancesAndTimes}
+              className="text-[11px] text-blue-700 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+              title="Hitung ulang estimasi jarak antar destinasi dan sesuaikan jam otomatis"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+              <span>Hitung Ulang Jarak & Jam</span>
             </button>
             <button
               type="button"
@@ -312,11 +388,16 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
           {currentTimeline.map((item, idx) => {
             const typeConfig = ACTIVITY_TYPE_CONFIG[item.type || 'sightseeing'] || ACTIVITY_TYPE_CONFIG.sightseeing;
             const TypeIcon = typeConfig.icon;
+            const isOutbound = item.type === 'outbound';
 
             return (
-              <div 
+              <div
                 key={item.id || idx}
-                className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 hover:border-neutral-300 transition-all space-y-2.5"
+                className={`p-3 rounded-xl border transition-all space-y-2.5 ${
+                  isOutbound
+                    ? 'bg-teal-50/60 border-teal-300 hover:border-teal-400'
+                    : 'bg-neutral-50 border-neutral-200 hover:border-neutral-300'
+                }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -326,7 +407,7 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
                       <input
                         type="text"
                         value={item.time}
-                        onChange={(e) => handleUpdateItem(item.id, { time: e.target.value })}
+                        onChange={(e) => handleUpdateItem(item.id, { time: e.target.value }, false)}
                         placeholder="08:00 - 09:30"
                         className="w-28 text-xs font-bold font-mono focus:outline-none bg-transparent"
                       />
@@ -336,11 +417,14 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
                     <div className="flex items-center gap-1.5">
                       <select
                         value={item.type || 'sightseeing'}
-                        onChange={(e) => handleUpdateItem(item.id, { type: e.target.value as ItineraryActivityType })}
+                        onChange={(e) =>
+                          handleUpdateItem(item.id, { type: e.target.value as ItineraryActivityType }, true)
+                        }
                         className="text-xs py-1 px-2.5 rounded-lg border border-neutral-300 bg-white font-semibold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-orange-500"
                       >
                         <option value="pickup">🚗 Penjemputan / Kedatangan</option>
                         <option value="transport">🧭 Perjalanan / Mobilisasi</option>
+                        <option value="outbound">🎯 Outbound + Fasilitator</option>
                         <option value="sightseeing">🏛️ Kunjungan Objek Wisata</option>
                         <option value="meal">🍽️ Makan (Pagi/Siang/Malam)</option>
                         <option value="hotel_checkin">🏨 Check-in Hotel</option>
@@ -351,10 +435,19 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
                       </select>
                     </div>
 
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${typeConfig.color}`}>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${typeConfig.color}`}
+                    >
                       <TypeIcon className="w-3 h-3" />
                       <span>{typeConfig.label}</span>
                     </span>
+
+                    {typeof item.distanceKm === 'number' && item.distanceKm > 0 && (
+                      <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <Route className="w-3 h-3" />
+                        +{item.distanceKm} km · Est. {item.travelMinutes || 15} mnt transit
+                      </span>
+                    )}
                   </div>
 
                   {/* Actions: Move Up, Move Down, Delete */}
@@ -389,15 +482,26 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
                   </div>
                 </div>
 
-                {/* Title & Description Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Title, Location & Description Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
                     <input
                       type="text"
                       value={item.title}
-                      onChange={(e) => handleUpdateItem(item.id, { title: e.target.value })}
-                      placeholder="Judul Aktivitas / Nama Destinasi (Contoh: Kunjungan Candi Prambanan)"
+                      onChange={(e) => handleUpdateItem(item.id, { title: e.target.value }, true)}
+                      placeholder="Judul Aktivitas (Contoh: Kunjungan Candi Prambanan)"
                       className="w-full text-xs font-semibold py-1.5 px-2.5 border border-neutral-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <MapPin className="w-3.5 h-3.5 text-blue-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={item.location || ''}
+                      onChange={(e) => handleUpdateItem(item.id, { location: e.target.value }, true)}
+                      placeholder="Lokasi / Nama Destinasi (Hitung Jarak)"
+                      className="w-full text-xs font-semibold py-1.5 pl-8 pr-2.5 border border-neutral-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 text-neutral-800"
                     />
                   </div>
 
@@ -405,8 +509,8 @@ export const ItineraryTimelineEditor: React.FC<ItineraryTimelineEditorProps> = (
                     <input
                       type="text"
                       value={item.description || ''}
-                      onChange={(e) => handleUpdateItem(item.id, { description: e.target.value })}
-                      placeholder="Catatan / Detail Kegiatan (Contoh: Menikmati panorama candi & spot foto)"
+                      onChange={(e) => handleUpdateItem(item.id, { description: e.target.value }, false)}
+                      placeholder="Catatan / Detail Kegiatan"
                       className="w-full text-xs py-1.5 px-2.5 border border-neutral-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 text-neutral-600"
                     />
                   </div>

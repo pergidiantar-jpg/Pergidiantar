@@ -1,4 +1,4 @@
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DestinationRegion, BookingOrder, ItineraryDay } from '../../types/travel';
 import { 
@@ -32,7 +32,8 @@ import {
   ChevronDown,
   ChevronUp,
   ShoppingBag,
-  Coffee
+  Coffee,
+  Route
 } from 'lucide-react';
 import { handleImageFallback } from '../../utils/imageUtils';
 import {
@@ -45,7 +46,8 @@ import {
 import { 
   generateCustomTripItinerary, 
   getIntercityTravelInfo, 
-  IntercityTravelInfo 
+  IntercityTravelInfo,
+  summarizeItineraryMetrics
 } from '../../utils/itineraryGenerator';
 
 export type HotelLodgingTier = 'none' | 'bintang_3' | 'bintang_4' | 'bintang_5';
@@ -195,8 +197,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       setPickupCity('Denpasar / Bandara Ngurah Rai');
       setSelectedDestIds(cityDests.slice(0, Math.min(4, maxAllowed)).map(d => d.id));
     }
-    // reset calculation
-    setCalculationResult(null);
+    // Real-time effect will immediately recalculate
   };
 
   // Duration change handler enforcing strict destination quota limits
@@ -213,7 +214,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     setBreakfastCount(prev => Math.min(days, prev));
     setLunchCount(prev => Math.min(days, prev));
     setDinnerCount(prev => Math.min(days, prev));
-    setCalculationResult(null);
   };
 
   const toggleDestination = (destId: string) => {
@@ -225,7 +225,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
         return;
       }
       setSelectedDestIds(prev => prev.filter(id => id !== destId));
-      setCalculationResult(null);
     } else {
       const maxAllowed = (ctxGetMaxDestinationsForDuration || getMaxDestinationsForDuration)(durationDays);
       if (selectedDestIds.length >= maxAllowed) {
@@ -233,7 +232,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
         return;
       }
       setSelectedDestIds(prev => [...prev, destId]);
-      setCalculationResult(null);
     }
   };
 
@@ -245,36 +243,33 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     return 'Big Bus';
   };
 
-  // Run calculation based on average internet benchmark prices
-  const handleCalculatePrice = () => {
-    setValidationError(null);
+  // Core calculation function (used both for real-time updates and explicit button click)
+  const computeCalculation = useCallback((silentValidation = false) => {
+    if (!silentValidation) {
+      setValidationError(null);
+    }
 
-    // Validation
     if (isNaN(paxCount) || paxCount < 1) {
-      setValidationError('Jumlah peserta wajib diisi berupa angka minimal 1 orang.');
+      if (!silentValidation) setValidationError('Jumlah peserta wajib diisi berupa angka minimal 1 orang.');
       return;
     }
 
     if (durationDays < 2 || durationDays > 7) {
-      setValidationError('Durasi perjalanan minimal 2 hari 1 malam dan maksimal 7 hari 6 malam.');
+      if (!silentValidation) setValidationError('Durasi perjalanan minimal 2 hari 1 malam dan maksimal 7 hari 6 malam.');
       return;
     }
 
     if (selectedDestIds.length === 0) {
-      setValidationError('Jumlah destinasi wisata wajib dipilih minimal 1 destinasi.');
+      if (!silentValidation) setValidationError('Jumlah destinasi wisata wajib dipilih minimal 1 destinasi.');
       return;
     }
 
-    if (!pickupCity.trim()) {
+    const effectivePickup = pickupCity.trim() || (destination === 'jogja' ? 'Yogyakarta' : destination === 'malang' ? 'Malang' : 'Denpasar');
+    if (!pickupCity.trim() && !silentValidation) {
       setValidationError('Kota penjemputan wajib diisi.');
       return;
     }
 
-    // 1. Transport Costs (Benchmark Tarif Pariwisata Indonesia include BBM, Driver, Parkir)
-    // Innova Reborn: ~Rp 700.000 / hari
-    // HiAce Premio: ~Rp 1.350.000 / hari
-    // Medium Bus: ~Rp 2.100.000 / hari
-    // Big Bus: ~Rp 3.500.000 / hari
     let vehicleRatePerDay = 700000;
     let vehicleCapacity = 6;
     if (selectedTransport === 'Innova') {
@@ -291,42 +286,33 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       vehicleCapacity = 50;
     }
 
-    // Calculate how many vehicles are needed based on pax count
     const vehicleUnitCount = Math.max(1, Math.ceil(paxCount / vehicleCapacity));
     const transportCostTotal = vehicleRatePerDay * durationDays * vehicleUnitCount;
 
-    // 2. Destinations & Tickets Cost
     const selectedDestObjects = allDestinations.filter(d => selectedDestIds.includes(d.id));
     const avgTicketSum = selectedDestObjects.reduce((acc, d) => acc + d.avgTicketPrice, 0);
     const ticketCostTotal = avgTicketSum * paxCount;
 
-    // 3. Meals Cost (Rata-rata internet: Pagi Rp 30k, Siang Rp 45k, Malam Rp 50k)
     const breakfastTotal = breakfastCount * 30000 * paxCount;
     const lunchTotal = lunchCount * 45000 * paxCount;
     const dinnerTotal = dinnerCount * 50000 * paxCount;
     const mealCostTotal = breakfastTotal + lunchTotal + dinnerTotal;
 
-    // 4. Hotel & Penginapan Add-on (Tidak menampilkan nama hotel spesifik)
     const hotelNights = Math.max(1, durationDays - 1);
     const selectedHotelOption = HOTEL_TIER_OPTIONS.find(h => h.id === hotelTier) || HOTEL_TIER_OPTIONS[0];
     const hotelCostTotal = selectedHotelOption.ratePerRoomNight * hotelRoomCount * hotelNights;
 
-    // 5. Add-ons
-    // Dokumentasi: Rp 750.000 per trip (Foto, Video & Drone)
     const addOnDocTotal = hasDocumentation ? 750000 * Math.max(1, Math.ceil(durationDays / 2)) : 0;
-    // Outbound + Fasilitator: Rp 1.500.000
     const addOnOutboundTotal = hasOutbound ? 1500000 : 0;
 
-    // 6. Pickup Surcharge if picked up from outside primary city
     let pickupSurchargeTotal = 0;
-    const cleanPickup = pickupCity.toLowerCase();
-    const isBaseCity = 
+    const cleanPickup = effectivePickup.toLowerCase();
+    const isBaseCity =
       (destination === 'jogja' && (cleanPickup.includes('jogja') || cleanPickup.includes('yogyakarta') || cleanPickup.includes('yia') || cleanPickup.includes('tugu'))) ||
       (destination === 'malang' && (cleanPickup.includes('malang') || cleanPickup.includes('batu') || cleanPickup.includes('abdulrachman'))) ||
       (destination === 'bali' && (cleanPickup.includes('bali') || cleanPickup.includes('denpasar') || cleanPickup.includes('ngurah') || cleanPickup.includes('kuta') || cleanPickup.includes('ubud')));
 
     if (!isBaseCity) {
-      // Nearby outer cities (Solo, Semarang, Surabaya, Sidoarjo) vs Far cities (Jakarta, Bandung)
       if (cleanPickup.includes('solo') || cleanPickup.includes('surakarta') || cleanPickup.includes('semarang') || cleanPickup.includes('surabaya')) {
         pickupSurchargeTotal = 350000 * vehicleUnitCount;
       } else {
@@ -334,19 +320,15 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       }
     }
 
-    // Totals
     const baseSubtotal = transportCostTotal + ticketCostTotal + mealCostTotal + addOnDocTotal + addOnOutboundTotal + hotelCostTotal + pickupSurchargeTotal;
     const pricePerPaxNormal = Math.round(baseSubtotal / paxCount);
 
-    // 10% Discount for Package Pricing Option
     const discountAmount = Math.round(baseSubtotal * 0.10);
     const packagePriceTotalDiscounted = baseSubtotal - discountAmount;
     const packagePricePerPaxDiscounted = Math.round(packagePriceTotalDiscounted / paxCount);
 
-    // Calculate intercity routing information & transit estimation
-    const intercityInfo = getIntercityTravelInfo(pickupCity, destination);
+    const intercityInfo = getIntercityTravelInfo(effectivePickup, destination);
 
-    // Generate automatic logical Itinerary Timeline based on destinations, meals, hotel, and pickup
     const generatedTimeline = generateCustomTripItinerary({
       destination,
       destinationLabel: destination === 'jogja' ? 'Yogyakarta' : destination === 'malang' ? 'Malang & Bromo' : 'Bali',
@@ -354,11 +336,14 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       selectedDestinations: selectedDestObjects,
       hotelTier,
       hotelTitle: selectedHotelOption.title,
-      pickupCity,
+      pickupCity: effectivePickup,
       bonusItems: activeBonus?.items || [],
       breakfastCount,
       lunchCount,
-      dinnerCount
+      dinnerCount,
+      hasOutbound,
+      isGathering: hasOutbound,
+      allDestinations
     });
 
     setCalculationResult({
@@ -383,7 +368,35 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
       itineraryTimeline: generatedTimeline,
       intercityInfo
     });
-    setPreviewSelectedDay(1);
+  }, [
+    destination,
+    durationDays,
+    paxCount,
+    selectedTransport,
+    pickupCity,
+    selectedDestIds,
+    hotelTier,
+    hotelRoomCount,
+    hasDocumentation,
+    hasOutbound,
+    breakfastCount,
+    lunchCount,
+    dinnerCount,
+    allDestinations,
+    activeBonus
+  ]);
+
+  // Real-time auto-recalculation whenever any trip input, destination, or add-on changes
+  useEffect(() => {
+    computeCalculation(true);
+  }, [computeCalculation]);
+
+  const handleCalculatePrice = () => {
+    computeCalculation(false);
+    setTimeout(() => {
+      const el = document.getElementById('calculator-results');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
   // Proceed to booking and payment
@@ -637,7 +650,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                       setHotelRoomCount(Math.max(1, Math.ceil(next / 2)));
                       return next;
                     });
-                    setCalculationResult(null);
                   }}
                   className="w-10 h-10 rounded-lg bg-white hover:bg-neutral-200 text-neutral-800 flex items-center justify-center font-bold transition-colors shadow-2xs"
                 >
@@ -654,7 +666,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                     const next = isNaN(val) ? 1 : Math.max(1, val);
                     setPaxCount(next);
                     setHotelRoomCount(Math.max(1, Math.ceil(next / 2)));
-                    setCalculationResult(null);
                   }}
                   required
                   className="w-20 text-center text-lg font-black font-mono bg-transparent text-neutral-900 focus:outline-none"
@@ -667,7 +678,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                       setHotelRoomCount(Math.max(1, Math.ceil(next / 2)));
                       return next;
                     });
-                    setCalculationResult(null);
                   }}
                   className="w-10 h-10 rounded-lg bg-white hover:bg-neutral-200 text-neutral-800 flex items-center justify-center font-bold transition-colors shadow-2xs"
                 >
@@ -738,7 +748,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                   key={flt.id}
                   onClick={() => {
                     setSelectedTransport(flt.id);
-                    setCalculationResult(null);
                   }}
                   className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
                     isSelected
@@ -977,7 +986,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                       type="button"
                       onClick={() => {
                         setHotelRoomCount(prev => Math.max(1, prev - 1));
-                        setCalculationResult(null);
                       }}
                       className="w-6 h-6 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold flex items-center justify-center text-xs"
                       title="Kurangi kamar"
@@ -991,7 +999,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                       type="button"
                       onClick={() => {
                         setHotelRoomCount(prev => Math.min(paxCount, prev + 1));
-                        setCalculationResult(null);
                       }}
                       className="w-6 h-6 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold flex items-center justify-center text-xs"
                       title="Tambah kamar"
@@ -1015,7 +1022,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                     key={opt.id}
                     onClick={() => {
                       setHotelTier(opt.id);
-                      setCalculationResult(null);
                     }}
                     className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
                       isSelected
@@ -1087,7 +1093,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
             <div 
               onClick={() => {
                 setHasDocumentation(!hasDocumentation);
-                setCalculationResult(null);
               }}
               className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                 hasDocumentation ? 'bg-orange-50/80 border-orange-500 ring-1 ring-orange-500/20' : 'bg-neutral-50 border-neutral-200'
@@ -1116,27 +1121,26 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
             <div 
               onClick={() => {
                 setHasOutbound(!hasOutbound);
-                setCalculationResult(null);
               }}
               className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                hasOutbound ? 'bg-orange-50/80 border-orange-500 ring-1 ring-orange-500/20' : 'bg-neutral-50 border-neutral-200'
+                hasOutbound ? 'bg-teal-50/90 border-teal-500 ring-1 ring-teal-500/30' : 'bg-neutral-50 border-neutral-200'
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="font-bold text-xs text-neutral-900 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-blue-600" /> Outbound + Fasilitator
+                  <Sparkles className="w-4 h-4 text-teal-600" /> Outbound + Fasilitator
                 </span>
                 <input
                   type="checkbox"
                   checked={hasOutbound}
                   onChange={() => {}}
-                  className="rounded text-blue-600 focus:ring-blue-400 w-4 h-4"
+                  className="rounded text-teal-600 focus:ring-teal-400 w-4 h-4"
                 />
               </div>
               <p className="text-[11px] text-neutral-500">
-                Game Master, games equipment fun games, sound system portable & spanduk acara.
+                Game Master, fun games equipment, sound system portable & otomatis ditambahkan ke itinerary Hari Ke-2!
               </p>
-              <span className="text-xs font-mono font-bold text-blue-700 block mt-2">
+              <span className="text-xs font-mono font-bold text-teal-700 block mt-2">
                 +Rp 1.500.000 / paket
               </span>
             </div>
@@ -1153,7 +1157,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                 value={pickupCity}
                 onChange={(e) => {
                   setPickupCity(e.target.value);
-                  setCalculationResult(null);
                 }}
                 className="w-full text-xs py-2 px-3 border border-neutral-300 rounded-xl bg-white font-semibold text-neutral-900 focus:ring-2 focus:ring-orange-500"
               />
@@ -1164,7 +1167,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                     type="button"
                     onClick={() => {
                       setPickupCity(c);
-                      setCalculationResult(null);
                     }}
                     className={`text-[10px] py-0.5 px-2 rounded-md border ${
                       pickupCity === c ? 'bg-orange-500 text-white border-orange-500 font-bold' : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-100'
@@ -1196,7 +1198,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                     value={breakfastCount}
                     onChange={(e) => {
                       setBreakfastCount(Math.max(0, parseInt(e.target.value, 10) || 0));
-                      setCalculationResult(null);
                     }}
                     className="w-20 text-center font-mono font-bold text-xs py-1.5 px-2 border border-neutral-300 rounded-lg bg-white"
                   />
@@ -1217,7 +1218,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                     value={lunchCount}
                     onChange={(e) => {
                       setLunchCount(Math.max(0, parseInt(e.target.value, 10) || 0));
-                      setCalculationResult(null);
                     }}
                     className="w-20 text-center font-mono font-bold text-xs py-1.5 px-2 border border-neutral-300 rounded-lg bg-white"
                   />
@@ -1238,7 +1238,6 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                     value={dinnerCount}
                     onChange={(e) => {
                       setDinnerCount(Math.max(0, parseInt(e.target.value, 10) || 0));
-                      setCalculationResult(null);
                     }}
                     className="w-20 text-center font-mono font-bold text-xs py-1.5 px-2 border border-neutral-300 rounded-lg bg-white"
                   />
@@ -1261,9 +1260,9 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
           </button>
         </div>
 
-        {/* RESULTS SECTION: MUNCOL HARGA PER PAX & HARGA PER PAKET DENGAN DISKON 10% */}
+        {/* RESULTS SECTION: MUNCOL HARGA PER PAX & HARGA PER PAKET DENGAN DISKON 10% (AUTO REAL-TIME) */}
         {calculationResult && calculationResult.calculated && (
-          <div className="p-6 sm:p-8 rounded-3xl bg-neutral-900 text-white space-y-6 mt-6 border border-neutral-800 shadow-2xl animate-fade-in">
+          <div id="calculator-results" className="p-6 sm:p-8 rounded-3xl bg-neutral-900 text-white space-y-6 mt-6 border border-neutral-800 shadow-2xl animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-800">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-orange-400 block">
@@ -1363,7 +1362,9 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
             </div>
 
             {/* RUNDOWN & JADWAL PERJALANAN OTOMATIS (ITINERARY TIMELINE) */}
-            {calculationResult.itineraryTimeline && calculationResult.itineraryTimeline.length > 0 && (
+            {calculationResult.itineraryTimeline && calculationResult.itineraryTimeline.length > 0 && (() => {
+              const timelineMetrics = summarizeItineraryMetrics(calculationResult.itineraryTimeline);
+              return (
               <div className="bg-neutral-800/80 rounded-2xl border border-neutral-700 overflow-hidden shadow-lg">
                 <div 
                   onClick={() => setIsItineraryExpanded(!isItineraryExpanded)}
@@ -1376,14 +1377,24 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="text-sm font-extrabold text-white">
-                          Rundown Jadwal Otomatis (Itinerary Timeline)
+                          Rundown Jadwal Otomatis (Update Real-Time)
                         </h4>
                         <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded-full border border-orange-500/30">
                           {calculationResult.itineraryTimeline.length} Hari Terjadwal
                         </span>
+                        {timelineMetrics.totalDistanceKm > 0 && (
+                          <span className="text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30 flex items-center gap-1">
+                            <Route className="w-3 h-3" /> Total ±{timelineMetrics.totalDistanceKm} km ({timelineMetrics.totalTransitMinutes} mnt transit)
+                          </span>
+                        )}
+                        {timelineMetrics.hasDay2Outbound && (
+                          <span className="text-[10px] font-bold bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded-full border border-teal-500/30">
+                            Outbound Hari Ke-2 Aktif
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-neutral-400 mt-0.5">
-                        Sistem menyusun jam logis: penjemputan, destinasi, kuliner, dan check-in/out hotel.
+                        Estimasi jarak antar destinasi dan penyesuaian jam otomatis terupdate secara real-time saat Anda mengubah rute atau add-on.
                       </p>
                     </div>
                   </div>
@@ -1473,8 +1484,11 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                               const isHotel = item.type === 'hotel_checkin' || item.type === 'hotel_checkout';
                               const isTransport = item.type === 'pickup' || item.type === 'dropoff';
                               const isShop = item.type === 'shopping';
+                              const isOutbound = item.type === 'outbound';
 
-                              const badgeColor = isMeal 
+                              const badgeColor = isOutbound
+                                ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
+                                : isMeal 
                                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                                 : isHotel
                                 ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
@@ -1487,10 +1501,16 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                               return (
                                 <div 
                                   key={idx}
-                                  className="relative bg-neutral-900/80 border border-neutral-700/70 rounded-xl p-3 hover:border-neutral-600 transition-all text-xs"
+                                  className={`relative border rounded-xl p-3 hover:border-neutral-600 transition-all text-xs ${
+                                    isOutbound
+                                      ? 'bg-teal-950/50 border-teal-500/40'
+                                      : 'bg-neutral-900/80 border-neutral-700/70'
+                                  }`}
                                 >
                                   {/* Dot */}
-                                  <div className="absolute -left-5 top-3.5 w-2.5 h-2.5 rounded-full bg-orange-500 border-2 border-neutral-900 ring-2 ring-orange-500/30" />
+                                  <div className={`absolute -left-5 top-3.5 w-2.5 h-2.5 rounded-full border-2 border-neutral-900 ring-2 ${
+                                    isOutbound ? 'bg-teal-400 ring-teal-400/30' : 'bg-orange-500 ring-orange-500/30'
+                                  }`} />
 
                                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-1">
                                     <div className="flex items-center gap-2 flex-wrap">
@@ -1499,8 +1519,14 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                                         {item.time}
                                       </span>
                                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${badgeColor}`}>
-                                        {(item.type || 'sightseeing').replace('_', ' ')}
+                                        {isOutbound ? 'Outbound + Fasilitator' : (item.type || 'sightseeing').replace('_', ' ')}
                                       </span>
+                                      {typeof item.distanceKm === 'number' && item.distanceKm > 0 && (
+                                        <span className="text-[10px] font-mono font-bold text-blue-300 bg-blue-950/70 border border-blue-500/30 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                          <Route className="w-3 h-3" />
+                                          +{item.distanceKm} km · Est. {item.travelMinutes || 15} mnt
+                                        </span>
+                                      )}
                                     </div>
                                     {item.notes && (
                                       <span className="text-[10px] text-neutral-400 font-medium italic">
@@ -1527,7 +1553,8 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                   </div>
                 )}
               </div>
-            )}
+              );
+            })()}
 
             {/* DUA PILIHAN PENAWARAN: HARGA SATUAN (PER PAX) VS HARGA PAKET (DISKON 10%) */}
             <div className="pt-2">

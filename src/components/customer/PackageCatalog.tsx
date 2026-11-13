@@ -166,6 +166,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
               {destinations.map((d) => (
                 <button
                   key={d.key}
+                  type="button"
                   onClick={() => onSelectDestination(d.key)}
                   className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                     selectedDestination === d.key
@@ -184,6 +185,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
         {categories.map((c) => (
           <button
             key={c.key}
+            type="button"
             onClick={() => onSelectCategory(c.key)}
             className={`px-4 py-2 text-xs rounded-xl font-medium transition-all text-left whitespace-nowrap shrink-0 border ${
               selectedCategory === c.key
@@ -215,6 +217,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <button
+              type="button"
               onClick={() => setCatalogViewMode('custom_calculator')}
               className="w-full sm:w-auto px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center justify-center gap-2 shadow-sm"
             >
@@ -222,6 +225,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
               <span>Atur Rute & Cek Harga di Kalkulator Trip</span>
             </button>
             <button
+              type="button"
               onClick={() => {
                 onSelectCategory('all');
                 onSelectDestination('all');
@@ -298,6 +302,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
                   {/* Tier Switcher Control (All In vs Paket Hemat) */}
                   <div className="mt-4 p-1 bg-neutral-100 rounded-xl flex items-center border border-neutral-200">
                     <button
+                      type="button"
                       onClick={() => setTierForPackage(pkg.id, 'all_in')}
                       className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all text-center ${
                         isAllIn
@@ -308,6 +313,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
                       All In (VIP)
                     </button>
                     <button
+                      type="button"
                       onClick={() => setTierForPackage(pkg.id, 'paket_hemat')}
                       className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all text-center ${
                         !isAllIn
@@ -413,12 +419,14 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
                   {/* Action Buttons */}
                   <div className="mt-5 grid grid-cols-2 gap-2 pt-2 border-t border-neutral-100">
                     <button
+                      type="button"
                       onClick={() => onOpenDetail(pkg)}
                       className="py-2.5 px-3 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors text-center"
                     >
                       Detail & Rute
                     </button>
                     <button
+                      type="button"
                       onClick={() => onStartBooking(pkg, currentTier)}
                       className="py-2.5 px-3 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors flex items-center justify-center gap-1 shadow-xs"
                     >

@@ -1,24 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TourPackage, PackageTier } from '../../types/travel';
-import { 
-  X, 
-  Clock, 
-  Users, 
-  MapPin, 
-  Check, 
-  Car, 
-  Hotel, 
-  Utensils, 
-  Ticket, 
+import {
+  X,
+  Clock,
+  Users,
+  MapPin,
+  Check,
+  Car,
+  Hotel,
+  Utensils,
+  Ticket,
   ChevronRight,
   ShieldCheck,
   Calendar,
-  ShoppingBag,
   Sparkles,
-  Compass
+  Route
 } from 'lucide-react';
 import { normalizeImagePath, handleImageFallback } from '../../utils/imageUtils';
-import { createDefaultDayTimeline } from '../../utils/itineraryGenerator';
+import {
+  applyOutboundAndDistanceToItinerary,
+  createDefaultDayTimeline,
+  hasGatheringKeyword,
+  summarizeItineraryMetrics
+} from '../../utils/itineraryGenerator';
 
 interface PackageDetailModalProps {
   packageData: TourPackage | null;
@@ -37,6 +41,32 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
   const [selectedDayTab, setSelectedDayTab] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
 
+  useEffect(() => {
+    if (isOpen && packageData) {
+      setSelectedDayTab(1);
+      setViewMode('single');
+    }
+  }, [isOpen, packageData?.id]);
+
+  const isGatheringPkg = useMemo(() => {
+    if (!packageData) return false;
+    return hasGatheringKeyword(packageData.title, packageData.category);
+  }, [packageData]);
+
+  const enrichedItinerary = useMemo(() => {
+    if (!packageData) return [];
+    const region = packageData.destinations?.[0] || 'jogja';
+    return applyOutboundAndDistanceToItinerary(
+      packageData.itinerary || [],
+      region,
+      isGatheringPkg,
+      [],
+      true
+    );
+  }, [packageData, isGatheringPkg]);
+
+  const metrics = useMemo(() => summarizeItineraryMetrics(enrichedItinerary), [enrichedItinerary]);
+
   if (!isOpen || !packageData) return null;
 
   const isAllIn = selectedTier === 'all_in';
@@ -45,9 +75,9 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs transition-opacity" 
-        onClick={onClose} 
+      <div
+        className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs transition-opacity"
+        onClick={onClose}
       />
 
       <div className="relative bg-white rounded-3xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 border border-neutral-200 animate-in fade-in zoom-in-95 duration-150">
@@ -61,16 +91,18 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
             onError={(e) => handleImageFallback(e, packageData.destinations?.[0] || packageData.destinationLabel)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
-          
+
           <button
+            type="button"
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md transition-colors"
+            aria-label="Tutup"
           >
             <X className="w-5 h-5" />
           </button>
 
           <div className="absolute bottom-4 left-6 right-6 text-white">
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-md bg-orange-500 text-white text-[11px] font-bold uppercase tracking-wide">
                 {packageData.categoryLabel}
               </span>
@@ -78,11 +110,16 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                 <MapPin className="w-3 h-3 text-blue-400" />
                 {packageData.destinationLabel}
               </span>
+              {metrics.hasDay2Outbound && (
+                <span className="px-2.5 py-0.5 rounded-md bg-teal-500 text-white text-[11px] font-bold flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> Include Outbound Hari Ke-2
+                </span>
+              )}
             </div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
               {packageData.title}
             </h2>
-            <div className="flex items-center gap-4 text-xs text-neutral-300 mt-2">
+            <div className="flex items-center gap-4 text-xs text-neutral-300 mt-2 flex-wrap">
               <span className="flex items-center gap-1">
                 <Clock className="w-4 h-4 text-orange-400" />
                 Durasi: {packageData.durationDays} Hari {packageData.durationNights} Malam
@@ -92,6 +129,15 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                 <Users className="w-4 h-4 text-blue-400" />
                 Kapasitas: {packageData.minPax} - {packageData.maxPax} Orang
               </span>
+              {metrics.totalDistanceKm > 0 && (
+                <>
+                  <span>·</span>
+                  <span className="flex items-center gap-1 text-emerald-300 font-semibold">
+                    <Route className="w-4 h-4 text-emerald-400" />
+                    Est. Total Rute ±{metrics.totalDistanceKm} km
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -107,6 +153,7 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                 </span>
                 <div className="flex items-center gap-2 mt-2">
                   <button
+                    type="button"
                     onClick={() => setSelectedTier('all_in')}
                     className={`py-2 px-4 rounded-xl text-xs font-bold transition-all border ${
                       isAllIn
@@ -117,6 +164,7 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                     Paket All In
                   </button>
                   <button
+                    type="button"
                     onClick={() => setSelectedTier('paket_hemat')}
                     className={`py-2 px-4 rounded-xl text-xs font-bold transition-all border ${
                       !isAllIn
@@ -144,24 +192,28 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
             </div>
 
             {/* Prominent Tier Inclusion Description Box */}
-            <div className={`mt-4 p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
-              isAllIn 
-                ? 'bg-orange-50/90 border-orange-200 text-orange-950' 
-                : 'bg-blue-50/90 border-blue-200 text-blue-950'
-            }`}>
+            <div
+              className={`mt-4 p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                isAllIn
+                  ? 'bg-orange-50/90 border-orange-200 text-orange-950'
+                  : 'bg-blue-50/90 border-blue-200 text-blue-950'
+              }`}
+            >
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider block opacity-75">
                   {isAllIn ? 'KETERANGAN PAKET ALL IN' : 'KETERANGAN PAKET HEMAT'}
                 </span>
                 <p className="text-xs font-bold mt-0.5 leading-relaxed">
-                  {isAllIn 
-                    ? '(kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)' 
+                  {isAllIn
+                    ? '(kendaraan, driver, bbm, parkir, tiket wisata, hotel, makan 1x di hotel dan 2x/ hari di luar hotel)'
                     : '(kendaraan, driver, bbm, parkir)'}
                 </p>
               </div>
-              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase whitespace-nowrap self-start sm:self-auto ${
-                isAllIn ? 'bg-orange-200/80 text-orange-800' : 'bg-blue-200/80 text-blue-800'
-              }`}>
+              <span
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase whitespace-nowrap self-start sm:self-auto ${
+                  isAllIn ? 'bg-orange-200/80 text-orange-800' : 'bg-blue-200/80 text-blue-800'
+                }`}
+              >
                 {isAllIn ? 'All In VIP Terpadu' : 'Hemat Transportasi'}
               </span>
             </div>
@@ -180,30 +232,44 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                   <span>Transportasi (Kendaraan, Driver, BBM, Parkir)</span>
                 </div>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  {packageData.included.transport || 'Unit pariwisata ber-AC dingin, supir berpengalaman, bahan bakar (BBM) penuh dan retribusi parkir seluruh titik singgah.'}
+                  {packageData.included.transport ||
+                    'Unit pariwisata ber-AC dingin, supir berpengalaman, bahan bakar (BBM) penuh dan retribusi parkir seluruh titik singgah.'}
                 </p>
                 <div className="mt-2 pt-2 border-t border-neutral-100 flex flex-wrap items-center gap-1.5">
                   <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Pilihan Armada:</span>
-                  <span className="text-[10px] font-semibold bg-orange-50 text-orange-700 px-2 py-0.5 rounded border border-orange-200">Avanza (Standar)</span>
-                  <span className="text-[10px] font-semibold bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200">Innova Reborn (+Rp 150k)</span>
-                  <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">Hi-Ace Premio (+Rp 250k)</span>
+                  <span className="text-[10px] font-semibold bg-orange-50 text-orange-700 px-2 py-0.5 rounded border border-orange-200">
+                    Avanza (Standar)
+                  </span>
+                  <span className="text-[10px] font-semibold bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200">
+                    Innova Reborn (+Rp 150k)
+                  </span>
+                  <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">
+                    Hi-Ace Premio (+Rp 250k)
+                  </span>
                 </div>
               </div>
 
-              <div className={`p-4 rounded-xl border ${isAllIn ? 'border-neutral-200 bg-white' : 'border-neutral-200/70 bg-neutral-50/70 opacity-75'}`}>
+              <div
+                className={`p-4 rounded-xl border ${
+                  isAllIn ? 'border-neutral-200 bg-white' : 'border-neutral-200/70 bg-neutral-50/70 opacity-75'
+                }`}
+              >
                 <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 mb-1.5">
                   <Hotel className="w-4 h-4 text-blue-600" />
                   <span>Akomodasi Hotel</span>
                 </div>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  {isAllIn 
-                    ? 'Hotel Bintang 3-4 Mitra Pilihan (Twin/Triple Share), Kamar bersih, AC dingin, kolam renang, shower hangat, WiFi cepat.' 
-                    : 'Tidak Termasuk dalam Paket Hemat. Tamu dapat memilih dan memesan penginapan secara mandiri sesuai preferensi anggaran.'
-                  }
+                  {isAllIn
+                    ? 'Hotel Bintang 3-4 Mitra Pilihan (Twin/Triple Share), Kamar bersih, AC dingin, kolam renang, shower hangat, WiFi cepat.'
+                    : 'Tidak Termasuk dalam Paket Hemat. Tamu dapat memilih dan memesan penginapan secara mandiri sesuai preferensi anggaran.'}
                 </p>
               </div>
 
-              <div className={`p-4 rounded-xl border ${isAllIn ? 'border-neutral-200 bg-white' : 'border-neutral-200/70 bg-neutral-50/70 opacity-75'}`}>
+              <div
+                className={`p-4 rounded-xl border ${
+                  isAllIn ? 'border-neutral-200 bg-white' : 'border-neutral-200/70 bg-neutral-50/70 opacity-75'
+                }`}
+              >
                 <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 mb-1.5">
                   <Utensils className="w-4 h-4 text-amber-600" />
                   <span>Konsumsi & Makan</span>
@@ -211,12 +277,15 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                 <p className="text-xs text-neutral-600 leading-relaxed">
                   {isAllIn
                     ? 'Makan 1x di hotel dan 2x/ hari di luar hotel (restoran lokal khas) + snack box kedatangan & air mineral botol harian.'
-                    : 'Tidak Termasuk dalam Paket Hemat. Tamu bebas berwisata kuliner secara mandiri selama perjalanan berlangsung.'
-                  }
+                    : 'Tidak Termasuk dalam Paket Hemat. Tamu bebas berwisata kuliner secara mandiri selama perjalanan berlangsung.'}
                 </p>
               </div>
 
-              <div className={`p-4 rounded-xl border ${isAllIn ? 'border-neutral-200 bg-white' : 'border-neutral-200/70 bg-neutral-50/70 opacity-75'}`}>
+              <div
+                className={`p-4 rounded-xl border ${
+                  isAllIn ? 'border-neutral-200 bg-white' : 'border-neutral-200/70 bg-neutral-50/70 opacity-75'
+                }`}
+              >
                 <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 mb-1.5">
                   <Ticket className="w-4 h-4 text-purple-600" />
                   <span>Tiket Wisata</span>
@@ -243,20 +312,25 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-orange-50 via-amber-50/60 to-white border border-orange-200/80">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="text-[10px] font-black uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
                     <Sparkles className="w-3 h-3" /> DETAIL & RUTE ITINERARY
                   </span>
                   <span className="text-xs font-bold text-orange-950">
                     {packageData.destinationLabel} &bull; {packageData.durationDays} Hari {packageData.durationNights} Malam
                   </span>
+                  {metrics.totalDistanceKm > 0 && (
+                    <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <Route className="w-3 h-3" /> Total Rute ±{metrics.totalDistanceKm} km ({metrics.totalTransitMinutes} mnt transit)
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-sm font-extrabold text-neutral-900 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-emerald-600" />
                   Susunan Jadwal & Rundown Wisata Terstruktur
                 </h3>
                 <p className="text-xs text-neutral-600 mt-0.5">
-                  Jadwal perjalanan wisata terpadu dengan pencantuman jam logis, rute objek wisata, hotel, dan waktu kuliner.
+                  Jadwal perjalanan wisata terpadu dengan pencantuman jam logis, estimasi jarak tempuh antar destinasi, hotel, dan waktu kuliner.
                 </p>
               </div>
 
@@ -282,18 +356,28 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                       : 'text-neutral-600 hover:text-neutral-900'
                   }`}
                 >
-                  Semua Hari ({packageData.durationDays})
+                  Semua Hari ({enrichedItinerary.length})
                 </button>
               </div>
             </div>
 
+            {isGatheringPkg && (
+              <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-xs text-teal-900 flex items-center gap-2.5">
+                <Sparkles className="w-4 h-4 text-teal-600 shrink-0" />
+                <span>
+                  <strong>Paket Gathering Terdeteksi:</strong> Hari Ke-2 otomatis mencakup agenda <strong>Outbound & Team Building + Fasilitator</strong> dengan perhitungan jam logis serta jarak tempuh rute.
+                </span>
+              </div>
+            )}
+
             {/* Interactive Day Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-              {packageData.itinerary.map((it) => {
+              {enrichedItinerary.map((it) => {
                 const isSelected = selectedDayTab === it.day;
-                const effectiveTimeline = (it.timeline && it.timeline.length > 0)
-                  ? it.timeline
-                  : createDefaultDayTimeline(it.day, it.day === packageData.durationDays, packageData.destinationLabel);
+                const effectiveTimeline =
+                  it.timeline && it.timeline.length > 0
+                    ? it.timeline
+                    : createDefaultDayTimeline(it.day, it.day === packageData.durationDays, packageData.destinationLabel);
 
                 return (
                   <button
@@ -309,18 +393,22 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                         : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100 hover:border-neutral-400'
                     }`}
                   >
-                    <span className={`w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center ${
-                      isSelected && viewMode === 'single'
-                        ? 'bg-white text-orange-600'
-                        : 'bg-neutral-200 text-neutral-700'
-                    }`}>
+                    <span
+                      className={`w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center ${
+                        isSelected && viewMode === 'single'
+                          ? 'bg-white text-orange-600'
+                          : 'bg-neutral-200 text-neutral-700'
+                      }`}
+                    >
                       {it.day}
                     </span>
                     <div className="text-left leading-tight">
                       <span className="block text-xs">Hari Ke-{it.day}</span>
-                      <span className={`text-[10px] font-normal ${
-                        isSelected && viewMode === 'single' ? 'text-orange-100' : 'text-neutral-500'
-                      }`}>
+                      <span
+                        className={`text-[10px] font-normal ${
+                          isSelected && viewMode === 'single' ? 'text-orange-100' : 'text-neutral-500'
+                        }`}
+                      >
                         {effectiveTimeline.length} Agenda Terjadwal
                       </span>
                     </div>
@@ -331,95 +419,121 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
 
             {/* Render Days */}
             <div className="space-y-5">
-              {(viewMode === 'all' 
-                ? packageData.itinerary 
-                : [packageData.itinerary.find(d => d.day === selectedDayTab) || packageData.itinerary[0]]
-              ).filter(Boolean).map((it) => {
-                const effectiveTimeline = (it.timeline && it.timeline.length > 0)
-                  ? it.timeline
-                  : createDefaultDayTimeline(it.day, it.day === packageData.durationDays, packageData.destinationLabel);
+              {(viewMode === 'all'
+                ? enrichedItinerary
+                : [enrichedItinerary.find((d) => d.day === selectedDayTab) || enrichedItinerary[0]]
+              )
+                .filter(Boolean)
+                .map((it) => {
+                  const effectiveTimeline =
+                    it.timeline && it.timeline.length > 0
+                      ? it.timeline
+                      : createDefaultDayTimeline(it.day, it.day === packageData.durationDays, packageData.destinationLabel);
+                  const dayDistKm = effectiveTimeline.reduce((sum, s) => sum + (s.distanceKm || 0), 0);
 
-                return (
-                  <div key={it.day} className="p-4 sm:p-5 rounded-2xl border border-neutral-200 bg-neutral-50/60 space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-orange-100/60 border border-orange-200/80">
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-lg bg-orange-600 text-white font-black text-sm flex items-center justify-center shrink-0">
-                          D{it.day}
-                        </span>
-                        <div>
-                          <h4 className="text-sm font-extrabold text-neutral-900">
-                            {it.title}
-                          </h4>
-                          <p className="text-xs text-neutral-600 mt-0.5">
-                            {it.description || `Rundown pariwisata terstruktur di ${packageData.destinationLabel}.`}
-                          </p>
+                  return (
+                    <div key={it.day} className="p-4 sm:p-5 rounded-2xl border border-neutral-200 bg-neutral-50/60 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-orange-100/60 border border-orange-200/80">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-8 h-8 rounded-lg bg-orange-600 text-white font-black text-sm flex items-center justify-center shrink-0">
+                            D{it.day}
+                          </span>
+                          <div>
+                            <h4 className="text-sm font-extrabold text-neutral-900">{it.title}</h4>
+                            <p className="text-xs text-neutral-600 mt-0.5">
+                              {it.description || `Rundown pariwisata terstruktur di ${packageData.destinationLabel}.`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0 flex-wrap">
+                          {dayDistKm > 0 && (
+                            <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                              ±{dayDistKm} km
+                            </span>
+                          )}
+                          <span className="text-[11px] font-bold text-orange-800 bg-white border border-orange-200 px-2.5 py-1 rounded-lg">
+                            {effectiveTimeline.length} Titik Agenda
+                          </span>
                         </div>
                       </div>
-                      <span className="text-[11px] font-bold text-orange-800 bg-white border border-orange-200 px-2.5 py-1 rounded-lg self-start sm:self-auto shrink-0">
-                        {effectiveTimeline.length} Titik Agenda
-                      </span>
-                    </div>
 
-                    {/* Timeline Nodes */}
-                    <div className="relative pl-6 sm:pl-8 space-y-3 before:content-[''] before:absolute before:left-3 sm:before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-300">
-                      {effectiveTimeline.map((item, idx) => {
-                        const isMeal = item.type === 'meal';
-                        const isHotel = item.type === 'hotel_checkin' || item.type === 'hotel_checkout';
-                        const isTransport = item.type === 'pickup' || item.type === 'dropoff';
-                        const isShop = item.type === 'shopping';
+                      {/* Timeline Nodes */}
+                      <div className="relative pl-6 sm:pl-8 space-y-3 before:content-[''] before:absolute before:left-3 sm:before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-300">
+                        {effectiveTimeline.map((item, idx) => {
+                          const isMeal = item.type === 'meal';
+                          const isHotel = item.type === 'hotel_checkin' || item.type === 'hotel_checkout';
+                          const isTransport = item.type === 'pickup' || item.type === 'dropoff';
+                          const isShop = item.type === 'shopping';
+                          const isOutbound = item.type === 'outbound';
 
-                        const badgeColor = isMeal 
-                          ? 'bg-amber-100 text-amber-800 border-amber-200' 
-                          : isHotel 
-                          ? 'bg-purple-100 text-purple-800 border-purple-200' 
-                          : isTransport 
-                          ? 'bg-blue-100 text-blue-800 border-blue-200' 
-                          : isShop 
-                          ? 'bg-pink-100 text-pink-800 border-pink-200' 
-                          : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                          const badgeColor = isOutbound
+                            ? 'bg-teal-100 text-teal-800 border-teal-300'
+                            : isMeal
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : isHotel
+                            ? 'bg-purple-100 text-purple-800 border-purple-200'
+                            : isTransport
+                            ? 'bg-blue-100 text-blue-800 border-blue-200'
+                            : isShop
+                            ? 'bg-pink-100 text-pink-800 border-pink-200'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-200';
 
-                        return (
-                          <div 
-                            key={idx} 
-                            className="relative bg-white rounded-xl p-3.5 border border-neutral-200 text-xs shadow-2xs hover:border-neutral-300 transition-colors"
-                          >
-                            {/* Timeline Node Dot */}
-                            <div className="absolute -left-6 sm:-left-8 top-3.5 w-6 h-6 rounded-full border-2 border-orange-500 bg-white text-orange-600 flex items-center justify-center font-black text-[10px] shadow-2xs">
-                              {idx + 1}
-                            </div>
-
-                            <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono font-extrabold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md text-[11px] flex items-center gap-1">
-                                  <Clock className="w-3 h-3 text-orange-600" />
-                                  {item.time}
-                                </span>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${badgeColor}`}>
-                                  {(item.type || 'sightseeing').replace('_', ' ')}
-                                </span>
+                          return (
+                            <div
+                              key={idx}
+                              className={`relative rounded-xl p-3.5 border text-xs shadow-2xs transition-colors ${
+                                isOutbound
+                                  ? 'bg-teal-50/60 border-teal-300 hover:border-teal-400'
+                                  : 'bg-white border-neutral-200 hover:border-neutral-300'
+                              }`}
+                            >
+                              {/* Timeline Node Dot */}
+                              <div
+                                className={`absolute -left-6 sm:-left-8 top-3.5 w-6 h-6 rounded-full border-2 bg-white flex items-center justify-center font-black text-[10px] shadow-2xs ${
+                                  isOutbound ? 'border-teal-500 text-teal-600' : 'border-orange-500 text-orange-600'
+                                }`}
+                              >
+                                {idx + 1}
                               </div>
-                              {item.notes && (
-                                <span className="text-[10px] text-neutral-500 italic bg-neutral-50 px-2 py-0.5 rounded border border-neutral-200/60">
-                                  {item.notes}
-                                </span>
+
+                              <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-mono font-extrabold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md text-[11px] flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-orange-600" />
+                                    {item.time}
+                                  </span>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${badgeColor}`}>
+                                    {isOutbound ? 'Outbound + Fasilitator' : (item.type || 'sightseeing').replace('_', ' ')}
+                                  </span>
+                                  {typeof item.distanceKm === 'number' && item.distanceKm > 0 && (
+                                    <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                      <Route className="w-3 h-3" />
+                                      +{item.distanceKm} km · Est. {item.travelMinutes || 15} mnt transit
+                                    </span>
+                                  )}
+                                </div>
+                                {item.notes && (
+                                  <span className="text-[10px] text-neutral-500 italic bg-neutral-50 px-2 py-0.5 rounded border border-neutral-200/60">
+                                    {item.notes}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="font-extrabold text-neutral-900 text-xs sm:text-sm">
+                                {item.title}
+                              </div>
+                              {item.description && (
+                                <p className="text-[11px] text-neutral-600 mt-1 leading-relaxed">
+                                  {item.description}
+                                </p>
                               )}
                             </div>
-
-                            <div className="font-extrabold text-neutral-900 text-xs sm:text-sm">
-                              {item.title}
-                            </div>
-                            {item.description && (
-                              <p className="text-[11px] text-neutral-600 mt-1 leading-relaxed">
-                                {item.description}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
         </div>
@@ -427,7 +541,9 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
         {/* Modal Footer */}
         <div className="p-4 sm:p-6 border-t border-neutral-200 bg-neutral-50 flex items-center justify-between gap-4 shrink-0">
           <div>
-            <span className="text-[11px] text-neutral-500 block">Total Estimasi ({selectedTier === 'all_in' ? 'All In VIP' : 'Paket Hemat'})</span>
+            <span className="text-[11px] text-neutral-500 block">
+              Total Estimasi ({selectedTier === 'all_in' ? 'All In VIP' : 'Paket Hemat'})
+            </span>
             <span className="text-lg font-black text-neutral-900 font-mono" data-tabular>
               Rp {price.toLocaleString('id-ID')}
               <span className="text-xs font-normal text-neutral-500"> / pax</span>
@@ -436,12 +552,14 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
 
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={onClose}
               className="py-2.5 px-4 text-xs font-semibold text-neutral-700 hover:bg-neutral-200 rounded-xl transition-colors"
             >
               Tutup
             </button>
             <button
+              type="button"
               onClick={() => onSelectBooking(packageData, selectedTier)}
               className="py-2.5 px-6 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors flex items-center gap-2 shadow-sm"
             >

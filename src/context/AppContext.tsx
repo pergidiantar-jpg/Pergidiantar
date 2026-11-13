@@ -30,7 +30,10 @@ import {
   EmailDispatchRecord, 
   getStoredEmails, 
   dispatchOrderNotificationEmail,
-  dispatchCustomerAutoReplyEmail
+  dispatchCustomerAutoReplyEmail,
+  dispatchCustomerRegistrationEmail,
+  dispatchCustomerPaymentReceiptEmail,
+  retryEmailDispatch
 } from '../services/emailService';
 import { 
   RegisteredCustomer, 
@@ -104,6 +107,7 @@ interface AppContextType {
   unreadNotifCount: number;
   chats: ChatMessage[];
   emailOutbox: EmailDispatchRecord[];
+  retryEmail: (emailId: string) => Promise<EmailDispatchRecord | null>;
   adminEmail: string;
   pushPermission: NotificationPermission;
   activeTab: string;
@@ -474,7 +478,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentRoleState('customer');
       setActiveTab('catalog');
       closeAuthModal();
-      triggerPush('Pendaftaran Berhasil', `Akun Anda telah terdaftar di database PERGIDIANTAR. Selamat datang, ${user.displayName}!`, 'system');
+      dispatchCustomerRegistrationEmail(user).then((regEmailRec) => {
+        setEmailOutbox((prev) => [regEmailRec, ...prev]);
+      }).catch(() => {});
+      triggerPush('Pendaftaran Berhasil', `Akun Anda telah terdaftar di database PERGIDIANTAR. Email konfirmasi dikirim dari ${ADMIN_PRIMARY_EMAIL} ke ${user.email}.`, 'system');
       return true;
     } catch (err: any) {
       throw err;
@@ -1217,11 +1224,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (isNowPaid) {
             dispatchOrderNotificationEmail(updated, 'payment_verified').then((emailRec) => {
               setEmailOutbox((prevEmails) => [emailRec, ...prevEmails]);
-            });
+            }).catch(() => {});
+
+            dispatchCustomerPaymentReceiptEmail(updated).then((custReceiptRec) => {
+              setEmailOutbox((prevEmails) => [custReceiptRec, ...prevEmails]);
+            }).catch(() => {});
 
             triggerPush(
               'Pembayaran Berhasil Diverifikasi',
-              `Pembayaran untuk ${ord.orderNumber} (Rp ${ord.grandTotal.toLocaleString('id-ID')}) lunas. Notifikasi terkirim ke ${ADMIN_PRIMARY_EMAIL}.`,
+              `Pembayaran untuk ${ord.orderNumber} (Rp ${ord.grandTotal.toLocaleString('id-ID')}) lunas. Bukti pembayaran terkirim ke ${updated.customer.email} dan ${ADMIN_PRIMARY_EMAIL}.`,
               'payment',
               ord.id
             );
@@ -1231,6 +1242,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return ord;
       })
     );
+  };
+
+  const retryEmail = async (emailId: string): Promise<EmailDispatchRecord | null> => {
+    const target = emailOutbox.find((e) => e.id === emailId);
+    if (!target) return null;
+    const updated = await retryEmailDispatch(target);
+    setEmailOutbox((prev) => prev.map((item) => (item.id === emailId ? updated : item)));
+    return updated;
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
@@ -1892,6 +1911,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         unreadNotifCount,
         chats,
         emailOutbox,
+        retryEmail,
         adminEmail: ADMIN_PRIMARY_EMAIL,
         pushPermission,
         activeTab,

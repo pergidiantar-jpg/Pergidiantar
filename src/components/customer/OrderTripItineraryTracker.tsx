@@ -1,29 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BookingOrder, TourPackage } from '../../types/travel';
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Car, 
-  Hotel, 
-  Utensils, 
-  Ticket, 
-  CheckCircle2, 
-  Circle, 
-  ChevronRight, 
-  ExternalLink, 
-  Sparkles, 
-  AlertCircle,
+import {
+  Clock,
+  MapPin,
+  Car,
+  Hotel,
+  Utensils,
+  Ticket,
+  CheckCircle2,
+  Sparkles,
   Sun,
   Sunset,
   Moon,
   Compass,
-  Phone,
   Info,
   Check,
-  ShoppingBag
+  ShoppingBag,
+  Route
 } from 'lucide-react';
-import { getIntercityTravelInfo } from '../../utils/itineraryGenerator';
+import {
+  getIntercityTravelInfo,
+  applyOutboundAndDistanceToItinerary,
+  hasGatheringKeyword,
+  summarizeItineraryMetrics
+} from '../../utils/itineraryGenerator';
 
 interface OrderTripItineraryTrackerProps {
   order: BookingOrder;
@@ -31,22 +31,37 @@ interface OrderTripItineraryTrackerProps {
 }
 
 export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps> = ({ order, pkg }) => {
-  // If order has an attached custom itinerary timeline, prioritize it!
-  const itinerary = (order.itineraryTimeline && order.itineraryTimeline.length > 0)
-    ? order.itineraryTimeline
-    : (pkg?.itinerary && pkg.itinerary.length > 0 
-        ? pkg.itinerary 
+  const isGatheringOrOutbound = useMemo(() => {
+    const byKeyword = hasGatheringKeyword(order.packageTitle, order.category, order.notes);
+    const byAddOn = (order.addOnsList || []).some((a) => {
+      const low = a.toLowerCase();
+      return low.includes('outbound') || low.includes('outbond');
+    });
+    return byKeyword || byAddOn;
+  }, [order.packageTitle, order.category, order.notes, order.addOnsList]);
+
+  // Build and enrich itinerary with real-time distances & Day 2 outbound when applicable
+  const itinerary = useMemo(() => {
+    const rawItinerary =
+      order.itineraryTimeline && order.itineraryTimeline.length > 0
+        ? order.itineraryTimeline
+        : pkg?.itinerary && pkg.itinerary.length > 0
+        ? pkg.itinerary
         : [
             {
               day: 1,
               title: `Hari Ke-1: Penjemputan & Eksplorasi ${order.destinationLabel}`,
               description: `Penyambutan tamu di titik jemput ${order.customer.pickupAddress} dengan armada nyaman.`,
               activities: [
-                `Penjemputan di ${order.customer.pickupAddress} oleh supir ramah berlisensi`,
-                `Perjalanan menuju destinasi wisata utama ${order.destinationLabel}`,
-                order.tier === 'all_in' ? 'Makan siang kuliner khas lokal pilihan mitra' : 'Istirahat makan siang (mandiri/rekomendasi supir)',
-                'Kunjungan destinasi ikonik & spot foto instagramable',
-                order.tier === 'all_in' ? `Check-in hotel mitra: ${order.hotelAllotment || 'Hotel Bintang Pilihan'}` : 'Pengantaran ke penginapan tamu'
+                `08:00 - 09:00 - Penjemputan di ${order.customer.pickupAddress} oleh supir ramah berlisensi`,
+                `09:30 - 11:30 - Perjalanan & kunjungan destinasi wisata utama ${order.destinationLabel}`,
+                order.tier === 'all_in'
+                  ? '12:00 - 13:00 - Makan siang kuliner khas lokal pilihan mitra'
+                  : '12:00 - 13:00 - Istirahat makan siang (mandiri/rekomendasi supir)',
+                '13:30 - 15:30 - Kunjungan destinasi ikonik & spot foto instagramable',
+                order.tier === 'all_in'
+                  ? `16:00 - 17:00 - Check-in hotel mitra: ${order.hotelAllotment || 'Hotel Bintang Pilihan'}`
+                  : '16:00 - 17:00 - Pengantaran ke penginapan tamu'
               ]
             },
             {
@@ -54,11 +69,11 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
               title: `Hari Ke-2: Wisata Alam & Kuliner ${order.destinationLabel}`,
               description: 'Aktivitas eksplorasi wisata penuh sepanjang hari dengan pemandangan menakjubkan.',
               activities: [
-                order.tier === 'all_in' ? 'Sarapan pagi buffet lezat di hotel' : 'Persiapan perjalanan pagi',
-                'Eksplorasi destinasi alam & budaya unggulan',
-                order.tier === 'all_in' ? 'Makan siang & santap kuliner khas tradisional' : 'Makan siang kuliner lokal',
-                'Hunting sunset & panorama senja terbaik',
-                order.tier === 'all_in' ? 'Makan malam bersama keluarga / rombongan' : 'Makan malam santai mandiri'
+                order.tier === 'all_in' ? '07:00 - 08:30 - Sarapan pagi buffet lezat di hotel' : '07:30 - 08:30 - Persiapan perjalanan pagi',
+                '09:00 - 11:30 - Eksplorasi destinasi alam & budaya unggulan',
+                order.tier === 'all_in' ? '12:00 - 13:00 - Makan siang & santap kuliner khas tradisional' : '12:00 - 13:00 - Makan siang kuliner lokal',
+                '13:30 - 15:30 - Hunting sunset & panorama senja terbaik',
+                order.tier === 'all_in' ? '18:30 - 20:00 - Makan malam bersama keluarga / rombongan' : '18:30 - 20:00 - Makan malam santai mandiri'
               ]
             },
             {
@@ -66,13 +81,41 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
               title: `Hari Ke-3: Belanja Oleh-Oleh & Kepulangan`,
               description: 'Berburu cenderamata khas daerah dan pengantaran kepulangan tepat waktu.',
               activities: [
-                'Proses check-out hotel & pemuatan bagasi ke armada',
-                'Kunjungan pusat oleh-oleh khas & kerajinan lokal',
-                'Makan siang perpisahan',
-                'Pengantaran kembali ke Bandara / Stasiun / Titik Drop-off'
+                '08:30 - 09:30 - Proses check-out hotel & pemuatan bagasi ke armada',
+                '10:00 - 11:30 - Kunjungan pusat oleh-oleh khas & kerajinan lokal',
+                '12:30 - 13:30 - Makan siang perpisahan',
+                '15:00 - 16:30 - Pengantaran kembali ke Bandara / Stasiun / Titik Drop-off'
               ]
             }
-          ]);
+          ];
+
+    // Check if existing timeline already contains calculated distances and Day 2 outbound (if needed)
+    const alreadyHasDistances = rawItinerary.some((d) =>
+      (d.timeline || []).some((t) => typeof t.distanceKm === 'number' && t.distanceKm > 0)
+    );
+    const alreadyHasDay2Outbound = rawItinerary.some(
+      (d) =>
+        d.day === 2 &&
+        (d.timeline || []).some(
+          (t) =>
+            t.type === 'outbound' ||
+            t.title.toLowerCase().includes('outbound') ||
+            t.title.toLowerCase().includes('outbond')
+        )
+    );
+
+    const shouldRetime = !alreadyHasDistances || (isGatheringOrOutbound && !alreadyHasDay2Outbound);
+
+    return applyOutboundAndDistanceToItinerary(
+      rawItinerary,
+      order.destination || 'jogja',
+      isGatheringOrOutbound,
+      [],
+      shouldRetime
+    );
+  }, [order, pkg, isGatheringOrOutbound]);
+
+  const metrics = useMemo(() => summarizeItineraryMetrics(itinerary), [itinerary]);
 
   const totalDays = itinerary.length;
   const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -81,6 +124,8 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
 
   const getTimelineTypeMeta = (type: string) => {
     switch (type) {
+      case 'outbound':
+        return { label: 'Outbound + Fasilitator', icon: Sparkles, color: 'bg-teal-100 text-teal-800 border-teal-200' };
       case 'pickup':
         return { label: 'Penjemputan', icon: Car, color: 'bg-blue-100 text-blue-800 border-blue-200' };
       case 'dropoff':
@@ -107,10 +152,10 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
       if (!order.tourStartDate) return `Hari ke-${dayNumber}`;
       const startDate = new Date(order.tourStartDate);
       if (isNaN(startDate.getTime())) return `Hari ke-${dayNumber}`;
-      
+
       const targetDate = new Date(startDate);
       targetDate.setDate(startDate.getDate() + (dayNumber - 1));
-      
+
       return targetDate.toLocaleDateString('id-ID', {
         weekday: 'short',
         day: 'numeric',
@@ -129,7 +174,7 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
     }));
   };
 
-  // Determine activity time phase and visual icon based on index
+  // Fallback phase helpers for legacy activity text
   const getActivityPhase = (index: number, total: number) => {
     if (index === 0) {
       return { label: 'Pagi (08:00 - 11:30)', icon: Sun, color: 'text-amber-500 bg-amber-50 border-amber-200' };
@@ -143,9 +188,11 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
     return { label: 'Malam (18:30 - 21:00)', icon: Moon, color: 'text-purple-500 bg-purple-50 border-purple-200' };
   };
 
-  // Detect type of activity from text
   const getActivityType = (text: string) => {
     const lower = text.toLowerCase();
+    if (lower.includes('outbound') || lower.includes('outbond')) {
+      return { type: 'outbound', label: 'Outbound + Fasilitator', icon: Sparkles, color: 'bg-teal-100 text-teal-800' };
+    }
     if (lower.includes('jemput') || lower.includes('armada') || lower.includes('stasiun') || lower.includes('bandara') || lower.includes('antar')) {
       return { type: 'transport', label: 'Transportasi', icon: Car, color: 'bg-blue-100 text-blue-800' };
     }
@@ -171,11 +218,23 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
               <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-orange-500 text-white flex items-center gap-1">
                 <Sparkles className="w-3 h-3" /> ITINERARY TIMELINE WISATAWAN
               </span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                isAllIn ? 'bg-emerald-500 text-white' : 'bg-blue-500 text-white'
-              }`}>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                  isAllIn ? 'bg-emerald-500 text-white' : 'bg-blue-500 text-white'
+                }`}
+              >
                 {isAllIn ? 'Paket All In' : 'Paket Hemat'}
               </span>
+              {metrics.hasDay2Outbound && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-500 text-white">
+                  Outbound Hari Ke-2 Aktif
+                </span>
+              )}
+              {metrics.totalDistanceKm > 0 && (
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-neutral-800 border border-neutral-600 text-emerald-300 flex items-center gap-1">
+                  <Route className="w-3 h-3" /> Total Rute ±{metrics.totalDistanceKm} km
+                </span>
+              )}
               <span className="text-xs text-neutral-300 font-mono">
                 {order.tourStartDate} s/d {order.tourEndDate}
               </span>
@@ -184,7 +243,8 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
               Susunan Rute Perjalanan: {order.packageTitle}
             </h2>
             <p className="text-xs text-neutral-300 mt-1 max-w-2xl">
-              Panduan interaktif rute dan jadwal harian tour Anda di <strong>{order.destinationLabel}</strong>. Tandai setiap spot yang sudah Anda kunjungi!
+              Panduan interaktif rute, estimasi jarak tempuh antar destinasi, dan jadwal harian tour Anda di{' '}
+              <strong>{order.destinationLabel}</strong>. Tandai setiap spot yang sudah Anda kunjungi!
             </p>
           </div>
 
@@ -242,9 +302,7 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
             <div className="truncate">
               <span className="text-[10px] text-neutral-400 block font-medium">Akomodasi:</span>
               <span className="font-bold text-white text-xs truncate">
-                {isAllIn 
-                  ? (order.hotelAllotment || 'Hotel Bintang Terverifikasi')
-                  : 'Penginapan Mandiri (Hemat)'}
+                {isAllIn ? order.hotelAllotment || 'Hotel Bintang Terverifikasi' : 'Penginapan Mandiri (Hemat)'}
               </span>
             </div>
           </div>
@@ -302,18 +360,22 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
                     : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100 hover:border-neutral-400'
                 }`}
               >
-                <span className={`w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center ${
-                  isCurrent && viewMode === 'single'
-                    ? 'bg-white text-orange-600'
-                    : 'bg-neutral-200 text-neutral-700'
-                }`}>
+                <span
+                  className={`w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center ${
+                    isCurrent && viewMode === 'single'
+                      ? 'bg-white text-orange-600'
+                      : 'bg-neutral-200 text-neutral-700'
+                  }`}
+                >
                   {it.day}
                 </span>
                 <div className="text-left leading-tight">
                   <span className="block text-xs">Hari Ke-{it.day}</span>
-                  <span className={`text-[10px] font-normal ${
-                    isCurrent && viewMode === 'single' ? 'text-orange-100' : 'text-neutral-500'
-                  }`}>
+                  <span
+                    className={`text-[10px] font-normal ${
+                      isCurrent && viewMode === 'single' ? 'text-orange-100' : 'text-neutral-500'
+                    }`}
+                  >
                     {dateLabel}
                   </span>
                 </div>
@@ -325,9 +387,9 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
 
       {/* Main Timeline Render Section */}
       <div className="p-5 sm:p-6 space-y-6">
-        {/* Render Day Block(s) */}
-        {(viewMode === 'all' ? itinerary : [currentDayData]).map((dayIt) => {
+        {(viewMode === 'all' ? itinerary : [currentDayData]).filter(Boolean).map((dayIt) => {
           const dateLabel = getDayDateLabel(dayIt.day);
+          const dayDistKm = (dayIt.timeline || []).reduce((sum, s) => sum + (s.distanceKm || 0), 0);
 
           return (
             <div key={dayIt.day} className="space-y-4">
@@ -338,16 +400,17 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
                     D{dayIt.day}
                   </span>
                   <div>
-                    <h3 className="text-sm font-extrabold text-neutral-900">
-                      {dayIt.title}
-                    </h3>
-                    <p className="text-xs text-neutral-600 mt-0.5">
-                      {dayIt.description}
-                    </p>
+                    <h3 className="text-sm font-extrabold text-neutral-900">{dayIt.title}</h3>
+                    <p className="text-xs text-neutral-600 mt-0.5">{dayIt.description}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-center">
+                <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+                  {dayDistKm > 0 && (
+                    <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                      ±{dayDistKm} km tempuh
+                    </span>
+                  )}
                   <span className="text-[11px] font-bold text-orange-700 bg-white border border-orange-200 px-2.5 py-1 rounded-lg">
                     {dateLabel}
                   </span>
@@ -367,8 +430,10 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
                       <div
                         key={idx}
                         className={`relative group rounded-xl p-3.5 border transition-all ${
-                          isChecked 
-                            ? 'bg-emerald-50/50 border-emerald-300' 
+                          isChecked
+                            ? 'bg-emerald-50/50 border-emerald-300'
+                            : item.type === 'outbound'
+                            ? 'bg-teal-50/50 border-teal-300 hover:border-teal-400 shadow-2xs'
                             : 'bg-white border-neutral-200 hover:border-neutral-300 shadow-2xs'
                         }`}
                       >
@@ -392,17 +457,22 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
 
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
                           <div className="flex items-center gap-2 flex-wrap">
-                            {/* Time Badge */}
                             <span className="text-xs font-mono font-black text-orange-700 bg-orange-100 border border-orange-200 px-2 py-0.5 rounded-md flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5 text-orange-600" />
                               {item.time}
                             </span>
 
-                            {/* Activity Category Badge */}
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${meta.color}`}>
                               <MetaIcon className="w-3 h-3" />
                               {meta.label}
                             </span>
+
+                            {typeof item.distanceKm === 'number' && item.distanceKm > 0 && (
+                              <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <Route className="w-3 h-3" />
+                                +{item.distanceKm} km · Est. {item.travelMinutes || 15} mnt transit
+                              </span>
+                            )}
 
                             {isChecked && (
                               <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -411,7 +481,6 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
                             )}
                           </div>
 
-                          {/* Interactive toggle button */}
                           <button
                             type="button"
                             onClick={() => toggleStopCompleted(stopKey)}
@@ -423,35 +492,45 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
                           </button>
                         </div>
 
-                        {/* Activity Title */}
-                        <h4 className={`text-xs sm:text-sm font-bold leading-relaxed ${
-                          isChecked ? 'line-through text-neutral-500' : 'text-neutral-900'
-                        }`}>
+                        <h4
+                          className={`text-xs sm:text-sm font-bold leading-relaxed ${
+                            isChecked ? 'line-through text-neutral-500' : 'text-neutral-900'
+                          }`}
+                        >
                           {item.title}
                         </h4>
 
-                        {/* Activity Description */}
                         {item.description && (
-                          <p className={`text-xs mt-1 leading-relaxed ${
-                            isChecked ? 'line-through text-neutral-400' : 'text-neutral-600'
-                          }`}>
+                          <p
+                            className={`text-xs mt-1 leading-relaxed ${
+                              isChecked ? 'line-through text-neutral-400' : 'text-neutral-600'
+                            }`}
+                          >
                             {item.description}
                           </p>
                         )}
 
-                        {/* Notes / Inclusion note */}
                         <div className="mt-2 pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-500">
                           <span className="flex items-center gap-1">
                             <Info className="w-3.5 h-3.5 text-neutral-400" />
-                            {item.notes || (
-                              item.type === 'pickup' ? 'Armada pariwisata ber-AC & driver standby.' :
-                              item.type === 'meal' ? (isAllIn ? 'Makan terjadwal & reservasi tempat.' : 'Makan mandiri.') :
-                              item.type === 'hotel_checkin' ? `Check-in hotel: ${order.hotelAllotment || 'Hotel Terdaftar'}.` :
-                              item.type === 'hotel_checkout' ? 'Check-out hotel & pemuatan bagasi.' :
-                              item.type === 'shopping' ? 'Pusat oleh-oleh khas & kerajinan tangan.' :
-                              item.type === 'dropoff' ? 'Pengantaran ke titik drop-off / bandara / stasiun.' :
-                              'Kunjungan destinasi pariwisata.'
-                            )}
+                            {item.notes ||
+                              (item.type === 'outbound'
+                                ? 'Kegiatan outbound team building dipandu Game Master & fasilitator.'
+                                : item.type === 'pickup'
+                                ? 'Armada pariwisata ber-AC & driver standby.'
+                                : item.type === 'meal'
+                                ? isAllIn
+                                  ? 'Makan terjadwal & reservasi tempat.'
+                                  : 'Makan mandiri.'
+                                : item.type === 'hotel_checkin'
+                                ? `Check-in hotel: ${order.hotelAllotment || 'Hotel Terdaftar'}.`
+                                : item.type === 'hotel_checkout'
+                                ? 'Check-out hotel & pemuatan bagasi.'
+                                : item.type === 'shopping'
+                                ? 'Pusat oleh-oleh khas & kerajinan tangan.'
+                                : item.type === 'dropoff'
+                                ? 'Pengantaran ke titik drop-off / bandara / stasiun.'
+                                : 'Kunjungan destinasi pariwisata.')}
                           </span>
 
                           <span className="font-mono text-[10px] text-neutral-400 font-bold">
@@ -474,12 +553,11 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
                       <div
                         key={idx}
                         className={`relative group rounded-xl p-3.5 border transition-all ${
-                          isChecked 
-                            ? 'bg-emerald-50/50 border-emerald-300' 
+                          isChecked
+                            ? 'bg-emerald-50/50 border-emerald-300'
                             : 'bg-white border-neutral-200 hover:border-neutral-300 shadow-2xs'
                         }`}
                       >
-                        {/* Timeline Node Dot */}
                         <button
                           type="button"
                           onClick={() => toggleStopCompleted(stopKey)}
@@ -499,18 +577,14 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
 
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
                           <div className="flex items-center gap-2 flex-wrap">
-                            {/* Phase Badge */}
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${phase.color}`}>
                               <PhaseIcon className="w-3 h-3" />
                               {phase.label}
                             </span>
-
-                            {/* Activity Type Badge */}
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${type.color}`}>
                               <TypeIcon className="w-3 h-3" />
                               {type.label}
                             </span>
-
                             {isChecked && (
                               <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Selesai Dikunjungi
@@ -518,7 +592,6 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
                             )}
                           </div>
 
-                          {/* Interactive toggle button */}
                           <button
                             type="button"
                             onClick={() => toggleStopCompleted(stopKey)}
@@ -530,39 +603,13 @@ export const OrderTripItineraryTracker: React.FC<OrderTripItineraryTrackerProps>
                           </button>
                         </div>
 
-                        {/* Activity Description */}
-                        <p className={`text-xs sm:text-sm font-semibold leading-relaxed ${
-                          isChecked ? 'line-through text-neutral-500' : 'text-neutral-800'
-                        }`}>
+                        <p
+                          className={`text-xs sm:text-sm font-semibold leading-relaxed ${
+                            isChecked ? 'line-through text-neutral-500' : 'text-neutral-800'
+                          }`}
+                        >
                           {act}
                         </p>
-
-                        {/* Inclusion note depending on tier */}
-                        <div className="mt-2 pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-500">
-                          <span className="flex items-center gap-1">
-                            <Info className="w-3.5 h-3.5 text-neutral-400" />
-                            {type.type === 'transport' && 'Armada pariwisata ber-AC & driver standby.'}
-                            {type.type === 'meal' && (
-                              isAllIn 
-                                ? 'Konsumsi include (Makan 1x di hotel & 2x/ hari di luar hotel).' 
-                                : 'Konsumsi mandiri sesuai selera kuliner Anda.'
-                            )}
-                            {type.type === 'hotel' && (
-                              isAllIn 
-                                ? `Akomodasi hotel mitra: ${order.hotelAllotment || 'Hotel Terverifikasi'}.` 
-                                : 'Penginapan mandiri sesuai preferensi Anda.'
-                            )}
-                            {type.type === 'sightseeing' && (
-                              isAllIn 
-                                ? 'Tiket masuk tercover penuh (All In).' 
-                                : 'Tiket masuk bayar mandiri di loket (Paket Hemat).'
-                            )}
-                          </span>
-
-                          <span className="font-mono text-[10px] text-neutral-400 font-bold">
-                            Stop #{idx + 1}
-                          </span>
-                        </div>
                       </div>
                     );
                   })

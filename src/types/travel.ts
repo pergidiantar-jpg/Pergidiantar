@@ -13,6 +13,7 @@ export type ItineraryActivityType =
   | 'pickup'           // Penjemputan (Bandara / Stasiun / Titik Kumpul)
   | 'transport'        // Perjalanan / Mobilisasi
   | 'sightseeing'      // Kunjungan Destinasi Wisata
+  | 'outbound'         // Outbound / Team Building + Fasilitator
   | 'meal'             // Makan Pagi / Siang / Malam / Kuliner
   | 'hotel_checkin'    // Check-in Hotel
   | 'hotel_checkout'   // Check-out Hotel
@@ -28,6 +29,9 @@ export interface ItineraryTimelineItem {
   location?: string;      // Nama Lokasi / Titik
   type?: ItineraryActivityType; // Kategori Kegiatan
   notes?: string;         // Catatan Tambahan / Inklusi
+  distanceKm?: number;    // Estimasi jarak tempuh dari titik sebelumnya (km)
+  travelMinutes?: number; // Estimasi waktu tempuh dari titik sebelumnya (menit)
+  routeFrom?: string;     // Nama lokasi sebelumnya untuk kalkulasi rute real-time
 }
 
 export interface ItineraryDay {
