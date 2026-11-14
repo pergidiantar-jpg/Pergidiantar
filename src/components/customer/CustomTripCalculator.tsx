@@ -121,7 +121,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
   const activeBonus = (ctxBonusDestinations && ctxBonusDestinations[destination]) || BONUS_DESTINATIONS[destination];
   const [durationDays, setDurationDays] = useState<number>(3); // 2 to 7 days
   const [paxCount, setPaxCount] = useState<number>(6); // must be number >= 1
-  const [selectedTransport, setSelectedTransport] = useState<'Innova' | 'HiAce' | 'Medium Bus' | 'Big Bus'>('Innova');
+  const [selectedTransport, setSelectedTransport] = useState<'Avanza' | 'Innova' | 'HiAce' | 'Medium Bus' | 'Big Bus'>('Innova');
   const [pickupCity, setPickupCity] = useState<string>('Yogyakarta');
   const [transportMode, setTransportMode] = useState<'dijemput' | 'pesawat' | 'kereta'>('dijemput');
   
@@ -272,16 +272,19 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     }
 
     let vehicleRatePerDay = 700000;
-    let vehicleCapacity = 6;
-    if (selectedTransport === 'Innova') {
+    let vehicleCapacity = 7;
+    if (selectedTransport === 'Avanza') {
+      vehicleRatePerDay = 500000;
+      vehicleCapacity = 5;
+    } else if (selectedTransport === 'Innova') {
       vehicleRatePerDay = 700000;
-      vehicleCapacity = 6;
+      vehicleCapacity = 7;
     } else if (selectedTransport === 'HiAce') {
       vehicleRatePerDay = 1350000;
       vehicleCapacity = 14;
     } else if (selectedTransport === 'Medium Bus') {
       vehicleRatePerDay = 2100000;
-      vehicleCapacity = 33;
+      vehicleCapacity = 30;
     } else if (selectedTransport === 'Big Bus') {
       vehicleRatePerDay = 3500000;
       vehicleCapacity = 50;
@@ -306,16 +309,28 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     const addOnDocTotal = hasDocumentation ? 750000 * Math.max(1, Math.ceil(durationDays / 2)) : 0;
     const addOnOutboundTotal = hasOutbound ? 1500000 : 0;
 
-    let pickupSurchargeTotal = 0;
     const intercityInfo = getIntercityTravelInfo(effectivePickup, destination);
-    if (transportMode === 'dijemput' && intercityInfo && intercityInfo.isIntercity) {
-      const km = intercityInfo.distanceKm || 0;
-      if (km > 500) pickupSurchargeTotal = 1250000 * vehicleUnitCount; // Long distance inter-island / cross-province (e.g. Jogja -> Bali ~680km, Toll + BBM + Ferry)
-      else if (km > 200) pickupSurchargeTotal = 750000 * vehicleUnitCount; // Medium-long distance (e.g. Jogja -> Malang ~300km)
-      else if (km > 50) pickupSurchargeTotal = 350000 * vehicleUnitCount;  // Intercity regional
-      else pickupSurchargeTotal = 150000 * vehicleUnitCount;               // Local
+    let pickupSurchargeTotal = 0;
+    if (transportMode !== 'dijemput') {
+      pickupSurchargeTotal = 0; // Automatically 0 when customer chooses plane or train
     } else {
-      pickupSurchargeTotal = 0;
+      if (intercityInfo && intercityInfo.isIntercity) {
+        const km = intercityInfo.distanceKm || 0;
+        let baseSurcharge = 150000;
+        if (km > 500) baseSurcharge = 1250000; // Cross-province / inter-island long distance (Toll + BBM + Ferry)
+        else if (km > 200) baseSurcharge = 750000;  // Medium-long distance
+        else if (km > 50) baseSurcharge = 350000;   // Regional intercity
+
+        let vehicleMultiplier = 1.0;
+        if (selectedTransport === 'Innova') vehicleMultiplier = 1.3;
+        else if (selectedTransport === 'HiAce') vehicleMultiplier = 1.6;
+        else if (selectedTransport === 'Medium Bus') vehicleMultiplier = 2.4;
+        else if (selectedTransport === 'Big Bus') vehicleMultiplier = 3.5;
+
+        pickupSurchargeTotal = Math.round(baseSurcharge * vehicleMultiplier * vehicleUnitCount);
+      } else {
+        pickupSurchargeTotal = 0;
+      }
     }
 
     const baseSubtotal = transportCostTotal + ticketCostTotal + mealCostTotal + addOnDocTotal + addOnOutboundTotal + hotelCostTotal + pickupSurchargeTotal;
@@ -732,33 +747,40 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
             {[
+              {
+                id: 'Avanza' as const,
+                name: 'Toyota Avanza / Veloz',
+                seats: '1 - 5 Kursi',
+                desc: 'Lincah, AC double blower, ideal untuk solo/duo/keluarga kecil',
+                dailyRate: 'Rp 500.000 / hari'
+              },
               {
                 id: 'Innova' as const,
                 name: 'Kijang Innova Reborn',
-                seats: '1 - 6 Kursi',
+                seats: '4 - 7 Kursi',
                 desc: 'Suspensi empuk, kabin senyap, ideal untuk keluarga kecil',
                 dailyRate: 'Rp 700.000 / hari'
               },
               {
                 id: 'HiAce' as const,
                 name: 'Toyota HiAce Premio Luxury',
-                seats: '7 - 14 Kursi',
+                seats: '8 - 14 Kursi',
                 desc: 'Reclining leather seats, AC dingin merata, charger USB',
                 dailyRate: 'Rp 1.350.000 / hari'
               },
               {
                 id: 'Medium Bus' as const,
                 name: 'Medium Bus Jetbus 5',
-                seats: '15 - 33 Kursi',
+                seats: '15 - 30 Kursi',
                 desc: 'Konfigurasi 2-2 lega, audio karaoke, Smart TV & bagasi',
                 dailyRate: 'Rp 2.100.000 / hari'
               },
               {
                 id: 'Big Bus' as const,
                 name: 'Big Bus SHD Pariwisata',
-                seats: '34 - 50 Kursi',
+                seats: '31 - 50 Kursi',
                 desc: 'Air suspension empuk, toilet higienis, dispenser air panas',
                 dailyRate: 'Rp 3.500.000 / hari'
               }

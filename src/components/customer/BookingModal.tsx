@@ -67,6 +67,26 @@ const CUSTOMER_FLEET_CHOICES = [
     ratePerPax: 250000,
     badge: 'Kapasitas Lega (+Rp 250.000/pax)',
     description: 'High-roof luas dapat berdiri, kursi reclining kulit, port USB tiap baris, mic karaoke audio.'
+  },
+  {
+    id: 'bus_medium' as const,
+    name: 'Medium Bus Pariwisata',
+    model: 'Medium Bus Jetbus 3+ / 5',
+    capacityText: '15 - 30 Kursi',
+    maxPax: 30,
+    ratePerPax: 450000,
+    badge: 'Rombongan Sedang (+Rp 450.000/pax)',
+    description: 'Konfigurasi 2-2 luas, bagasi besar, AC ducting dingin, Smart TV & mic karaoke.'
+  },
+  {
+    id: 'bus_big' as const,
+    name: 'Big Bus SHD Pariwisata',
+    model: 'Big Bus Super High Deck',
+    capacityText: '31 - 50 Kursi',
+    maxPax: 50,
+    ratePerPax: 750000,
+    badge: 'Big Group Pariwisata (+Rp 750.000/pax)',
+    description: 'Air suspension sangat empuk, toilet dalam bus, smoking area (opsional), leg rest & audio premium.'
   }
 ];
 
@@ -125,11 +145,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [transportMode, setTransportMode] = useState<'dijemput' | 'pesawat' | 'kereta'>('dijemput');
   const [specialRequests, setSpecialRequests] = useState('');
 
-  const [selectedFleetId, setSelectedFleetId] = useState<'avanza' | 'innova' | 'hiace'>(() => {
+  const [selectedFleetId, setSelectedFleetId] = useState<'avanza' | 'innova' | 'hiace' | 'bus_medium' | 'bus_big'>(() => {
     const initialPax = packageData?.minPax || 4;
     if (initialPax <= 5) return 'avanza';
     if (initialPax <= 7) return 'innova';
-    return 'hiace';
+    if (initialPax <= 14) return 'hiace';
+    if (initialPax <= 30) return 'bus_medium';
+    return 'bus_big';
   });
 
   const selectedFleet = CUSTOMER_FLEET_CHOICES.find((f) => f.id === selectedFleetId) || CUSTOMER_FLEET_CHOICES[0];
@@ -162,7 +184,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setTier(initialTier);
     const nextPax = Math.max(1, packageData.minPax || 4);
     setPaxCount(nextPax);
-    setSelectedFleetId(nextPax <= 5 ? 'avanza' : nextPax <= 7 ? 'innova' : 'hiace');
+    setSelectedFleetId(
+      nextPax <= 5 ? 'avanza' : nextPax <= 7 ? 'innova' : nextPax <= 14 ? 'hiace' : nextPax <= 30 ? 'bus_medium' : 'bus_big'
+    );
     setSelectedAddOns([]);
     setValidationError(null);
     setPromoMessage(null);
@@ -214,14 +238,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   // Real-time dynamic distance surcharge calculation when 'dijemput' is selected
   const pickupSurchargeTotal = useMemo(() => {
-    if (transportMode !== 'dijemput' || !intercityInfo || !intercityInfo.isIntercity) return 0;
+    if (transportMode !== 'dijemput') return 0; // Automatically 0 if pesawat or kereta
+    if (!intercityInfo || !intercityInfo.isIntercity) return 0;
+
     const km = intercityInfo.distanceKm || 0;
     const vehicleUnitCount = Math.max(1, Math.ceil(paxCount / selectedFleet.maxPax));
-    if (km > 500) return 1250000 * vehicleUnitCount; // Long distance inter-island / cross-province (e.g. Jogja -> Bali ~680km, Toll + BBM + Ferry)
-    if (km > 200) return 750000 * vehicleUnitCount;  // Medium-long distance (e.g. Jogja -> Malang ~300km)
-    if (km > 50) return 350000 * vehicleUnitCount;   // Intercity regional
-    return 150000 * vehicleUnitCount;                // Local
-  }, [transportMode, intercityInfo, paxCount, selectedFleet.maxPax]);
+
+    let baseSurcharge = 150000;
+    if (km > 500) baseSurcharge = 1250000; // Long distance inter-island / cross-province (e.g. Jogja -> Bali ~680km, Toll + BBM + Ferry)
+    else if (km > 200) baseSurcharge = 750000;  // Medium-long distance (e.g. Jogja -> Malang ~300km)
+    else if (km > 50) baseSurcharge = 350000;   // Regional intercity
+
+    let vehicleMultiplier = 1.0;
+    if (selectedFleetId === 'innova') vehicleMultiplier = 1.3;
+    else if (selectedFleetId === 'hiace') vehicleMultiplier = 1.6;
+    else if (selectedFleetId === 'bus_medium') vehicleMultiplier = 2.4;
+    else if (selectedFleetId === 'bus_big') vehicleMultiplier = 3.5;
+
+    return Math.round(baseSurcharge * vehicleMultiplier * vehicleUnitCount);
+  }, [transportMode, intercityInfo, paxCount, selectedFleet.maxPax, selectedFleetId]);
 
   // Safe early return AFTER all hooks
   if (!isOpen || !packageData) return null;
@@ -586,7 +621,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
                   {CUSTOMER_FLEET_CHOICES.map((fleet) => {
                     const isSelected = selectedFleetId === fleet.id;
                     const isOverPax = paxCount > fleet.maxPax;
