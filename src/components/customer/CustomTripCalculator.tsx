@@ -307,18 +307,13 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     const addOnOutboundTotal = hasOutbound ? 1500000 : 0;
 
     let pickupSurchargeTotal = 0;
-    const cleanPickup = effectivePickup.toLowerCase();
-    const isBaseCity =
-      (destination === 'jogja' && (cleanPickup.includes('jogja') || cleanPickup.includes('yogyakarta') || cleanPickup.includes('yia') || cleanPickup.includes('tugu') || cleanPickup.includes('lempuyangan'))) ||
-      (destination === 'malang' && (cleanPickup.includes('malang') || cleanPickup.includes('batu') || cleanPickup.includes('abdulrachman'))) ||
-      (destination === 'bali' && (cleanPickup.includes('bali') || cleanPickup.includes('denpasar') || cleanPickup.includes('ngurah') || cleanPickup.includes('kuta') || cleanPickup.includes('ubud')));
-
-    if (!isBaseCity && transportMode === 'dijemput') {
-      if (cleanPickup.includes('solo') || cleanPickup.includes('surakarta') || cleanPickup.includes('semarang') || cleanPickup.includes('surabaya')) {
-        pickupSurchargeTotal = 350000 * vehicleUnitCount;
-      } else {
-        pickupSurchargeTotal = 750000 * vehicleUnitCount;
-      }
+    const intercityInfo = getIntercityTravelInfo(effectivePickup, destination);
+    if (transportMode === 'dijemput' && intercityInfo && intercityInfo.isIntercity) {
+      const km = intercityInfo.distanceKm || 0;
+      if (km > 500) pickupSurchargeTotal = 1250000 * vehicleUnitCount; // Long distance inter-island / cross-province (e.g. Jogja -> Bali ~680km, Toll + BBM + Ferry)
+      else if (km > 200) pickupSurchargeTotal = 750000 * vehicleUnitCount; // Medium-long distance (e.g. Jogja -> Malang ~300km)
+      else if (km > 50) pickupSurchargeTotal = 350000 * vehicleUnitCount;  // Intercity regional
+      else pickupSurchargeTotal = 150000 * vehicleUnitCount;               // Local
     } else {
       pickupSurchargeTotal = 0;
     }
@@ -330,7 +325,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     const packagePriceTotalDiscounted = baseSubtotal - discountAmount;
     const packagePricePerPaxDiscounted = Math.round(packagePriceTotalDiscounted / paxCount);
 
-    const intercityInfo = getIntercityTravelInfo(effectivePickup, destination);
+    // intercityInfo is already computed above at line 310
 
     const generatedTimeline = generateCustomTripItinerary({
       destination,
@@ -498,6 +493,9 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
   ];
 
   const popularPickupCities = [
+    'Jogjakarta (Yogyakarta / YIA / Stasiun Tugu / Lempuyangan)',
+    'Stasiun Malang',
+    'Bandara Ngurah Rai Bali',
     'Bandara YIA (Yogyakarta)',
     'Stasiun Tugu Yogyakarta',
     'Stasiun Lempuyangan',

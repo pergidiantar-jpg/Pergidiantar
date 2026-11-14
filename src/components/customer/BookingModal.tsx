@@ -79,6 +79,9 @@ const AVAILABLE_ADD_ONS = [
 ];
 
 const POPULAR_ORIGIN_CITIES = [
+  'Jogjakarta (Yogyakarta / YIA / Stasiun Tugu / Lempuyangan)',
+  'Stasiun Malang',
+  'Bandara Ngurah Rai Bali',
   'Bandara YIA (Yogyakarta)',
   'Stasiun Tugu Yogyakarta',
   'Stasiun Lempuyangan',
@@ -214,9 +217,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     if (transportMode !== 'dijemput' || !intercityInfo || !intercityInfo.isIntercity) return 0;
     const km = intercityInfo.distanceKm || 0;
     const vehicleUnitCount = Math.max(1, Math.ceil(paxCount / selectedFleet.maxPax));
-    if (km > 500) return 750000 * vehicleUnitCount;
-    if (km > 100) return 350000 * vehicleUnitCount;
-    return 150000 * vehicleUnitCount;
+    if (km > 500) return 1250000 * vehicleUnitCount; // Long distance inter-island / cross-province (e.g. Jogja -> Bali ~680km, Toll + BBM + Ferry)
+    if (km > 200) return 750000 * vehicleUnitCount;  // Medium-long distance (e.g. Jogja -> Malang ~300km)
+    if (km > 50) return 350000 * vehicleUnitCount;   // Intercity regional
+    return 150000 * vehicleUnitCount;                // Local
   }, [transportMode, intercityInfo, paxCount, selectedFleet.maxPax]);
 
   // Safe early return AFTER all hooks
