@@ -123,6 +123,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
   const [paxCount, setPaxCount] = useState<number>(6); // must be number >= 1
   const [selectedTransport, setSelectedTransport] = useState<'Innova' | 'HiAce' | 'Medium Bus' | 'Big Bus'>('Innova');
   const [pickupCity, setPickupCity] = useState<string>('Yogyakarta');
+  const [transportMode, setTransportMode] = useState<'dijemput' | 'pesawat' | 'kereta'>('dijemput');
   
   // Add-ons
   const [hasDocumentation, setHasDocumentation] = useState<boolean>(false);
@@ -308,16 +309,18 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     let pickupSurchargeTotal = 0;
     const cleanPickup = effectivePickup.toLowerCase();
     const isBaseCity =
-      (destination === 'jogja' && (cleanPickup.includes('jogja') || cleanPickup.includes('yogyakarta') || cleanPickup.includes('yia') || cleanPickup.includes('tugu'))) ||
+      (destination === 'jogja' && (cleanPickup.includes('jogja') || cleanPickup.includes('yogyakarta') || cleanPickup.includes('yia') || cleanPickup.includes('tugu') || cleanPickup.includes('lempuyangan'))) ||
       (destination === 'malang' && (cleanPickup.includes('malang') || cleanPickup.includes('batu') || cleanPickup.includes('abdulrachman'))) ||
       (destination === 'bali' && (cleanPickup.includes('bali') || cleanPickup.includes('denpasar') || cleanPickup.includes('ngurah') || cleanPickup.includes('kuta') || cleanPickup.includes('ubud')));
 
-    if (!isBaseCity) {
+    if (!isBaseCity && transportMode === 'dijemput') {
       if (cleanPickup.includes('solo') || cleanPickup.includes('surakarta') || cleanPickup.includes('semarang') || cleanPickup.includes('surabaya')) {
         pickupSurchargeTotal = 350000 * vehicleUnitCount;
       } else {
         pickupSurchargeTotal = 750000 * vehicleUnitCount;
       }
+    } else {
+      pickupSurchargeTotal = 0;
     }
 
     const baseSubtotal = transportCostTotal + ticketCostTotal + mealCostTotal + addOnDocTotal + addOnOutboundTotal + hotelCostTotal + pickupSurchargeTotal;
@@ -494,7 +497,29 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
     }
   ];
 
-  const popularPickupCities = ['Yogyakarta', 'Solo', 'Semarang', 'Surabaya', 'Malang', 'Denpasar', 'Jakarta', 'Bandung'];
+  const popularPickupCities = [
+    'Bandara YIA (Yogyakarta)',
+    'Stasiun Tugu Yogyakarta',
+    'Stasiun Lempuyangan',
+    'Jakarta',
+    'Bandung',
+    'Surabaya',
+    'Semarang',
+    'Solo / Surakarta',
+    'Malang / Batu',
+    'Denpasar / Bali',
+    'Medan',
+    'Makassar',
+    'Palembang',
+    'Balikpapan',
+    'Banjarmasin',
+    'Padang',
+    'Pekanbaru',
+    'Batam',
+    'Pontianak',
+    'Manado',
+    'Samarinda'
+  ];
 
   const customTripId = useId();
 
@@ -1145,19 +1170,17 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
               </span>
             </div>
 
-            {/* Kota Penjemputan */}
-            <div className="p-4 rounded-2xl border border-neutral-200 bg-neutral-50 space-y-2">
+            {/* Kota Penjemputan & Moda Transportasi */}
+            <div className="p-4 rounded-2xl border border-neutral-200 bg-neutral-50 space-y-3">
               <label htmlFor={`${customTripId}-pickup`} className="font-bold text-xs text-neutral-900 flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-emerald-600" /> Kota Penjemputan *
+                <MapPin className="w-4 h-4 text-emerald-600" /> Titik / Kota Penjemputan *
               </label>
               <input
                 id={`${customTripId}-pickup`}
                 type="text"
-                placeholder="Ketik kota jemput / bandara / stasiun..."
+                placeholder="Bandara YIA, Stasiun Tugu, Jakarta, Surabaya, dll..."
                 value={pickupCity}
-                onChange={(e) => {
-                  setPickupCity(e.target.value);
-                }}
+                onChange={(e) => setPickupCity(e.target.value)}
                 className="w-full text-xs py-2 px-3 border border-neutral-300 rounded-xl bg-white font-semibold text-neutral-900 focus:ring-2 focus:ring-orange-500"
               />
               <div className="flex flex-wrap gap-1 pt-1">
@@ -1165,9 +1188,7 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                   <button
                     key={c}
                     type="button"
-                    onClick={() => {
-                      setPickupCity(c);
-                    }}
+                    onClick={() => setPickupCity(c)}
                     className={`text-[10px] py-0.5 px-2 rounded-md border ${
                       pickupCity === c ? 'bg-orange-500 text-white border-orange-500 font-bold' : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-100'
                     }`}
@@ -1175,6 +1196,51 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                     {c}
                   </button>
                 ))}
+              </div>
+
+              {/* Moda Transportasi Selection */}
+              <div className="pt-2 border-t border-neutral-200 space-y-1.5">
+                <span className="text-[11px] font-bold text-neutral-700 block">
+                  Moda Transportasi Menuju Destinasi:
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTransportMode('dijemput')}
+                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                      transportMode === 'dijemput'
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-2xs'
+                        : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <span>🚗 Dijemput (Darat)</span>
+                    <span className="text-[9px] opacity-80">Armada PERGIDIANTAR</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTransportMode('pesawat')}
+                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                      transportMode === 'pesawat'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                        : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <span>✈️ Pesawat (Flight)</span>
+                    <span className="text-[9px] opacity-80">Tiba di Bandara Tujuan</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTransportMode('kereta')}
+                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                      transportMode === 'kereta'
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
+                        : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <span>🚂 Kereta (Train)</span>
+                    <span className="text-[9px] opacity-80">Tiba di Stasiun Tujuan</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
