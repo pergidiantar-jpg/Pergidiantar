@@ -370,6 +370,13 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
               </div>
             )}
 
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Catatan:</strong> Destinasi wisata dan itinerary wisata dapat menyesuaikan dengan waktu yang tersedia di hari tersebut. Ketidaksesuaian jam pada itinerary dapat disebabkan karena penyesuaian sistem atau kondisi di lapangan.
+              </span>
+            </div>
+
             {/* Interactive Day Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
               {enrichedItinerary.map((it) => {

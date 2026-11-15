@@ -1010,6 +1010,11 @@ export function recalculateTimelineWithDistances(
               nextStart = 7 * 60 + 30; // 07:30 default
             }
           }
+        } else if (item.type === 'sightseeing') {
+          // Sightseeing must be strictly in daytime hours (08:00 to 18:30), never at 2 AM or night!
+          if (nextStart < 8 * 60 || nextStart > 18 * 60 + 30) {
+            nextStart = 10 * 60; // 10:00 morning sightseeing slot
+          }
         } else if (item.type === 'hotel_checkin') {
           if (nextStart < 13 * 60 || nextStart > 17 * 60) {
             nextStart = 14 * 60;
@@ -1017,6 +1022,15 @@ export function recalculateTimelineWithDistances(
         } else if (item.type === 'hotel_checkout') {
           if (nextStart < 7 * 60 || nextStart > 11 * 60) {
             nextStart = 8 * 60;
+          }
+        }
+
+        // General guard: No tourist trips or activities at 02:00 AM or unreasonable nighttime hours (22:00 - 06:00)
+        if (nextStart >= 22 * 60 || nextStart < 6 * 60) {
+          if (item.type === 'sightseeing' || item.type === 'outbound') {
+            nextStart = 9 * 60 + 30; // Shift to 09:30 morning
+          } else if (item.type === 'meal') {
+            nextStart = 12 * 60; // Shift to 12:00 noon
           }
         }
 

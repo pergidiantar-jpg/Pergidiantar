@@ -1486,6 +1486,13 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
 
                 {isItineraryExpanded && (
                   <div className="p-4 sm:p-5 space-y-4">
+                    <div className="p-3 rounded-xl bg-amber-950/50 border border-amber-500/40 text-xs text-amber-300 flex items-start gap-2.5">
+                      <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-amber-200">Catatan:</strong> Destinasi wisata dan itinerary wisata dapat menyesuaikan dengan waktu yang tersedia di hari tersebut. Ketidaksesuaian jam pada itinerary dapat disebabkan karena penyesuaian sistem atau kondisi di lapangan.
+                      </span>
+                    </div>
+
                     {/* Intercity Journey Notice Card */}
                     {calculationResult.intercityInfo?.isIntercity && (
                       <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-950/60 to-neutral-900 border border-blue-500/40 text-xs text-neutral-200">
