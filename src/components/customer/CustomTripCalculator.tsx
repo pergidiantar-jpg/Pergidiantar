@@ -1150,7 +1150,8 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
                 Fotografer + videografer profesional, hasil cinematic edited & drone aerial video.
               </p>
               <span className="text-xs font-mono font-bold text-orange-700 block mt-2">
-                +Rp 750.000 / trip
+                +Rp 2.200.000 / trip included drone
+                +Rp 1.500.000/ trip without drone
               </span>
             </div>
 
