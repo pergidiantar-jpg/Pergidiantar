@@ -508,30 +508,22 @@ export const CustomTripCalculator: React.FC<CustomTripCalculatorProps> = ({
   ];
 
   const popularPickupCities = [
-    'Jogjakarta (Yogyakarta / YIA / Stasiun Tugu / Lempuyangan)',
-    'Stasiun Malang',
-    'Bandara Ngurah Rai Bali',
-    'Bandara YIA (Yogyakarta)',
-    'Stasiun Tugu Yogyakarta',
-    'Stasiun Lempuyangan',
-    'Jakarta',
-    'Bandung',
-    'Surabaya',
-    'Semarang',
-    'Solo / Surakarta',
-    'Malang / Batu',
-    'Denpasar / Bali',
-    'Medan',
-    'Makassar',
-    'Palembang',
-    'Balikpapan',
-    'Banjarmasin',
-    'Padang',
-    'Pekanbaru',
-    'Batam',
-    'Pontianak',
-    'Manado',
-    'Samarinda'
+    'Kota Jogja',
+    'Bandara YIA',
+    'Stasiun Tugu/ Lempuyangan',
+    'DKI Jakarta',
+    'Bandung Raya',
+    'Pantura Jawa Barat',
+    'Bogor',
+    'Tangerang Raya',
+    'Semarang Raya',
+    'Banyumas Raya',
+    'Solo Raya',
+    'Surabaya Raya',
+    'Malang/ Batu',
+    'Pantura Jawa Timur',
+    'Bali',
+    'Bandara Ngurah Rai'
   ];
 
   const customTripId = useId();
