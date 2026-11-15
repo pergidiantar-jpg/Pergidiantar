@@ -50,7 +50,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
     { key: 'company_gathering', label: 'Company Gathering', sub: 'Jogja Team Building' },
     { key: 'study_tour', label: 'Study Tour', sub: 'Jogja, Malang, Bali' },
     { key: 'business_trip', label: 'Business Trip', sub: 'Perjalanan Bisnis' },
-    { key: 'wedding', label: 'Wedding Transport', sub: 'Armada Pengantin' },
+    { key: 'wedding', label: 'Wedding / Tamu Nikah', sub: 'Shuttle Armada Tamu Resepsi' },
     { key: 'graduation', label: 'Graduation / Wisuda', sub: 'Rombongan Wisuda' }
   ];
 

@@ -177,7 +177,7 @@ export const PackageManagement: React.FC = () => {
         addCategory === 'company_gathering' ? 'Company Gathering' :
         addCategory === 'study_tour' ? 'Study Tour' :
         addCategory === 'business_trip' ? 'Business Trip' :
-        addCategory === 'wedding' ? 'Wedding Transport' : 'Graduation Trip',
+        addCategory === 'wedding' ? 'Wedding (Antar Tamu Nikah)' : 'Graduation Trip',
       destinations: [addDestination],
       destinationLabel: 
         addDestination === 'jogja' ? 'Yogyakarta' :
@@ -517,7 +517,7 @@ export const PackageManagement: React.FC = () => {
                     <option value="company_gathering">Company Gathering (Jogja)</option>
                     <option value="study_tour">Study Tour (Jogja, Malang, Bali)</option>
                     <option value="business_trip">Business Trip (Korporat)</option>
-                    <option value="wedding">Wedding (Armada Pengantin)</option>
+                    <option value="wedding">Wedding (Armada Antar Tamu Resepsi Pernikahan)</option>
                     <option value="graduation">Graduation (Rombongan Wisuda)</option>
                   </select>
                 </div>
@@ -770,7 +770,7 @@ export const PackageManagement: React.FC = () => {
                     <option value="company_gathering">Company Gathering</option>
                     <option value="study_tour">Study Tour (Sekolah/Kampus)</option>
                     <option value="business_trip">Business Trip (Korporat)</option>
-                    <option value="wedding">Wedding (Armada Pengantin)</option>
+                    <option value="wedding">Wedding (Armada Antar Tamu Resepsi Pernikahan)</option>
                     <option value="graduation">Graduation (Rombongan Wisuda)</option>
                   </select>
                 </div>
