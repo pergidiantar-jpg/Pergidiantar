@@ -992,13 +992,32 @@ export function recalculateTimelineWithDistances(
         const transit = typeof travelMinutes === 'number' ? travelMinutes : 15;
         let nextStart = roundUpTo5Min(cursorEndMin + transit);
 
-        // Reasonable floor for lunch (don't put lunch before 11:30 unless already earlier) and dinner (not before 17:45)
+        // AI Heuristic time bounds enforcement for absolute logical consistency
         const lowTitle = (item.title || '').toLowerCase();
-        if (item.type === 'meal' && lowTitle.includes('siang') && nextStart < 11 * 60 + 30) {
-          nextStart = Math.max(nextStart, 11 * 60 + 45);
-        }
-        if (item.type === 'meal' && (lowTitle.includes('malam') || lowTitle.includes('dinner')) && nextStart < 17 * 60 + 45) {
-          nextStart = Math.max(nextStart, 18 * 60);
+        if (item.type === 'meal') {
+          if (lowTitle.includes('siang') || lowTitle.includes('lunch') || lowTitle.includes('makan siang')) {
+            // Lunch strictly between 11:30 and 13:30
+            if (nextStart < 11 * 60 + 30 || nextStart > 13 * 60 + 30) {
+              nextStart = 12 * 60; // 12:00 default
+            }
+          } else if (lowTitle.includes('malam') || lowTitle.includes('dinner') || lowTitle.includes('makan malam')) {
+            // Dinner strictly between 18:30 and 20:30
+            if (nextStart < 18 * 60 + 30 || nextStart > 21 * 60) {
+              nextStart = 19 * 60; // 19:00 default
+            }
+          } else if (lowTitle.includes('pagi') || lowTitle.includes('sarapan') || lowTitle.includes('breakfast')) {
+            if (nextStart < 6 * 60 + 30 || nextStart > 9 * 60) {
+              nextStart = 7 * 60 + 30; // 07:30 default
+            }
+          }
+        } else if (item.type === 'hotel_checkin') {
+          if (nextStart < 13 * 60 || nextStart > 17 * 60) {
+            nextStart = 14 * 60;
+          }
+        } else if (item.type === 'hotel_checkout') {
+          if (nextStart < 7 * 60 || nextStart > 11 * 60) {
+            nextStart = 8 * 60;
+          }
         }
 
         // Preserve single timestamp for final return/rest or keep range
