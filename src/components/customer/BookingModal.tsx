@@ -92,7 +92,7 @@ const CUSTOMER_FLEET_CHOICES = [
 
 const AVAILABLE_ADD_ONS = [
   { id: 'outbound', label: 'Outbond + Fasilitator (Game Master & Fun Games)', price: 1500000, isPerPax: false },
-  { id: 'drone', label: 'Dokumentasi Drone & Video Teaser 4K', price: 600000, isPerPax: false },
+  { id: 'drone', label: 'Dokumentasi Drone & Video Teaser 4K', price: 2200000, isPerPax: false },
   { id: 'bbq', label: 'Spesial BBQ / Gala Dinner Night', price: 150000, isPerPax: true },
   { id: 'merch', label: 'Kaos Polo Seragam Tour Keren', price: 75000, isPerPax: true },
   { id: 'snack_vip', label: 'Snack Box & Buah Segar Upgrade VIP', price: 25000, isPerPax: true }
