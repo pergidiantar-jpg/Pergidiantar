@@ -174,7 +174,10 @@ export const PackageManagement: React.FC = () => {
         addCategory === 'single_trip' ? 'Single Trip' :
         addCategory === 'family_trip' ? 'Family Trip' :
         addCategory === 'family_gathering' ? 'Family Gathering' :
-        addCategory === 'company_gathering' ? 'Company Gathering' : 'Study Tour',
+        addCategory === 'company_gathering' ? 'Company Gathering' :
+        addCategory === 'study_tour' ? 'Study Tour' :
+        addCategory === 'business_trip' ? 'Business Trip' :
+        addCategory === 'wedding' ? 'Wedding Transport' : 'Graduation Trip',
       destinations: [addDestination],
       destinationLabel: 
         addDestination === 'jogja' ? 'Yogyakarta' :
@@ -513,6 +516,9 @@ export const PackageManagement: React.FC = () => {
                     <option value="family_gathering">Family Gathering (Jogja, Malang, Bali)</option>
                     <option value="company_gathering">Company Gathering (Jogja)</option>
                     <option value="study_tour">Study Tour (Jogja, Malang, Bali)</option>
+                    <option value="business_trip">Business Trip (Korporat)</option>
+                    <option value="wedding">Wedding (Armada Pengantin)</option>
+                    <option value="graduation">Graduation (Rombongan Wisuda)</option>
                   </select>
                 </div>
               </div>
@@ -763,6 +769,9 @@ export const PackageManagement: React.FC = () => {
                     <option value="family_gathering">Family Gathering</option>
                     <option value="company_gathering">Company Gathering</option>
                     <option value="study_tour">Study Tour (Sekolah/Kampus)</option>
+                    <option value="business_trip">Business Trip (Korporat)</option>
+                    <option value="wedding">Wedding (Armada Pengantin)</option>
+                    <option value="graduation">Graduation (Rombongan Wisuda)</option>
                   </select>
                 </div>
 

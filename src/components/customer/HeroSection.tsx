@@ -147,6 +147,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <option value="family_gathering">Family Gathering (Jogja, Malang, Bali)</option>
                 <option value="company_gathering">Company Gathering (Jogja)</option>
                 <option value="study_tour">Study Tour (Jogja, Malang, Bali)</option>
+                <option value="business_trip">Business Trip (Korporat)</option>
+                <option value="wedding">Wedding (Armada Pengantin)</option>
+                <option value="graduation">Graduation (Rombongan Wisuda)</option>
               </select>
             </div>
 

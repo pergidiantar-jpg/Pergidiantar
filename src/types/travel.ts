@@ -3,7 +3,10 @@ export type PackageCategory =
   | 'family_trip' 
   | 'family_gathering' 
   | 'company_gathering' 
-  | 'study_tour';
+  | 'study_tour'
+  | 'business_trip'
+  | 'wedding'
+  | 'graduation';
 
 export type DestinationRegion = 'jogja' | 'malang' | 'bali';
 
