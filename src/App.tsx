@@ -96,8 +96,8 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 flex flex-col font-sans selection:bg-orange-500 selection:text-white">
-      {/* Top Navbar */}
-      <Navbar onOpenNotifications={openNotifications} />
+      {/* Top Navbar: Hidden when inside Jemput Sekolah portal */}
+      {activeTab !== 'school-pickup' && <Navbar onOpenNotifications={openNotifications} />}
 
       {/* Main Viewport */}
       <main className="flex-1">

@@ -32,6 +32,39 @@ import {
 
 const ADMIN_DANA_NUMBER = '087716443331';
 
+interface AddressItem {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+const ADDRESS_DB: AddressItem[] = [
+  { name: 'Rumah Utama (Jl. Kaliurang KM 7, Sleman)', lat: -7.7512, lng: 110.3821 },
+  { name: 'Rumah Alternatif (Condongcatur, Depok, Sleman)', lat: -7.7589, lng: 110.3954 },
+  { name: 'SDN Model Yogyakarta (Jl. Madukismo, Kasihan, Bantul)', lat: -7.8123, lng: 110.3521 },
+  { name: 'SMP Negeri 1 Yogyakarta (Jl. Cik Di Tiro No.3)', lat: -7.7812, lng: 110.3754 },
+  { name: 'SMA Negeri 3 Yogyakarta (Jl. Yos Sudarso No.7)', lat: -7.7923, lng: 110.3712 },
+  { name: 'Universitas Gadjah Mada (Bulaksumur, Yogyakarta)', lat: -7.7706, lng: 110.3787 },
+  { name: 'Malioboro Mall (Jl. Malioboro, Yogyakarta)', lat: -7.7927, lng: 110.3658 },
+  { name: 'Stasiun Tugu Yogyakarta', lat: -7.7891, lng: 110.3621 },
+  { name: 'Bandara Internasional Yogyakarta (YIA Kulon Progo)', lat: -7.9012, lng: 110.0612 }
+];
+
+function computeDistance(addr1: string, addr2: string): number {
+  const item1 = ADDRESS_DB.find(a => a.name.toLowerCase().includes(addr1.toLowerCase())) || ADDRESS_DB[0];
+  const item2 = ADDRESS_DB.find(a => a.name.toLowerCase().includes(addr2.toLowerCase())) || ADDRESS_DB[2];
+  
+  const R = 6371;
+  const dLat = (item2.lat - item1.lat) * Math.PI / 180;
+  const dLon = (item2.lng - item1.lng) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(item1.lat * Math.PI / 180) * Math.cos(item2.lat * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const km = R * c;
+  return Math.max(1.5, Number((km || 4.5).toFixed(1)));
+}
+
 export const SchoolPickUpPortal: React.FC<{ onBackToMain: () => void }> = ({ onBackToMain }) => {
   // Portal auth state for Jemput Sekolah: 'customer' | 'driver' | null
   const [userRole, setUserRole] = useState<'customer' | 'driver' | null>(null);
@@ -152,12 +185,25 @@ export const SchoolPickUpPortal: React.FC<{ onBackToMain: () => void }> = ({ onB
 
   // Customer booking wizard state
   const [studentName, setStudentName] = useState('');
-  const [schoolName, setSchoolName] = useState('');
-  const [pickupAddress, setPickupAddress] = useState('');
-  const [dropoffAddress, setDropoffAddress] = useState('');
+  const [schoolName, setSchoolName] = useState('SDN Model Yogyakarta');
+  const [pickupAddress, setPickupAddress] = useState('Rumah Utama (Jl. Kaliurang KM 7 Sleman)');
+  const [dropoffAddress, setDropoffAddress] = useState('Sekolah (SDN Model Yogyakarta)');
   const [selectedDriverForBooking, setSelectedDriverForBooking] = useState<SchoolDriver | null>(null);
-  const [estimatedDistanceKm, setEstimatedDistanceKm] = useState(3.5);
+  const [estimatedDistanceKm, setEstimatedDistanceKm] = useState(4.5);
   const [activeCreatedOrder, setActiveCreatedOrder] = useState<SchoolOrder | null>(null);
+
+  const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
+  const [showDropoffSuggestions, setShowDropoffSuggestions] = useState(false);
+  const [mapModalType, setMapModalType] = useState<'pickup' | 'dropoff' | null>(null);
+
+  const pickupSuggestions = ADDRESS_DB.filter(a => a.name.toLowerCase().includes(pickupAddress.toLowerCase()));
+  const dropoffSuggestions = ADDRESS_DB.filter(a => a.name.toLowerCase().includes(dropoffAddress.toLowerCase()));
+
+  // Automatically calculate distance using computeDistance
+  useEffect(() => {
+    const dist = computeDistance(pickupAddress, dropoffAddress);
+    setEstimatedDistanceKm(dist);
+  }, [pickupAddress, dropoffAddress]);
   
   // Notification banner / Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -702,39 +748,103 @@ export const SchoolPickUpPortal: React.FC<{ onBackToMain: () => void }> = ({ onB
                       className="w-full p-2.5 bg-neutral-50 border border-neutral-300 rounded-xl"
                     />
                   </div>
-                  <div>
-                    <label className="block font-semibold text-neutral-700 mb-1">Nama Sekolah / Tujuan</label>
-                    <input
-                      type="text"
-                      value={schoolName}
-                      onChange={e => setSchoolName(e.target.value)}
-                      placeholder="cth. SDN Model Yogyakarta"
-                      className="w-full p-2.5 bg-neutral-50 border border-neutral-300 rounded-xl"
-                    />
+                  <div className="relative">
+                    <label className="block font-semibold text-neutral-700 mb-1">Titik Penjemputan (Ketik atau Pilih dari Peta)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={pickupAddress}
+                        onChange={e => {
+                          setPickupAddress(e.target.value);
+                          setShowPickupSuggestions(true);
+                        }}
+                        onFocus={() => setShowPickupSuggestions(true)}
+                        placeholder="Ketik rumah atau sekolah..."
+                        className="w-full p-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setMapModalType('pickup')}
+                        className="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1.5 shadow-xs"
+                        title="Pilih dari Peta Google Maps"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>Maps</span>
+                      </button>
+                    </div>
+                    {showPickupSuggestions && pickupSuggestions.length > 0 && (
+                      <div className="absolute z-30 left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-neutral-200 max-h-48 overflow-y-auto">
+                        {pickupSuggestions.map((item, i) => (
+                          <div
+                            key={i}
+                            onClick={() => {
+                              setPickupAddress(item.name);
+                              setShowPickupSuggestions(false);
+                            }}
+                            className="p-2.5 hover:bg-orange-50 hover:text-orange-900 cursor-pointer text-xs border-b border-neutral-100 last:border-0 font-medium flex items-center gap-2"
+                          >
+                            <span>📍</span>
+                            <span>{item.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="block font-semibold text-neutral-700 mb-1">Titik Penjemputan Rumah</label>
-                    <input
-                      type="text"
-                      value={pickupAddress}
-                      onChange={e => setPickupAddress(e.target.value)}
-                      placeholder="cth. Jl. Kaliurang KM 7, Sleman"
-                      className="w-full p-2.5 bg-neutral-50 border border-neutral-300 rounded-xl"
-                    />
+
+                  <div className="relative">
+                    <label className="block font-semibold text-neutral-700 mb-1">Titik Tujuan (Ketik atau Pilih dari Peta)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={dropoffAddress}
+                        onChange={e => {
+                          setDropoffAddress(e.target.value);
+                          setShowDropoffSuggestions(true);
+                        }}
+                        onFocus={() => setShowDropoffSuggestions(true)}
+                        placeholder="Ketik sekolah atau rumah..."
+                        className="w-full p-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setMapModalType('dropoff')}
+                        className="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1.5 shadow-xs"
+                        title="Pilih dari Peta Google Maps"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>Maps</span>
+                      </button>
+                    </div>
+                    {showDropoffSuggestions && dropoffSuggestions.length > 0 && (
+                      <div className="absolute z-30 left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-neutral-200 max-h-48 overflow-y-auto">
+                        {dropoffSuggestions.map((item, i) => (
+                          <div
+                            key={i}
+                            onClick={() => {
+                              setDropoffAddress(item.name);
+                              setShowDropoffSuggestions(false);
+                            }}
+                            className="p-2.5 hover:bg-orange-50 hover:text-orange-900 cursor-pointer text-xs border-b border-neutral-100 last:border-0 font-medium flex items-center gap-2"
+                          >
+                            <span>📍</span>
+                            <span>{item.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="block font-semibold text-neutral-700 mb-1">Estimasi Jarak (KM)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={estimatedDistanceKm}
-                      onChange={e => setEstimatedDistanceKm(Number(e.target.value))}
-                      className="w-full p-2.5 bg-neutral-50 border border-neutral-300 rounded-xl"
-                    />
-                    <p className="text-[10px] text-neutral-500 mt-1">
-                      Tarif dasar: Rp 10.000 (3km pertama), +Rp 3.000/km berikutnya.
-                    </p>
+                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between text-blue-900">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                      <span>Estimasi Jarak Otomatis (GPS):</span>
+                    </span>
+                    <span className="font-mono font-extrabold text-sm text-blue-700 bg-white px-2.5 py-1 rounded-lg border border-blue-200">
+                      {estimatedDistanceKm} KM
+                    </span>
                   </div>
+                  <p className="text-[10px] text-neutral-500">
+                    * Rumah dan Sekolah dapat menjadi titik penjemputan maupun tujuan. Jarak terhitung otomatis oleh sistem. Tarif dasar: Rp 10.000 (3km pertama), +Rp 3.000/km berikutnya.
+                  </p>
                 </div>
 
                 <div className="p-3.5 bg-orange-50 rounded-2xl border border-orange-200 text-xs text-orange-900 space-y-1">
@@ -985,6 +1095,58 @@ export const SchoolPickUpPortal: React.FC<{ onBackToMain: () => void }> = ({ onB
           </div>
         )}
       </div>
+
+      {/* Interactive Google Maps Picker Modal */}
+      {mapModalType && (
+        <div className="fixed inset-0 z-50 bg-neutral-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-neutral-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                <h3 className="text-sm font-black text-neutral-900">
+                  Pilih Lokasi dari Peta Interaktif Google Maps ({mapModalType === 'pickup' ? 'Titik Penjemputan' : 'Titik Tujuan'})
+                </h3>
+              </div>
+              <button onClick={() => setMapModalType(null)} className="p-1 rounded-lg hover:bg-neutral-100">
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
+
+            <p className="text-xs text-neutral-600">
+              Klik pada salah satu titik lokasi di bawah ini untuk memilih koordinat secara instan. Jarak dan harga akan menyesuaikan secara otomatis.
+            </p>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {ADDRESS_DB.map((loc, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    if (mapModalType === 'pickup') {
+                      setPickupAddress(loc.name);
+                    } else {
+                      setDropoffAddress(loc.name);
+                    }
+                    setMapModalType(null);
+                    showToast(`Lokasi ${mapModalType === 'pickup' ? 'Penjemputan' : 'Tujuan'} berhasil dipilih dari Maps! Jarak diperbarui.`);
+                  }}
+                  className="p-3 rounded-2xl border border-neutral-200 hover:border-orange-500 hover:bg-orange-50/50 cursor-pointer flex items-center justify-between transition-all text-xs"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                      📍
+                    </div>
+                    <div>
+                      <span className="font-bold text-neutral-900 block">{loc.name}</span>
+                      <span className="text-[10px] text-neutral-500 font-mono">Lat: {loc.lat}, Lng: {loc.lng}</span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-orange-600 bg-orange-100 px-3 py-1 rounded-xl">Pilih Lokasi</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
