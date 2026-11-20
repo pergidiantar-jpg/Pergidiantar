@@ -23,6 +23,7 @@ import { CustomerAuthModal } from './components/common/CustomerAuthModal';
 import { EditProfileModal } from './components/common/EditProfileModal';
 import { CustomerLiveChat } from './components/customer/CustomerLiveChat';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { SchoolPickUpPortal } from './components/school/SchoolPickUpPortal';
 import { TourPackage, PackageCategory, DestinationRegion, PackageTier, BookingOrder } from './types/travel';
 import { Lock } from 'lucide-react';
 
@@ -30,6 +31,7 @@ const MainAppContent: React.FC = () => {
   const { 
     packages, 
     activeTab, 
+    setActiveTab,
     currentRole, 
     isLoggedIn,
     isStaffLoggedIn,
@@ -99,7 +101,9 @@ const MainAppContent: React.FC = () => {
 
       {/* Main Viewport */}
       <main className="flex-1">
-        {!isLoggedIn ? (
+        {activeTab === 'school-pickup' ? (
+          <SchoolPickUpPortal onBackToMain={() => setActiveTab('catalog')} />
+        ) : !isLoggedIn ? (
           /* Public Landing Page: Only Slideshow Interaktif & Info Menarik Wisata (Jogja, Malang & Bali) + Form Login & Register */
           <PublicLandingPage />
         ) : isCustomer ? (

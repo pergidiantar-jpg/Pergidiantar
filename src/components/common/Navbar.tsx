@@ -11,7 +11,8 @@ import {
   LogOut,
   UserCog,
   MapPin,
-  Compass
+  Compass,
+  Bus
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -102,17 +103,31 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-neutral-600">
             {!isLoggedIn ? (
               <>
+                <button
+                  onClick={() => setActiveTab('school-pickup')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-orange-600 text-white font-bold text-xs shadow-md hover:bg-orange-700 transition-colors ${
+                    activeTab === 'school-pickup' ? 'ring-2 ring-orange-400' : ''
+                  }`}
+                >
+                  <Bus className="w-3.5 h-3.5 text-white" />
+                  <span>Jemput Sekolah</span>
+                </button>
                 <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 bg-neutral-100 px-3 py-1.5 rounded-full border border-neutral-200">
                   <MapPin className="w-3.5 h-3.5 text-orange-500" />
                   <span>Destinasi: Yogyakarta · Malang · Bali</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 bg-neutral-100 px-3 py-1.5 rounded-full border border-neutral-200">
-                  <Compass className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Jambon - Kota Jogjakarta · WA: 087716443331</span>
-                </div>
               </>
             ) : isCustomer ? (
               <>
+                <button
+                  onClick={() => setActiveTab('school-pickup')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-orange-600 text-white font-bold text-xs shadow-md hover:bg-orange-700 transition-colors ${
+                    activeTab === 'school-pickup' ? 'ring-2 ring-orange-400' : ''
+                  }`}
+                >
+                  <Bus className="w-3.5 h-3.5 text-white" />
+                  <span>Jemput Sekolah</span>
+                </button>
                 <button
                   onClick={() => setActiveTab('catalog')}
                   className={`hover:text-neutral-900 transition-colors whitespace-nowrap shrink-0 pb-0.5 ${

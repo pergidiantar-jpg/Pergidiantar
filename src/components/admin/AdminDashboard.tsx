@@ -11,6 +11,7 @@ import { PackageManagement } from './PackageManagement';
 import { UserRegisterManagement } from './UserRegisterManagement';
 import { AdminPurgeCenter } from './AdminPurgeCenter';
 import { VendorPaymentManagement } from './VendorPaymentManagement';
+import { SchoolAdminManagement } from './SchoolAdminManagement';
 import { 
   ShoppingBag, 
   Car, 
@@ -33,7 +34,8 @@ import {
   Smartphone,
   Laptop,
   Lock,
-  RefreshCw
+  RefreshCw,
+  Bus
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -51,6 +53,7 @@ export const AdminDashboard: React.FC = () => {
   const navigationItems = [
     { id: 'admin-orders', label: 'Order Masuk & Status', icon: ShoppingBag, desc: 'Kelola data pemesan & pembayaran' },
     { id: 'admin-users-registry', label: 'Data User & Register', icon: Users, desc: 'Database user & pendaftaran (Super Admin)' },
+    { id: 'admin-school-pickup', label: 'Manajemen Jemput Sekolah', icon: Bus, desc: 'Verifikasi driver & setoran DANA 8%' },
     { id: 'admin-packages', label: 'Kelola Paket & Harga', icon: Compass, desc: 'Edit harga & tujuan (Super Admin)' },
     { id: 'admin-inventory', label: 'Manajemen Inventaris', icon: Car, desc: 'Sinkronisasi armada & driver' },
     { id: 'admin-vendor-payments', label: 'Pembayaran Vendor & Mitra', icon: CreditCard, desc: 'Driver, hotel, armada & tiket wisata' },
@@ -285,6 +288,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex-1 min-w-0">
           {activeTab === 'admin-orders' && <OrderManagement />}
           {activeTab === 'admin-users-registry' && <UserRegisterManagement />}
+          {activeTab === 'admin-school-pickup' && <SchoolAdminManagement />}
           {activeTab === 'admin-packages' && <PackageManagement />}
           {activeTab === 'admin-inventory' && <InventoryManagement />}
           {activeTab === 'admin-vendor-payments' && <VendorPaymentManagement />}
