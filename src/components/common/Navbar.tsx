@@ -220,6 +220,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
 
           {/* Zone 3: User actions & profile management */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Jemput Sekolah Button - Always Visible */}
+            <button
+              onClick={() => setActiveTab('school-pickup')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 text-white font-bold text-xs shadow-md hover:bg-orange-700 transition-colors whitespace-nowrap ${
+                activeTab === 'school-pickup' ? 'ring-2 ring-orange-400' : ''
+              }`}
+            >
+              <Bus className="w-4 h-4 text-white" />
+              <span>Jemput Sekolah</span>
+            </button>
+
             {/* If NOT logged in: Show Login & Register CTA */}
             {!isLoggedIn ? (
               <div className="flex items-center gap-2">
