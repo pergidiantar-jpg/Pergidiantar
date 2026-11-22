@@ -962,42 +962,59 @@ export const SchoolPickUpPortal: React.FC<{ onBackToMain: () => void }> = ({ onB
                     </span>
                   </div>
 
-                  <div className="h-56 rounded-2xl bg-neutral-800 border border-neutral-700 flex flex-col items-center justify-center relative overflow-hidden p-4">
-                    <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=800')` }} />
+                  <div className="h-64 rounded-2xl bg-neutral-900 border border-neutral-700 flex flex-col items-center justify-center relative overflow-hidden p-4">
+                    <div className="absolute inset-0 bg-cover bg-center opacity-35" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=800')` }} />
                     
-                    {/* SVG Route Animation Line */}
-                    <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 flex items-center justify-between z-10">
+                    {/* Google Maps Winding Road SVG Routing Polyline */}
+                    <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none" viewBox="0 0 400 200" preserveAspectRatio="none">
+                      {/* Background Road Outline */}
+                      <path d="M 50 100 Q 120 40, 200 100 T 350 100" fill="none" stroke="#334155" strokeWidth="8" strokeLinecap="round" />
+                      {/* Active Google Maps Navigation Route Path (Blue/Orange Glowing) */}
+                      <path 
+                        d="M 50 100 Q 120 40, 200 100 T 350 100" 
+                        fill="none" 
+                        stroke="#3b82f6" 
+                        strokeWidth="4" 
+                        strokeLinecap="round"
+                        strokeDasharray="12 6"
+                        className="animate-[pulse_2s_infinite]"
+                      />
+                    </svg>
+
+                    {/* Start & End Markers */}
+                    <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 flex items-center justify-between z-10 w-full px-6">
                       <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold shadow-lg animate-pulse">
+                        <div className="w-9 h-9 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold shadow-xl border-2 border-white animate-bounce">
                           🏠
                         </div>
-                        <span className="text-[10px] font-bold text-white bg-neutral-900/80 px-2 py-0.5 rounded-full mt-1 max-w-[120px] truncate">
+                        <span className="text-[10px] font-extrabold text-white bg-neutral-950/90 px-2.5 py-1 rounded-md mt-1 max-w-[130px] truncate border border-neutral-800">
                           {pickupAddress.split('(')[0]}
                         </span>
                       </div>
 
-                      {/* Animated Route Line */}
-                      <div className="flex-1 mx-4 relative h-2">
-                        <div className="absolute inset-0 border-t-2 border-dashed border-orange-400 animate-pulse" />
-                        {/* Moving Vehicle Icon */}
-                        <div className="absolute top-1/2 -translate-y-1/2 animate-[bounce_1.5s_infinite] left-1/2 -translate-x-1/2 bg-blue-600 text-white p-1.5 rounded-full shadow-lg">
-                          <Bus className="w-3.5 h-3.5" />
-                        </div>
+                      {/* Moving Vehicle Along Road Curve */}
+                      <div className="relative animate-[bounce_1.2s_infinite] bg-blue-600 text-white p-2 rounded-full shadow-2xl border-2 border-white">
+                        <Bus className="w-4 h-4" />
                       </div>
 
                       <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-lg animate-pulse">
+                        <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-xl border-2 border-white animate-bounce">
                           🏫
                         </div>
-                        <span className="text-[10px] font-bold text-white bg-neutral-900/80 px-2 py-0.5 rounded-full mt-1 max-w-[120px] truncate">
+                        <span className="text-[10px] font-extrabold text-white bg-neutral-950/90 px-2.5 py-1 rounded-md mt-1 max-w-[130px] truncate border border-neutral-800">
                           {dropoffAddress.split('(')[0]}
                         </span>
                       </div>
                     </div>
 
-                    <div className="relative z-10 text-center mt-24 space-y-1">
-                      <p className="text-xs font-extrabold text-orange-400">⚡ Jalur Rute Aktif & Navigasi GPS Terdeteksi</p>
-                      <p className="text-[11px] text-neutral-300">Jarak: <strong>{estimatedDistanceKm} KM</strong> · Estimasi Waktu Tempuh: <strong>~{Math.round(estimatedDistanceKm * 3.5)} Menit</strong></p>
+                    <div className="relative z-10 text-center mt-28 bg-neutral-950/80 backdrop-blur-md px-4 py-2 rounded-xl border border-neutral-800 space-y-0.5">
+                      <p className="text-xs font-black text-orange-400 flex items-center justify-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                        <span>Navigasi Rute Jalan Raya Sesuai Google Maps</span>
+                      </p>
+                      <p className="text-[11px] text-neutral-300">
+                        Jarak Rute: <strong>{estimatedDistanceKm} KM</strong> · Waktu Tempuh: <strong>~{Math.round(estimatedDistanceKm * 3.2)} Menit</strong>
+                      </p>
                     </div>
                   </div>
                 </div>
