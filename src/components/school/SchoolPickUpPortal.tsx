@@ -39,15 +39,104 @@ interface AddressItem {
 }
 
 const ADDRESS_DB: AddressItem[] = [
-  { name: 'Rumah Utama (Jl. Kaliurang KM 7, Sleman)', lat: -7.7512, lng: 110.3821 },
-  { name: 'Rumah Alternatif (Condongcatur, Depok, Sleman)', lat: -7.7589, lng: 110.3954 },
-  { name: 'SDN Model Yogyakarta (Jl. Madukismo, Kasihan, Bantul)', lat: -7.8123, lng: 110.3521 },
-  { name: 'SMP Negeri 1 Yogyakarta (Jl. Cik Di Tiro No.3)', lat: -7.7812, lng: 110.3754 },
-  { name: 'SMA Negeri 3 Yogyakarta (Jl. Yos Sudarso No.7)', lat: -7.7923, lng: 110.3712 },
-  { name: 'Universitas Gadjah Mada (Bulaksumur, Yogyakarta)', lat: -7.7706, lng: 110.3787 },
-  { name: 'Malioboro Mall (Jl. Malioboro, Yogyakarta)', lat: -7.7927, lng: 110.3658 },
-  { name: 'Stasiun Tugu Yogyakarta', lat: -7.7891, lng: 110.3621 },
-  { name: 'Bandara Internasional Yogyakarta (YIA Kulon Progo)', lat: -7.9012, lng: 110.0612 }
+  // --- SD / MI SE-DIY ---
+  { name: 'SD BOPKRI Gondolayu Yogyakarta', lat: -7.7812, lng: 110.3689 },
+  { name: 'SD BOPKRI Klebengan Sleman', lat: -7.7654, lng: 110.3854 },
+  { name: 'SDN Model Yogyakarta (Kasihan, Bantul)', lat: -7.8123, lng: 110.3521 },
+  { name: 'SDN Percobaan 1 Yogyakarta', lat: -7.7821, lng: 110.3712 },
+  { name: 'SDN Unggulan Sleman', lat: -7.7312, lng: 110.3654 },
+  { name: 'SDN Condongcatur (Depok, Sleman)', lat: -7.7545, lng: 110.3921 },
+  { name: 'SDN Keputran 1 Yogyakarta', lat: -7.8012, lng: 110.3654 },
+  { name: 'SDN Jetis 1 Yogyakarta', lat: -7.7845, lng: 110.3678 },
+  { name: 'SDN Kotagede 1 Yogyakarta', lat: -7.8321, lng: 110.3912 },
+  { name: 'SDN Gamping 1 (Sleman)', lat: -7.8021, lng: 110.3312 },
+  { name: 'SDN Banguntapan 1 (Bantul)', lat: -7.8045, lng: 110.4089 },
+  { name: 'MIN 1 Yogyakarta', lat: -7.7891, lng: 110.3754 },
+  { name: 'SD Muhammadiyah Sapen Yogyakarta', lat: -7.7854, lng: 110.3891 },
+  { name: 'SD Kanisius Kotabaru Yogyakarta', lat: -7.7812, lng: 110.3721 },
+  { name: 'SDIT LHI Condongcatur Sleman', lat: -7.7512, lng: 110.3981 },
+
+  // --- SMP / MTs SE-DIY ---
+  { name: 'SMP Negeri 1 Yogyakarta (Cik Di Tiro)', lat: -7.7812, lng: 110.3754 },
+  { name: 'SMP Negeri 2 Yogyakarta', lat: -7.7912, lng: 110.3689 },
+  { name: 'SMP Negeri 3 Yogyakarta', lat: -7.7854, lng: 110.3712 },
+  { name: 'SMP Negeri 4 Yogyakarta', lat: -7.7989, lng: 110.3621 },
+  { name: 'SMP Negeri 5 Yogyakarta', lat: -7.7821, lng: 110.3645 },
+  { name: 'SMP Negeri 8 Yogyakarta', lat: -7.7712, lng: 110.3789 },
+  { name: 'SMP Negeri 1 Depok (Sleman)', lat: -7.7589, lng: 110.3889 },
+  { name: 'SMP Negeri 4 Depok (Sleman)', lat: -7.7612, lng: 110.4054 },
+  { name: 'SMP Negeri 1 Gamping (Sleman)', lat: -7.7912, lng: 110.3387 },
+  { name: 'SMP Negeri 1 Kasihan (Bantul)', lat: -7.8154, lng: 110.3389 },
+  { name: 'SMP Negeri 1 Banguntapan (Bantul)', lat: -7.7989, lng: 110.4154 },
+  { name: 'MTs Negeri 1 Yogyakarta', lat: -7.7891, lng: 110.3789 },
+  { name: 'SMP Kolese De Britto Yogyakarta', lat: -7.7791, lng: 110.3891 },
+  { name: 'SMP Budi Mulia Dua Yogyakarta', lat: -7.7454, lng: 110.4012 },
+  { name: 'SMP BOPKRI 1 Yogyakarta', lat: -7.7912, lng: 110.3654 },
+  { name: 'SMP BOPKRI 2 Yogyakarta', lat: -7.7854, lng: 110.3789 },
+  { name: 'SMP BOPKRI 3 Yogyakarta', lat: -7.7821, lng: 110.3721 },
+
+  // --- SMA / SMK / MA SE-DIY ---
+  { name: 'SMA Negeri 1 Yogyakarta (Teladan)', lat: -7.7754, lng: 110.3721 },
+  { name: 'SMA Negeri 2 Yogyakarta', lat: -7.7821, lng: 110.3612 },
+  { name: 'SMA Negeri 3 Yogyakarta (Padmanaba)', lat: -7.7923, lng: 110.3712 },
+  { name: 'SMA Negeri 4 Yogyakarta', lat: -7.8012, lng: 110.3754 },
+  { name: 'SMA Negeri 5 Yogyakarta', lat: -7.8123, lng: 110.3689 },
+  { name: 'SMA Negeri 6 Yogyakarta (Bopo)', lat: -7.7845, lng: 110.3612 },
+  { name: 'SMA Negeri 7 Yogyakarta', lat: -7.7989, lng: 110.3721 },
+  { name: 'SMA Negeri 8 Yogyakarta', lat: -7.7723, lng: 110.3921 },
+  { name: 'SMA Negeri 1 Depok (Sleman)', lat: -7.7678, lng: 110.3987 },
+  { name: 'SMA Negeri 2 Depok (Sleman)', lat: -7.7512, lng: 110.4123 },
+  { name: 'SMA Negeri 1 Gamping (Sleman)', lat: -7.7889, lng: 110.3254 },
+  { name: 'SMA Negeri 1 Kasihan (Bantul)', lat: -7.8212, lng: 110.3454 },
+  { name: 'SMA Negeri 1 Banguntapan (Bantul)', lat: -7.7923, lng: 110.4189 },
+  { name: 'SMK Negeri 2 Yogyakarta (Jetis)', lat: -7.7789, lng: 110.3689 },
+  { name: 'SMK Negeri 3 Yogyakarta (Hokya)', lat: -7.7854, lng: 110.3754 },
+  { name: 'SMK Negeri 1 Depok (Sleman)', lat: -7.7612, lng: 110.3954 },
+  { name: 'SMK Muhammadiyah 1 Yogyakarta', lat: -7.7921, lng: 110.3689 },
+  { name: 'MAN 1 Yogyakarta', lat: -7.7812, lng: 110.3789 },
+  { name: 'MAN 2 Yogyakarta', lat: -7.8212, lng: 110.3712 },
+  { name: 'SMA Kolese De Britto Yogyakarta', lat: -7.7791, lng: 110.3891 },
+  { name: 'SMA Muhammadiyah 1 Yogyakarta', lat: -7.7954, lng: 110.3689 },
+  { name: 'SMA Stella Duce 1 Yogyakarta', lat: -7.7854, lng: 110.3721 },
+  { name: 'SMA BOPKRI 1 Yogyakarta', lat: -7.7821, lng: 110.3654 },
+  { name: 'SMA BOPKRI 2 Yogyakarta', lat: -7.7891, lng: 110.3789 },
+
+  // --- UNIVERSITAS / KAMPUS UTAMA SE-DIY ---
+  { name: 'Universitas Gadjah Mada (UGM Bulaksumur)', lat: -7.7706, lng: 110.3787 },
+  { name: 'Universitas Negeri Yogyakarta (UNY Depok)', lat: -7.7761, lng: 110.3912 },
+  { name: 'Universitas Islam Indonesia (UII Kaliurang)', lat: -7.6891, lng: 110.4123 },
+  { name: 'Universitas Pembangunan Nasional (UPN) Veteran Yogyakarta', lat: -7.7621, lng: 110.4021 },
+  { name: 'Universitas Atma Jaya Yogyakarta (UAJY)', lat: -7.7754, lng: 110.4154 },
+  { name: 'Universitas Sanata Dharma (USD Mrican)', lat: -7.7789, lng: 110.3889 },
+  { name: 'Universitas Muhammadiyah Yogyakarta (UMY Tamantirto)', lat: -7.8134, lng: 110.3212 },
+  { name: 'Universitas Ahmad Dahlan (UAD Yogyakarta)', lat: -7.8054, lng: 110.3821 },
+  { name: 'Institut Seni Indonesia (ISI) Yogyakarta (Kasihan)', lat: -7.8345, lng: 110.3387 },
+  { name: 'Universitas Mercu Buana Yogyakarta (UMBY)', lat: -7.8123, lng: 110.3154 },
+
+  // --- KAWASAN JALAN UTAMA & KECAMATAN DI DIY ---
+  { name: 'Condongcatur (Depok, Sleman)', lat: -7.7589, lng: 110.3954 },
+  { name: 'Caturtunggal (Depok, Sleman)', lat: -7.7712, lng: 110.3854 },
+  { name: 'Maguwoharjo (Depok, Sleman)', lat: -7.7654, lng: 110.4212 },
+  { name: 'Jl. Seturan Raya (Depok, Sleman)', lat: -7.7634, lng: 110.4012 },
+  { name: 'Jl. Affandi / Gejayan (Depok, Sleman)', lat: -7.7723, lng: 110.3871 },
+  { name: 'Jl. Kaliurang KM 5-8 (Depok, Sleman)', lat: -7.7512, lng: 110.3821 },
+  { name: 'Kawasan Malioboro (Kota Yogyakarta)', lat: -7.7927, lng: 110.3658 },
+  { name: 'Kawasan Tugu / Jetis (Kota Yogyakarta)', lat: -7.7789, lng: 110.3662 },
+  { name: 'Kawasan Lempuyangan (Danurejan, Kota Yogyakarta)', lat: -7.7912, lng: 110.3721 },
+  { name: 'Kawasan Kotagede (Kota Yogyakarta)', lat: -7.8321, lng: 110.3912 },
+  { name: 'Kawasan Kraton Yogyakarta', lat: -7.8054, lng: 110.3642 },
+  { name: 'Ambarketawang (Gamping, Sleman)', lat: -7.8012, lng: 110.3345 },
+  { name: 'Banyuraden (Gamping, Sleman)', lat: -7.7854, lng: 110.3321 },
+  { name: 'Nogotirto (Gamping, Sleman)', lat: -7.7689, lng: 110.3454 },
+  { name: 'Jl. Wates KM 3-7 (Gamping, Sleman)', lat: -7.7954, lng: 110.3212 },
+  { name: 'Ngestiharjo (Kasihan, Bantul)', lat: -7.8012, lng: 110.3421 },
+  { name: 'Tirtonirmolo (Kasihan, Bantul)', lat: -7.8189, lng: 110.3512 },
+  { name: 'Tamantirto (Kasihan, Bantul)', lat: -7.8123, lng: 110.3289 },
+  { name: 'Banguntapan (Banguntapan, Bantul)', lat: -7.8012, lng: 110.4012 },
+  { name: 'Potorono (Banguntapan, Bantul)', lat: -7.8189, lng: 110.4212 },
+  { name: 'Baturetno (Banguntapan, Bantul)', lat: -7.7889, lng: 110.4123 },
+  { name: 'Jl. Ringroad Timur (Banguntapan, Bantul)', lat: -7.7954, lng: 110.4054 },
+  { name: 'Jl. Wonosari KM 5-8 (Banguntapan, Bantul)', lat: -7.7821, lng: 110.4289 }
 ];
 
 function computeDistance(addr1: string, addr2: string): number {
@@ -873,14 +962,42 @@ export const SchoolPickUpPortal: React.FC<{ onBackToMain: () => void }> = ({ onB
                     </span>
                   </div>
 
-                  <div className="h-48 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=800')` }} />
-                    <div className="relative z-10 text-center space-y-2 p-4">
-                      <div className="w-10 h-10 rounded-full bg-orange-600 text-white flex items-center justify-center mx-auto shadow-lg animate-bounce">
-                        <Bus className="w-5 h-5" />
+                  <div className="h-56 rounded-2xl bg-neutral-800 border border-neutral-700 flex flex-col items-center justify-center relative overflow-hidden p-4">
+                    <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=800')` }} />
+                    
+                    {/* SVG Route Animation Line */}
+                    <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 flex items-center justify-between z-10">
+                      <div className="flex flex-col items-center">
+                        <div className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold shadow-lg animate-pulse">
+                          🏠
+                        </div>
+                        <span className="text-[10px] font-bold text-white bg-neutral-900/80 px-2 py-0.5 rounded-full mt-1 max-w-[120px] truncate">
+                          {pickupAddress.split('(')[0]}
+                        </span>
                       </div>
-                      <p className="text-xs font-bold text-white">Posisi Anak & Armada Pengemudi Terdeteksi Secara Real-Time</p>
-                      <p className="text-[11px] text-neutral-300">Titik jemput: {pickupAddress || 'Belum diisi'} &rarr; Sekolah: {schoolName || 'Belum diisi'}</p>
+
+                      {/* Animated Route Line */}
+                      <div className="flex-1 mx-4 relative h-2">
+                        <div className="absolute inset-0 border-t-2 border-dashed border-orange-400 animate-pulse" />
+                        {/* Moving Vehicle Icon */}
+                        <div className="absolute top-1/2 -translate-y-1/2 animate-[bounce_1.5s_infinite] left-1/2 -translate-x-1/2 bg-blue-600 text-white p-1.5 rounded-full shadow-lg">
+                          <Bus className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center">
+                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-lg animate-pulse">
+                          🏫
+                        </div>
+                        <span className="text-[10px] font-bold text-white bg-neutral-900/80 px-2 py-0.5 rounded-full mt-1 max-w-[120px] truncate">
+                          {dropoffAddress.split('(')[0]}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="relative z-10 text-center mt-24 space-y-1">
+                      <p className="text-xs font-extrabold text-orange-400">⚡ Jalur Rute Aktif & Navigasi GPS Terdeteksi</p>
+                      <p className="text-[11px] text-neutral-300">Jarak: <strong>{estimatedDistanceKm} KM</strong> · Estimasi Waktu Tempuh: <strong>~{Math.round(estimatedDistanceKm * 3.5)} Menit</strong></p>
                     </div>
                   </div>
                 </div>
